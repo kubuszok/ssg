@@ -1,7 +1,7 @@
 import sbt.*
 import sbt.Keys.*
 
-import java.nio.file.{Files, Path}
+import java.nio.file.{ Files, Path }
 import scala.jdk.CollectionConverters.*
 
 // sbt sourceGenerator that uses Baltic Porter to mechanically port Java and
@@ -10,8 +10,7 @@ import scala.jdk.CollectionConverters.*
 object BalticPorterGen {
 
   private def bpRoot(ssgRoot: Path): Path =
-    Path.of(sys.props.getOrElse("balticporter.root",
-      ssgRoot.resolve("../balticporter").toString)).toAbsolutePath.normalize
+    Path.of(sys.props.getOrElse("balticporter.root", ssgRoot.resolve("../balticporter").toString)).toAbsolutePath.normalize
 
   private def hasBpSibling(ssgRoot: Path): Boolean =
     Files.isDirectory(bpRoot(ssgRoot).resolve("balticporter/corpus"))
@@ -26,16 +25,15 @@ object BalticPorterGen {
     val bp = bpRoot(ssgRoot)
 
     val liqpSrc = ssgRoot.resolve("original-src/liqp/src/main/java")
-    require(Files.isDirectory(liqpSrc),
-      s"liqp sources not found at $liqpSrc — run: git submodule update --init")
+    require(Files.isDirectory(liqpSrc), s"liqp sources not found at $liqpSrc — run: git submodule update --init")
 
     val portRoot = outDir.toPath.getParent
-    val outPath = outDir.toPath
-    val marker = ssgRoot.resolve("target/balticporter-ssg-liquid/.generated-marker")
+    val outPath  = outDir.toPath
+    val marker   = ssgRoot.resolve("target/balticporter-ssg-liquid/.generated-marker")
 
     val forceRegen = sys.props.getOrElse("balticporter.forceRegen", "false").toBoolean
-    val commit = balticporter.runner.VendoredCommit.of(ssgRoot.resolve("original-src/liqp"))
-    val cached = !forceRegen && Files.exists(marker) &&
+    val commit     = balticporter.runner.VendoredCommit.of(ssgRoot.resolve("original-src/liqp"))
+    val cached     = !forceRegen && Files.exists(marker) &&
       Files.exists(outPath) &&
       Files.readString(marker).trim == commit
 
@@ -43,16 +41,17 @@ object BalticPorterGen {
       log.info(s"[Baltic Porter] Generating ssg-liquid sources from liqp ($commit)")
 
       val confPath = bp.resolve("balticporter/corpus/ports/liqp/main.conf")
-      require(Files.exists(confPath),
-        s"liqp port config not found at $confPath — publish balticporter-corpus first")
+      require(Files.exists(confPath), s"liqp port config not found at $confPath — publish balticporter-corpus first")
 
       balticporter.corpus.liqp.LiqpClasspath.ensure(bp)
 
       System.setProperty("balticporter.root", bp.toAbsolutePath.normalize.toString)
       try {
-        val config = balticporter.runner.PortConfig.load(confPath, Seq(
-          s"--portRoot=$portRoot"
-        ))
+        val config = balticporter.runner.PortConfig.load(confPath,
+                                                         Seq(
+                                                           s"--portRoot=$portRoot"
+                                                         )
+        )
         config.execute()
         log.info(s"[Baltic Porter] Generated ssg-liquid sources to $outPath")
       } catch {
@@ -82,16 +81,15 @@ object BalticPorterGen {
     val bp = bpRoot(ssgRoot)
 
     val flexmarkSrc = ssgRoot.resolve("original-src/flexmark-java")
-    require(Files.isDirectory(flexmarkSrc),
-      s"flexmark-java sources not found at $flexmarkSrc — run: git submodule update --init")
+    require(Files.isDirectory(flexmarkSrc), s"flexmark-java sources not found at $flexmarkSrc — run: git submodule update --init")
 
     val portRoot = outDir.toPath.getParent
-    val outPath = outDir.toPath
-    val marker = ssgRoot.resolve("target/balticporter-ssg-md/.generated-marker")
+    val outPath  = outDir.toPath
+    val marker   = ssgRoot.resolve("target/balticporter-ssg-md/.generated-marker")
 
     val forceRegen = sys.props.getOrElse("balticporter.forceRegen", "false").toBoolean
-    val commit = balticporter.runner.VendoredCommit.of(flexmarkSrc)
-    val cached = !forceRegen && Files.exists(marker) &&
+    val commit     = balticporter.runner.VendoredCommit.of(flexmarkSrc)
+    val cached     = !forceRegen && Files.exists(marker) &&
       Files.exists(outPath) &&
       Files.readString(marker).trim == commit
 
@@ -99,16 +97,17 @@ object BalticPorterGen {
       log.info(s"[Baltic Porter] Generating ssg-md sources from flexmark-java ($commit)")
 
       val confPath = bp.resolve("balticporter/corpus/ports/ssg-md/main.conf")
-      require(Files.exists(confPath),
-        s"flexmark port config not found at $confPath — publish balticporter-corpus first")
+      require(Files.exists(confPath), s"flexmark port config not found at $confPath — publish balticporter-corpus first")
 
       balticporter.corpus.flexmark.FlexmarkClasspath.ensure(bp)
 
       System.setProperty("balticporter.root", bp.toAbsolutePath.normalize.toString)
       try {
-        val config = balticporter.runner.PortConfig.load(confPath, Seq(
-          s"--portRoot=$portRoot"
-        ))
+        val config = balticporter.runner.PortConfig.load(confPath,
+                                                         Seq(
+                                                           s"--portRoot=$portRoot"
+                                                         )
+        )
         config.execute()
         log.info(s"[Baltic Porter] Generated ssg-md sources to $outPath")
       } catch {
@@ -138,13 +137,13 @@ object BalticPorterGen {
     val bp = bpRoot(ssgRoot)
 
     val portRoot = outDir.toPath.getParent
-    val outPath = outDir.toPath
-    val marker = ssgRoot.resolve("target/balticporter-ssg-md-ext/.generated-marker")
+    val outPath  = outDir.toPath
+    val marker   = ssgRoot.resolve("target/balticporter-ssg-md-ext/.generated-marker")
 
-    val forceRegen = sys.props.getOrElse("balticporter.forceRegen", "false").toBoolean
+    val forceRegen  = sys.props.getOrElse("balticporter.forceRegen", "false").toBoolean
     val flexmarkSrc = ssgRoot.resolve("original-src/flexmark-java")
-    val commit = balticporter.runner.VendoredCommit.of(flexmarkSrc)
-    val cached = !forceRegen && Files.exists(marker) &&
+    val commit      = balticporter.runner.VendoredCommit.of(flexmarkSrc)
+    val cached      = !forceRegen && Files.exists(marker) &&
       Files.exists(outPath) &&
       Files.readString(marker).trim == commit
 
@@ -152,16 +151,17 @@ object BalticPorterGen {
       log.info(s"[Baltic Porter] Generating ssg-md-ext sources from flexmark extensions ($commit)")
 
       val confPath = bp.resolve("balticporter/corpus/ports/ssg-md/ext.conf")
-      require(Files.exists(confPath),
-        s"flexmark-ext port config not found at $confPath — publish balticporter-corpus first")
+      require(Files.exists(confPath), s"flexmark-ext port config not found at $confPath — publish balticporter-corpus first")
 
       balticporter.corpus.flexmark.FlexmarkClasspath.ensure(bp)
 
       System.setProperty("balticporter.root", bp.toAbsolutePath.normalize.toString)
       try {
-        val config = balticporter.runner.PortConfig.load(confPath, Seq(
-          s"--portRoot=$portRoot"
-        ))
+        val config = balticporter.runner.PortConfig.load(confPath,
+                                                         Seq(
+                                                           s"--portRoot=$portRoot"
+                                                         )
+        )
         config.execute()
         log.info(s"[Baltic Porter] Generated ssg-md-ext sources to $outPath")
       } catch {
@@ -189,7 +189,7 @@ object BalticPorterGen {
       ("\\.first\\b", ".head"),
       ("\\.isEmpty\\(\\)", ".isEmpty"),
       ("\\.head\\(\\)", ".head"),
-      ("\\.scheduled\\b", ".isScheduled"),
+      ("\\.scheduled\\b", ".isScheduled")
     )
     val perFileReplacements: Map[String, List[(String, String)]] = Map(
       "FilterNode.scala" -> List(
@@ -199,12 +199,13 @@ object BalticPorterGen {
       "PlaceholderReplacer.scala" -> List(("spanList\\.isEmpty\\(\\)", "spanList.isEmpty")),
       "Split.scala" -> List(
         (java.util.regex.Pattern.quote("""original.split("(?<!^)" + java.util.regex.Pattern.quote(delimiter))"""),
-         """{ val _p = original.split(java.util.regex.Pattern.quote(delimiter), -1); if (_p.length > 0 && _p(0).isEmpty()) _p.drop(1) else _p }""")
-      ),
+         """{ val _p = original.split(java.util.regex.Pattern.quote(delimiter), -1); if (_p.length > 0 && _p(0).isEmpty()) _p.drop(1) else _p }"""
+        )
+      )
     )
-    var count = 0
+    var count  = 0
     val stream = Files.walk(outDir)
-    try {
+    try
       stream.forEach { p =>
         if (p.toString.endsWith(".scala")) {
           var content = Files.readString(p)
@@ -212,37 +213,43 @@ object BalticPorterGen {
           for ((pattern, replacement) <- replacements) {
             val skipFirst = pattern.contains("first") && content.contains("var first:")
             val skipEmpty = skipIsEmpty && pattern.contains("isEmpty")
-            val skip = skipFirst || skipEmpty
+            val skip      = skipFirst || skipEmpty
             if (!skip) {
               val updated = content.replaceAll(pattern, replacement)
               if (updated != content) { content = updated; changed = true }
             }
           }
           val fileName = p.getFileName.toString
-          for (extras <- perFileReplacements.get(fileName); (pat, rep) <- extras) {
+          for {
+            extras <- perFileReplacements.get(fileName)
+            (pat, rep) <- extras
+          } {
             val updated = content.replaceAll(pat, rep)
             if (updated != content) { content = updated; changed = true }
           }
           if (changed) { Files.writeString(p, content); count += 1 }
         }
       }
-    } finally stream.close()
+    finally stream.close()
     if (count > 0) log.info(s"[Baltic Porter] Post-processed $count files (API name fixes)")
   }
 
   /** Collect .scala files, excluding paths that exist in the hand-written source tree. */
   private def collectScalaFiles(dir: Path, excludeDuplicatesOf: Option[Path] = None): Seq[File] = {
     if (!Files.isDirectory(dir)) return Seq.empty
-    val excluded: Set[String] = excludeDuplicatesOf.filter(Files.isDirectory(_)).map { excl =>
-      val s = Files.walk(excl)
-      try {
-        val b = Set.newBuilder[String]
-        s.forEach { p =>
-          if (p.toString.endsWith(".scala")) b += excl.relativize(p).toString
-        }
-        b.result()
-      } finally s.close()
-    }.getOrElse(Set.empty)
+    val excluded: Set[String] = excludeDuplicatesOf
+      .filter(Files.isDirectory(_))
+      .map { excl =>
+        val s = Files.walk(excl)
+        try {
+          val b = Set.newBuilder[String]
+          s.forEach { p =>
+            if (p.toString.endsWith(".scala")) b += excl.relativize(p).toString
+          }
+          b.result()
+        } finally s.close()
+      }
+      .getOrElse(Set.empty)
 
     val stream = Files.walk(dir)
     try {
@@ -262,21 +269,20 @@ object BalticPorterGen {
   // ---------------------------------------------------------------------------
 
   def generateNonJavaModule(
-      moduleName: String,
-      referenceDir: File,
-      outDir: File,
-      log: sbt.util.Logger,
-      rastDir: Option[File] = None,
-      policy: balticporter.frontend.ts.ParityDerive.Policy =
-        balticporter.frontend.ts.ParityDerive.Policy(),
-      bodyMapBuilder: Option[(File, File) => Map[String, (String, Int)]] = None,
+    moduleName:     String,
+    referenceDir:   File,
+    outDir:         File,
+    log:            sbt.util.Logger,
+    rastDir:        Option[File] = None,
+    policy:         balticporter.frontend.ts.ParityDerive.Policy = balticporter.frontend.ts.ParityDerive.Policy(),
+    bodyMapBuilder: Option[(File, File) => Map[String, (String, Int)]] = None
   ): Seq[File] = {
     if (!referenceDir.exists) {
       log.warn(s"[Baltic Porter] No reference/ dir for $moduleName, skipping")
       return Seq.empty
     }
 
-    val marker = outDir.toPath.resolve(".generated-marker")
+    val marker  = outDir.toPath.resolve(".generated-marker")
     val refHash = referenceDir.hashCode.toString +
       rastDir.map(_.hashCode.toString).getOrElse("")
 
@@ -290,7 +296,7 @@ object BalticPorterGen {
       (for {
         rd <- rastDir if rd.exists
         builder <- bodyMapBuilder
-      } yield {
+      } yield
         try {
           val bodies = builder(referenceDir, rd)
           log.info(s"[Baltic Porter] $moduleName: loaded ${bodies.size} RAST bodies from ${rd.getName}")
@@ -299,12 +305,11 @@ object BalticPorterGen {
           case e: Exception =>
             log.warn(s"[Baltic Porter] $moduleName: RAST body map failed: ${e.getMessage}, using empty")
             Map.empty[String, (String, Int)]
-        }
-      }).getOrElse(Map.empty)
+        }).getOrElse(Map.empty)
 
     val refFiles = (referenceDir ** "*.scala").get()
     var rastUsed = 0
-    var refUsed = 0
+    var refUsed  = 0
 
     val generated = refFiles.flatMap { refFile =>
       sbt.IO.relativize(referenceDir, refFile).map { relPath =>
@@ -312,8 +317,7 @@ object BalticPorterGen {
 
         val refSource = sbt.IO.read(refFile)
 
-        val result = balticporter.frontend.ts.ParityDerive.derive(
-          refSource, globalBodies, policy)
+        val result = balticporter.frontend.ts.ParityDerive.derive(refSource, globalBodies, policy)
 
         rastUsed += result.rastCount
         refUsed += result.referenceCount
@@ -327,9 +331,11 @@ object BalticPorterGen {
     Files.writeString(marker, refHash)
 
     val total = rastUsed + refUsed
-    val pct = if (total > 0) f"${rastUsed * 100.0 / total}%.1f" else "0.0"
-    log.info(s"[Baltic Porter] $moduleName: generated ${generated.size} files, " +
-      s"$rastUsed/$total ($pct%) RAST-derived bodies")
+    val pct   = if (total > 0) f"${rastUsed * 100.0 / total}%.1f" else "0.0"
+    log.info(
+      s"[Baltic Porter] $moduleName: generated ${generated.size} files, " +
+        s"$rastUsed/$total ($pct%) RAST-derived bodies"
+    )
     generated
   }
 }
