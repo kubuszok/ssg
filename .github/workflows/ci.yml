@@ -78,6 +78,8 @@ jobs:
 
       - uses: sbt/setup-sbt@v1
 
+      - uses: coursier/setup-action@v3.0.2
+
       - name: Checkout submodules for Java ports
         run: git submodule update --init --depth=1 original-src/liqp original-src/flexmark-java
 
@@ -164,6 +166,8 @@ jobs:
 
       - uses: sbt/setup-sbt@v1
 
+      - uses: coursier/setup-action@v3.0.2
+
       - name: Checkout submodules for Java ports
         run: git submodule update --init --depth=1 original-src/liqp original-src/flexmark-java
 
@@ -240,6 +244,8 @@ jobs:
           architecture: ${{ matrix.architecture || '' }}
 
       - uses: sbt/setup-sbt@v1
+
+      - uses: coursier/setup-action@v3.0.2
 
       - name: Checkout submodules for Java ports
         run: git submodule update --init --depth=1 original-src/liqp original-src/flexmark-java
