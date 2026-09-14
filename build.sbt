@@ -296,7 +296,7 @@ lazy val `ssg-liquid` = (projectMatrix in file("ssg-liquid"))
       "io.github.cquiroz" %% "scala-java-locales" % versions.scalaJavaLocales,
       // Baltic Porter generated code dependencies: the mechanically ported liqp code
       // uses these libraries directly (the hand-port had rewrote them away).
-      "com.kubuszok"                    %% "balticporter-runtime"      % "0.1.0-SNAPSHOT",
+      "com.kubuszok"                    %% "balticporter-runtime"      % "637f03b3a13df2863068979146444abc06bee3d6-SNAPSHOT",
       "org.antlr"                        % "antlr4-runtime"            % "4.13.0",
       "com.fasterxml.jackson.core"       % "jackson-core"              % "2.15.0",
       "com.fasterxml.jackson.core"       % "jackson-databind"          % "2.13.4.2",
@@ -351,7 +351,7 @@ lazy val `ssg-md` = (projectMatrix in file("ssg-md"))
     name := "ssg-md",
     libraryDependencies ++= Seq(
       "com.kubuszok"    %% "multiarch-resources"    % versions.multiarch,
-      "com.kubuszok"    %% "balticporter-runtime"    % "0.1.0-SNAPSHOT",
+      "com.kubuszok"    %% "balticporter-runtime"    % "637f03b3a13df2863068979146444abc06bee3d6-SNAPSHOT",
       "org.jetbrains"    % "annotations"            % "24.0.1" % Provided,
       "org.nibor.autolink" % "autolink"             % "0.6.0",
     ),
