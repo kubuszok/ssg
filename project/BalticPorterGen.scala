@@ -25,8 +25,8 @@ object BalticPorterGen {
     }
     val bp = bpRoot(ssgRoot)
 
-    val portRoot = outDir.toPath.getParent
-    val outPath  = outDir.toPath
+    val portRoot = outDir.toPath
+    val outPath  = portRoot.resolve("src_managed/main/scala")
     val marker   = ssgRoot.resolve("target/balticporter-ssg-liquid/.generated-marker")
 
     val forceRegen = sys.props.getOrElse("balticporter.forceRegen", "false").toBoolean
@@ -79,8 +79,8 @@ object BalticPorterGen {
     }
     val bp = bpRoot(ssgRoot)
 
-    val portRoot = outDir.toPath.getParent
-    val outPath  = outDir.toPath
+    val portRoot = outDir.toPath
+    val outPath  = portRoot.resolve("src_managed/main/scala")
     val marker   = ssgRoot.resolve("target/balticporter-ssg-md/.generated-marker")
 
     val forceRegen = sys.props.getOrElse("balticporter.forceRegen", "false").toBoolean
@@ -133,8 +133,8 @@ object BalticPorterGen {
     }
     val bp = bpRoot(ssgRoot)
 
-    val portRoot = outDir.toPath.getParent
-    val outPath  = outDir.toPath
+    val portRoot = outDir.toPath
+    val outPath  = portRoot.resolve("src_managed/main/scala")
     val marker   = ssgRoot.resolve("target/balticporter-ssg-md-ext/.generated-marker")
 
     val forceRegen = sys.props.getOrElse("balticporter.forceRegen", "false").toBoolean
