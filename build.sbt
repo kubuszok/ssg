@@ -312,9 +312,14 @@ lazy val `ssg-liquid` = (projectMatrix in file("ssg-liquid"))
     resolvers += "Central Portal Snapshots" at "https://central.sonatype.com/repository/maven-snapshots",
     // ANTLR-generated parser class directory: the generated liqp code imports liquid.parser.v4.*
     // which is compiled from the grammar by LiqpClasspath in balticporter.
+    // LiqpClasspath.ensure compiles the parser; call it here (not in the sourceGenerator)
+    // so the classes exist before sbt evaluates the compile classpath.
     Compile / unmanagedClasspath ++= {
       val bpRoot = (ThisBuild / baseDirectory).value / ".." / "balticporter"
       val parserDir = bpRoot / "out" / "liqp-parser-classes"
+      if (java.nio.file.Files.isDirectory(bpRoot.toPath.resolve("balticporter/corpus"))) {
+        try { balticporter.corpus.liqp.LiqpClasspath.ensure(bpRoot.toPath) } catch { case _: Exception => () }
+      }
       if (parserDir.exists()) {
         val fc = fileConverter.value
         Seq(Attributed.blank(fc.toVirtualFile(parserDir.toPath)))
