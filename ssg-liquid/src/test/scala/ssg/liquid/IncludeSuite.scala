@@ -4,7 +4,6 @@ package liquid
 
 import ssg.data.DataView
 
-import ssg.liquid.antlr.NameResolver
 import ssg.liquid.parser.Flavor
 
 import java.util.HashMap
@@ -15,7 +14,7 @@ final class IncludeSuite extends munit.FunSuite {
   private def parserWith(templates: (String, String)*): TemplateParser = {
     val map = new HashMap[String, String]()
     templates.foreach { case (name, content) => map.put(name, content) }
-    new TemplateParser.Builder().withFlavor(Flavor.JEKYLL).withNameResolver(new NameResolver.InMemory(map)).withShowExceptionsFromInclude(true).build()
+    new TemplateParser.Builder().withFlavor(Flavor.JEKYLL).withNameResolver(new TestBridges.InMemoryNameResolver(map)).withShowExceptionsFromInclude(true).build()
   }
 
   test("include: basic include") {
@@ -98,7 +97,7 @@ final class IncludeSuite extends munit.FunSuite {
 
   test("include: missing template with showExceptionsFromInclude=false returns empty") {
     val map         = new HashMap[String, String]()
-    val quietParser = new TemplateParser.Builder().withFlavor(Flavor.JEKYLL).withNameResolver(new NameResolver.InMemory(map)).withShowExceptionsFromInclude(false).build()
+    val quietParser = new TemplateParser.Builder().withFlavor(Flavor.JEKYLL).withNameResolver(new TestBridges.InMemoryNameResolver(map)).withShowExceptionsFromInclude(false).build()
     val template    = quietParser.parse("before{% include 'nonexistent' %}after")
     assertEquals(template.render(), "beforeafter")
   }

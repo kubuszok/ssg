@@ -40,7 +40,7 @@ final class MarkdownFacadeIss1105Suite extends munit.FunSuite {
 
     val manualHtml = {
       val doc = Parser.builder(options).build().parse(softBreakMarkdown)
-      HtmlRenderer.builder(Nullable(options)).build().render(doc)
+      HtmlRenderer.builder(options).build().render(doc)
     }
 
     assertEquals(facadeHtml, manualHtml)
@@ -68,7 +68,7 @@ final class MarkdownFacadeIss1105Suite extends munit.FunSuite {
     options.set(HtmlRenderer.SOFT_BREAK, "<br />\n")
 
     val doc               = Markdown.parse(softBreakMarkdown, options)
-    val renderedViaDoc    = HtmlRenderer.builder(Nullable(options)).build().render(doc)
+    val renderedViaDoc    = HtmlRenderer.builder(options).build().render(doc)
     val renderedViaFacade = Markdown.render(softBreakMarkdown, options)
 
     assertEquals(renderedViaDoc, renderedViaFacade)

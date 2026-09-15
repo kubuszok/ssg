@@ -21,12 +21,13 @@ import scala.language.implicitConversions
 
 final class ComboAdmonitionFormatterSpecTest extends FormatterSpecTestSuite {
   override def specResource:         ResourceLocation     = ComboAdmonitionFormatterSpecTest.RESOURCE_LOCATION
-  override def defaultOptions:       Nullable[DataHolder] = Nullable(ComboAdmonitionFormatterSpecTest.OPTIONS)
+  override def defaultOptions:       Nullable[DataHolder] = ComboAdmonitionFormatterSpecTest.OPTIONS
   override def knownFailurePrefixes: Set[String]          = Set("Admonition Extension - Basic Tests -")
 }
 
 object ComboAdmonitionFormatterSpecTest {
   val SPEC_RESOURCE:     String           = "/ssg/md/ext/admonition/test/ext_admonition_formatter_spec.md"
   val RESOURCE_LOCATION: ResourceLocation = ResourceLocation.of(classOf[ComboAdmonitionFormatterSpecTest], SPEC_RESOURCE)
-  val OPTIONS:           DataHolder       = new MutableDataSet().set(Parser.EXTENSIONS, Collections.singleton(AdmonitionExtension.create())).set(Parser.LISTS_AUTO_LOOSE, false).toImmutable
+  val OPTIONS:           DataHolder       =
+    new MutableDataSet().set(Parser.EXTENSIONS, Collections.singleton(AdmonitionExtension.create())).set(Parser.LISTS_AUTO_LOOSE, java.lang.Boolean.valueOf(false)).toImmutable()
 }

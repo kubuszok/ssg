@@ -10,7 +10,6 @@ import ssg.md.util.misc.Utils.escapeJavaString
 import ssg.md.util.sequence.{ BasedSequence, PositionAnchor }
 import ssg.md.util.sequence.builder.ISegmentBuilder.{ F_INCLUDE_ANCHORS, F_TRACK_FIRST256 }
 
-import scala.jdk.CollectionConverters.*
 import scala.language.implicitConversions
 
 final class PlainSegmentBuilderSuite extends munit.FunSuite {
@@ -21,7 +20,7 @@ final class PlainSegmentBuilderSuite extends munit.FunSuite {
     def this(base: CharSequence, optimizer: CharRecoveryOptimizer) =
       this(base, optimizer, F_INCLUDE_ANCHORS | F_TRACK_FIRST256)
 
-    override protected def optimizeText(parts: Array[Object]): Array[Object] =
+    override protected[builder] def optimizeText(parts: Array[Object]): Array[Object] =
       optimizer.apply(base, parts)
   }
 
@@ -33,8 +32,8 @@ final class PlainSegmentBuilderSuite extends munit.FunSuite {
 
     val expected = ""
 
-    assertEquals(segments.toStringPrep, "PlainSegmentBuilder{NULL, s=0:0, u=0:0, t=0:0, l=0, sz=0, na=0 }")
-    assertEquals(segments.toString(sequence).length, segments.length)
+    assertEquals(segments.toStringPrep(), "PlainSegmentBuilder{NULL, s=0:0, u=0:0, t=0:0, l=0, sz=0, na=0 }")
+    assertEquals(segments.toString(sequence).length, segments.length())
 
     assertEquals(segments.toStringWithRangesVisibleWhitespace(sequence), expected)
     assertEquals(segments.toString(sequence), expected)
@@ -48,9 +47,9 @@ final class PlainSegmentBuilderSuite extends munit.FunSuite {
     segments.append(0, 0)
     segments.append(sequence.length(), sequence.length())
 
-    assertEquals(segments.length, 0)
-    assertEquals(segments.toStringPrep, "PlainSegmentBuilder{[0, 10), s=0:0, u=0:0, t=0:0, l=0, sz=2, na=0: [0), [10) }")
-    assertEquals(segments.toString(sequence).length, segments.length)
+    assertEquals(segments.length(), 0)
+    assertEquals(segments.toStringPrep(), "PlainSegmentBuilder{[0, 10), s=0:0, u=0:0, t=0:0, l=0, sz=2, na=0: [0), [10) }")
+    assertEquals(segments.toString(sequence).length, segments.length())
   }
 
   test("test_basicEmptyNoAnchors") {
@@ -61,9 +60,9 @@ final class PlainSegmentBuilderSuite extends munit.FunSuite {
     segments.append(0, 0)
     segments.append(sequence.length(), sequence.length())
 
-    assertEquals(segments.length, 0)
-    assertEquals(segments.toStringPrep, "PlainSegmentBuilder{[0, 10), s=0:0, u=0:0, t=0:0, l=0, sz=0, na=0 }")
-    assertEquals(segments.toString(sequence).length, segments.length)
+    assertEquals(segments.length(), 0)
+    assertEquals(segments.toStringPrep(), "PlainSegmentBuilder{[0, 10), s=0:0, u=0:0, t=0:0, l=0, sz=0, na=0 }")
+    assertEquals(segments.toString(sequence).length, segments.length())
   }
 
   test("test_basicEmptyAnchors") {
@@ -74,9 +73,9 @@ final class PlainSegmentBuilderSuite extends munit.FunSuite {
     segments.append(0, 0)
     segments.append(sequence.length(), sequence.length())
 
-    assertEquals(segments.length, 0)
-    assertEquals(segments.toStringPrep, "PlainSegmentBuilder{[0, 10), s=0:0, u=0:0, t=0:0, l=0, sz=2, na=0: [0), [10) }")
-    assertEquals(segments.toString(sequence).length, segments.length)
+    assertEquals(segments.length(), 0)
+    assertEquals(segments.toStringPrep(), "PlainSegmentBuilder{[0, 10), s=0:0, u=0:0, t=0:0, l=0, sz=2, na=0: [0), [10) }")
+    assertEquals(segments.toString(sequence).length, segments.length())
   }
 
   test("test_basicPrefix") {
@@ -88,8 +87,8 @@ final class PlainSegmentBuilderSuite extends munit.FunSuite {
     segments.append("  ")
     segments.append(0, 4)
 
-    assertEquals(segments.toStringPrep, "PlainSegmentBuilder{[0, 4), s=1:2, u=1:2, t=1:2, l=6, sz=2, na=2: a:2x' ', [0, 4) }")
-    assertEquals(segments.toString(sequence).length, segments.length)
+    assertEquals(segments.toStringPrep(), "PlainSegmentBuilder{[0, 4), s=1:2, u=1:2, t=1:2, l=6, sz=2, na=2: a:2x' ', [0, 4) }")
+    assertEquals(segments.toString(sequence).length, segments.length())
 
     assertEquals(segments.toStringWithRangesVisibleWhitespace(sequence), "  \u27e60123\u27e7")
     assertEquals(segments.toString(sequence), "  0123")
@@ -105,8 +104,8 @@ final class PlainSegmentBuilderSuite extends munit.FunSuite {
     segments.append(' ')
     segments.append(0, 4)
 
-    assertEquals(segments.toStringPrep, "PlainSegmentBuilder{[0, 4), s=1:2, u=1:2, t=1:2, l=6, sz=2, na=2: a:2x' ', [0, 4) }")
-    assertEquals(segments.toString(sequence).length, segments.length)
+    assertEquals(segments.toStringPrep(), "PlainSegmentBuilder{[0, 4), s=1:2, u=1:2, t=1:2, l=6, sz=2, na=2: a:2x' ', [0, 4) }")
+    assertEquals(segments.toString(sequence).length, segments.length())
 
     assertEquals(segments.toStringWithRangesVisibleWhitespace(sequence), "  \u27e60123\u27e7")
     assertEquals(segments.toString(sequence), "  0123")
@@ -121,8 +120,8 @@ final class PlainSegmentBuilderSuite extends munit.FunSuite {
     segments.append(' ', 2)
     segments.append(0, 4)
 
-    assertEquals(segments.toStringPrep, "PlainSegmentBuilder{[0, 4), s=1:2, u=1:2, t=1:2, l=6, sz=2, na=2: a:2x' ', [0, 4) }")
-    assertEquals(segments.toString(sequence).length, segments.length)
+    assertEquals(segments.toStringPrep(), "PlainSegmentBuilder{[0, 4), s=1:2, u=1:2, t=1:2, l=6, sz=2, na=2: a:2x' ', [0, 4) }")
+    assertEquals(segments.toString(sequence).length, segments.length())
 
     assertEquals(segments.toStringWithRangesVisibleWhitespace(sequence), "  \u27e60123\u27e7")
     assertEquals(segments.toString(sequence), "  0123")
@@ -138,8 +137,8 @@ final class PlainSegmentBuilderSuite extends munit.FunSuite {
     segments.append(0, 4)
     segments.appendAnchor(3)
 
-    assertEquals(segments.toStringPrep, "PlainSegmentBuilder{[0, 4), s=1:2, u=1:2, t=1:2, l=6, sz=2, na=2: a:2x' ', [0, 4) }")
-    assertEquals(segments.toString(sequence).length, segments.length)
+    assertEquals(segments.toStringPrep(), "PlainSegmentBuilder{[0, 4), s=1:2, u=1:2, t=1:2, l=6, sz=2, na=2: a:2x' ', [0, 4) }")
+    assertEquals(segments.toString(sequence).length, segments.length())
 
     assertEquals(segments.toStringWithRangesVisibleWhitespace(sequence), "  \u27e60123\u27e7")
     assertEquals(segments.toString(sequence), "  0123")
@@ -155,8 +154,8 @@ final class PlainSegmentBuilderSuite extends munit.FunSuite {
     segments.append(0, 4)
     segments.appendAnchor(4)
 
-    assertEquals(segments.toStringPrep, "PlainSegmentBuilder{[0, 4), s=1:2, u=1:2, t=1:2, l=6, sz=2, na=2: a:2x' ', [0, 4) }")
-    assertEquals(segments.toString(sequence).length, segments.length)
+    assertEquals(segments.toStringPrep(), "PlainSegmentBuilder{[0, 4), s=1:2, u=1:2, t=1:2, l=6, sz=2, na=2: a:2x' ', [0, 4) }")
+    assertEquals(segments.toString(sequence).length, segments.length())
 
     assertEquals(segments.toStringWithRangesVisibleWhitespace(sequence), "  \u27e60123\u27e7")
     assertEquals(segments.toString(sequence), "  0123")
@@ -172,8 +171,8 @@ final class PlainSegmentBuilderSuite extends munit.FunSuite {
     segments.append(0, 4)
     segments.appendAnchor(5)
 
-    assertEquals(segments.toStringPrep, "PlainSegmentBuilder{[0, 5), s=1:2, u=1:2, t=1:2, l=6, sz=3, na=2: a:2x' ', [0, 4), [5) }")
-    assertEquals(segments.toString(sequence).length, segments.length)
+    assertEquals(segments.toStringPrep(), "PlainSegmentBuilder{[0, 5), s=1:2, u=1:2, t=1:2, l=6, sz=3, na=2: a:2x' ', [0, 4), [5) }")
+    assertEquals(segments.toString(sequence).length, segments.length())
 
     assertEquals(segments.toStringWithRangesVisibleWhitespace(sequence), "  \u27e60123\u27e7\u27e6\u27e7")
     assertEquals(segments.toString(sequence), "  0123")
@@ -187,8 +186,8 @@ final class PlainSegmentBuilderSuite extends munit.FunSuite {
 
     segments.append(0, 4)
 
-    assertEquals(segments.toStringPrep, "PlainSegmentBuilder{[0, 4), s=0:0, u=0:0, t=0:0, l=4, sz=1, na=1: [0, 4) }")
-    assertEquals(segments.toString(sequence).length, segments.length)
+    assertEquals(segments.toStringPrep(), "PlainSegmentBuilder{[0, 4), s=0:0, u=0:0, t=0:0, l=4, sz=1, na=1: [0, 4) }")
+    assertEquals(segments.toString(sequence).length, segments.length())
 
     assertEquals(segments.toStringWithRangesVisibleWhitespace(sequence), "\u27e60123\u27e7")
     assertEquals(segments.toString(sequence), input.substring(0, 4))
@@ -203,8 +202,8 @@ final class PlainSegmentBuilderSuite extends munit.FunSuite {
     segments.append(0, 4)
     segments.append(6, 7)
 
-    assertEquals(segments.toStringPrep, "PlainSegmentBuilder{[0, 7), s=0:0, u=0:0, t=0:0, l=5, sz=2, na=2: [0, 4), [6, 7) }")
-    assertEquals(segments.toString(sequence).length, segments.length)
+    assertEquals(segments.toStringPrep(), "PlainSegmentBuilder{[0, 7), s=0:0, u=0:0, t=0:0, l=5, sz=2, na=2: [0, 4), [6, 7) }")
+    assertEquals(segments.toString(sequence).length, segments.length())
 
     assertEquals(segments.toStringWithRangesVisibleWhitespace(sequence), "\u27e60123\u27e7\u27e66\u27e7")
     assertEquals(segments.toString(sequence), input.substring(0, 4) + input.substring(6, 7))
@@ -219,8 +218,8 @@ final class PlainSegmentBuilderSuite extends munit.FunSuite {
     segments.append(0, 5)
     segments.append(3, 7)
 
-    assertEquals(segments.toStringPrep, "PlainSegmentBuilder{[0, 7), s=0:0, u=0:0, t=0:0, l=7, sz=1, na=1: [0, 7) }")
-    assertEquals(segments.toString(sequence).length, segments.length)
+    assertEquals(segments.toStringPrep(), "PlainSegmentBuilder{[0, 7), s=0:0, u=0:0, t=0:0, l=7, sz=1, na=1: [0, 7) }")
+    assertEquals(segments.toString(sequence).length, segments.length())
 
     assertEquals(segments.toStringWithRangesVisibleWhitespace(sequence), "\u27e60123456\u27e7")
     assertEquals(segments.toString(sequence), input.substring(0, 7))
@@ -235,8 +234,11 @@ final class PlainSegmentBuilderSuite extends munit.FunSuite {
     segments.append("abc")
     segments.append(3, 7)
 
-    assertEquals(segments.toStringPrep, "PlainSegmentBuilder{[0, 7), s=0:0, u=1:3, t=1:3, l=10, sz=3, na=3: [0, 5), a:'abc', [5, 7) }")
-    assertEquals(segments.toString(sequence).length, segments.length)
+    assertEquals(
+      segments.toStringPrep(),
+      "PlainSegmentBuilder{[0, 7), s=0:0, u=1:3, t=1:3, l=10, sz=3, na=3: [0, 5), a:'abc', [5, 7) }"
+    )
+    assertEquals(segments.toString(sequence).length, segments.length())
 
     assertEquals(segments.toStringWithRangesVisibleWhitespace(sequence), "\u27e601234\u27e7abc\u27e656\u27e7")
     assertEquals(segments.toString(sequence), input.substring(0, 5) + "abc" + input.substring(5, 7))
@@ -252,8 +254,11 @@ final class PlainSegmentBuilderSuite extends munit.FunSuite {
     segments.append("abc")
     segments.append("def")
 
-    assertEquals(segments.toStringPrep, "PlainSegmentBuilder{[0, 5), s=0:0, u=1:6, t=1:6, l=11, sz=3, na=2: [0, 5), a:'abcdef', [5) }")
-    assertEquals(segments.toString(sequence).length, segments.length)
+    assertEquals(
+      segments.toStringPrep(),
+      "PlainSegmentBuilder{[0, 5), s=0:0, u=1:6, t=1:6, l=11, sz=3, na=2: [0, 5), a:'abcdef', [5) }"
+    )
+    assertEquals(segments.toString(sequence).length, segments.length())
 
     assertEquals(segments.toStringWithRangesVisibleWhitespace(sequence), "\u27e601234\u27e7abcdef\u27e6\u27e7")
     assertEquals(segments.toString(sequence), input.substring(0, 5) + "abcdef")
@@ -268,8 +273,8 @@ final class PlainSegmentBuilderSuite extends munit.FunSuite {
     segments.append(0, 5)
     segments.append(5, 7)
 
-    assertEquals(segments.toStringPrep, "PlainSegmentBuilder{[0, 7), s=0:0, u=0:0, t=0:0, l=7, sz=1, na=1: [0, 7) }")
-    assertEquals(segments.toString(sequence).length, segments.length)
+    assertEquals(segments.toStringPrep(), "PlainSegmentBuilder{[0, 7), s=0:0, u=0:0, t=0:0, l=7, sz=1, na=1: [0, 7) }")
+    assertEquals(segments.toString(sequence).length, segments.length())
 
     assertEquals(segments.toStringWithRangesVisibleWhitespace(sequence), "\u27e60123456\u27e7")
     assertEquals(segments.toString(sequence), input.substring(0, 7))
@@ -283,9 +288,9 @@ final class PlainSegmentBuilderSuite extends munit.FunSuite {
     segments.append(2, 5)
     segments.append("-")
     segments.append(4, 8)
-    assertEquals(segments.toStringPrep, "PlainSegmentBuilder{[2, 8), s=0:0, u=1:1, t=1:1, l=7, sz=3, na=3: [2, 5), a:'-', [5, 8) }")
+    assertEquals(segments.toStringPrep(), "PlainSegmentBuilder{[2, 8), s=0:0, u=1:1, t=1:1, l=7, sz=3, na=3: [2, 5), a:'-', [5, 8) }")
     assertEquals(segments.toString(sequence), "234-567")
-    assertEquals(segments.toString(sequence).length, segments.length)
+    assertEquals(segments.toString(sequence).length, segments.length())
   }
 
   test("test_handleOverlapDefaultChop2") {
@@ -296,8 +301,8 @@ final class PlainSegmentBuilderSuite extends munit.FunSuite {
     segments.append(2, 5)
     segments.append("-")
     segments.append(1, 8)
-    assertEquals(segments.toStringPrep, "PlainSegmentBuilder{[2, 8), s=0:0, u=1:1, t=1:1, l=7, sz=3, na=3: [2, 5), a:'-', [5, 8) }")
-    assertEquals(segments.toString(sequence).length, segments.length)
+    assertEquals(segments.toStringPrep(), "PlainSegmentBuilder{[2, 8), s=0:0, u=1:1, t=1:1, l=7, sz=3, na=3: [2, 5), a:'-', [5, 8) }")
+    assertEquals(segments.toString(sequence).length, segments.length())
   }
 
   test("test_handleOverlapDefaultChop3") {
@@ -308,8 +313,8 @@ final class PlainSegmentBuilderSuite extends munit.FunSuite {
     segments.append(2, 5)
     segments.append("-")
     segments.append(3, 5)
-    assertEquals(segments.toStringPrep, "PlainSegmentBuilder{[2, 5), s=0:0, u=1:1, t=1:1, l=4, sz=3, na=2: [2, 5), a:'-', [5) }")
-    assertEquals(segments.toString(sequence).length, segments.length)
+    assertEquals(segments.toStringPrep(), "PlainSegmentBuilder{[2, 5), s=0:0, u=1:1, t=1:1, l=4, sz=3, na=2: [2, 5), a:'-', [5) }")
+    assertEquals(segments.toString(sequence).length, segments.length())
   }
 
   test("test_handleOverlapDefaultChop4") {
@@ -320,8 +325,8 @@ final class PlainSegmentBuilderSuite extends munit.FunSuite {
     segments.append(2, 5)
     segments.append("-")
     segments.append(2, 4)
-    assertEquals(segments.toStringPrep, "PlainSegmentBuilder{[2, 5), s=0:0, u=1:1, t=1:1, l=4, sz=3, na=2: [2, 5), a:'-', [5) }")
-    assertEquals(segments.toString(sequence).length, segments.length)
+    assertEquals(segments.toStringPrep(), "PlainSegmentBuilder{[2, 5), s=0:0, u=1:1, t=1:1, l=4, sz=3, na=2: [2, 5), a:'-', [5) }")
+    assertEquals(segments.toString(sequence).length, segments.length())
   }
 
   test("test_handleOverlapDefaultChop5") {
@@ -332,8 +337,8 @@ final class PlainSegmentBuilderSuite extends munit.FunSuite {
     segments.append(2, 5)
     segments.append("-")
     segments.append(2, 5)
-    assertEquals(segments.toStringPrep, "PlainSegmentBuilder{[2, 5), s=0:0, u=1:1, t=1:1, l=4, sz=3, na=2: [2, 5), a:'-', [5) }")
-    assertEquals(segments.toString(sequence).length, segments.length)
+    assertEquals(segments.toStringPrep(), "PlainSegmentBuilder{[2, 5), s=0:0, u=1:1, t=1:1, l=4, sz=3, na=2: [2, 5), a:'-', [5) }")
+    assertEquals(segments.toString(sequence).length, segments.length())
   }
 
   test("test_handleOverlapDefaultChop6") {
@@ -344,8 +349,8 @@ final class PlainSegmentBuilderSuite extends munit.FunSuite {
     segments.append(2, 5)
     segments.append("-")
     segments.append(3, 4)
-    assertEquals(segments.toStringPrep, "PlainSegmentBuilder{[2, 5), s=0:0, u=1:1, t=1:1, l=4, sz=3, na=2: [2, 5), a:'-', [5) }")
-    assertEquals(segments.toString(sequence).length, segments.length)
+    assertEquals(segments.toStringPrep(), "PlainSegmentBuilder{[2, 5), s=0:0, u=1:1, t=1:1, l=4, sz=3, na=2: [2, 5), a:'-', [5) }")
+    assertEquals(segments.toString(sequence).length, segments.length())
   }
 
   test("test_handleOverlapDefaultMerge1") {
@@ -355,8 +360,8 @@ final class PlainSegmentBuilderSuite extends munit.FunSuite {
 
     segments.append(2, 5)
     segments.append(4, 8)
-    assertEquals(segments.toStringPrep, "PlainSegmentBuilder{[2, 8), s=0:0, u=0:0, t=0:0, l=6, sz=1, na=1: [2, 8) }")
-    assertEquals(segments.toString(sequence).length, segments.length)
+    assertEquals(segments.toStringPrep(), "PlainSegmentBuilder{[2, 8), s=0:0, u=0:0, t=0:0, l=6, sz=1, na=1: [2, 8) }")
+    assertEquals(segments.toString(sequence).length, segments.length())
   }
 
   test("test_handleOverlapDefaultMerge2") {
@@ -366,8 +371,8 @@ final class PlainSegmentBuilderSuite extends munit.FunSuite {
 
     segments.append(2, 5)
     segments.append(1, 8)
-    assertEquals(segments.toStringPrep, "PlainSegmentBuilder{[2, 8), s=0:0, u=0:0, t=0:0, l=6, sz=1, na=1: [2, 8) }")
-    assertEquals(segments.toString(sequence).length, segments.length)
+    assertEquals(segments.toStringPrep(), "PlainSegmentBuilder{[2, 8), s=0:0, u=0:0, t=0:0, l=6, sz=1, na=1: [2, 8) }")
+    assertEquals(segments.toString(sequence).length, segments.length())
   }
 
   test("test_handleOverlapDefaultMerge3") {
@@ -377,8 +382,8 @@ final class PlainSegmentBuilderSuite extends munit.FunSuite {
 
     segments.append(2, 5)
     segments.append(3, 5)
-    assertEquals(segments.toStringPrep, "PlainSegmentBuilder{[2, 5), s=0:0, u=0:0, t=0:0, l=3, sz=1, na=1: [2, 5) }")
-    assertEquals(segments.toString(sequence).length, segments.length)
+    assertEquals(segments.toStringPrep(), "PlainSegmentBuilder{[2, 5), s=0:0, u=0:0, t=0:0, l=3, sz=1, na=1: [2, 5) }")
+    assertEquals(segments.toString(sequence).length, segments.length())
   }
 
   test("test_handleOverlapDefaultMerge4") {
@@ -388,8 +393,8 @@ final class PlainSegmentBuilderSuite extends munit.FunSuite {
 
     segments.append(2, 5)
     segments.append(2, 4)
-    assertEquals(segments.toStringPrep, "PlainSegmentBuilder{[2, 5), s=0:0, u=0:0, t=0:0, l=3, sz=1, na=1: [2, 5) }")
-    assertEquals(segments.toString(sequence).length, segments.length)
+    assertEquals(segments.toStringPrep(), "PlainSegmentBuilder{[2, 5), s=0:0, u=0:0, t=0:0, l=3, sz=1, na=1: [2, 5) }")
+    assertEquals(segments.toString(sequence).length, segments.length())
   }
 
   test("test_handleOverlapDefaultMerge5") {
@@ -399,8 +404,8 @@ final class PlainSegmentBuilderSuite extends munit.FunSuite {
 
     segments.append(2, 5)
     segments.append(2, 5)
-    assertEquals(segments.toStringPrep, "PlainSegmentBuilder{[2, 5), s=0:0, u=0:0, t=0:0, l=3, sz=1, na=1: [2, 5) }")
-    assertEquals(segments.toString(sequence).length, segments.length)
+    assertEquals(segments.toStringPrep(), "PlainSegmentBuilder{[2, 5), s=0:0, u=0:0, t=0:0, l=3, sz=1, na=1: [2, 5) }")
+    assertEquals(segments.toString(sequence).length, segments.length())
   }
 
   test("test_handleOverlapDefaultMerge6") {
@@ -410,8 +415,8 @@ final class PlainSegmentBuilderSuite extends munit.FunSuite {
 
     segments.append(2, 5)
     segments.append(3, 4)
-    assertEquals(segments.toStringPrep, "PlainSegmentBuilder{[2, 5), s=0:0, u=0:0, t=0:0, l=3, sz=1, na=1: [2, 5) }")
-    assertEquals(segments.toString(sequence).length, segments.length)
+    assertEquals(segments.toStringPrep(), "PlainSegmentBuilder{[2, 5), s=0:0, u=0:0, t=0:0, l=3, sz=1, na=1: [2, 5) }")
+    assertEquals(segments.toString(sequence).length, segments.length())
   }
 
   /*
@@ -427,8 +432,8 @@ final class PlainSegmentBuilderSuite extends munit.FunSuite {
     segments.append(0, 3)
     segments.append("345")
     segments.append(6, 10)
-    assertEquals(segments.toStringPrep, "OptimizedSegmentBuilder2{[0, 10), s=0:0, u=0:0, t=0:0, l=10, sz=1, na=1: [0, 10) }")
-    assertEquals(segments.toString(sequence).length, segments.length)
+    assertEquals(segments.toStringPrep(), "OptimizedSegmentBuilder2{[0, 10), s=0:0, u=0:0, t=0:0, l=10, sz=1, na=1: [0, 10) }")
+    assertEquals(segments.toString(sequence).length, segments.length())
   }
 
   test("test_optimizerExtendPrev2") {
@@ -441,10 +446,10 @@ final class PlainSegmentBuilderSuite extends munit.FunSuite {
     segments.append("34 ")
     segments.append(6, 10)
     assertEquals(
-      segments.toStringPrep,
+      segments.toStringPrep(),
       "OptimizedSegmentBuilder2{[0, 10), s=1:1, u=1:1, t=1:1, l=10, sz=3, na=3: [0, 5), a:' ', [6, 10) }"
     )
-    assertEquals(segments.toString(sequence).length, segments.length)
+    assertEquals(segments.toString(sequence).length, segments.length())
   }
 
   test("test_optimizerExtendPrevNext") {
@@ -457,10 +462,10 @@ final class PlainSegmentBuilderSuite extends munit.FunSuite {
     segments.append("34 5")
     segments.append(6, 10)
     assertEquals(
-      segments.toStringPrep,
+      segments.toStringPrep(),
       "OptimizedSegmentBuilder2{[0, 10), s=1:1, u=1:1, t=1:1, l=11, sz=3, na=3: [0, 5), a:' ', [5, 10) }"
     )
-    assertEquals(segments.toString(sequence).length, segments.length)
+    assertEquals(segments.toString(sequence).length, segments.length())
   }
 
   test("test_optimizerExtendPrevNextCollapse") {
@@ -473,10 +478,10 @@ final class PlainSegmentBuilderSuite extends munit.FunSuite {
     segments.append("34 56")
     segments.append(7, 10)
     assertEquals(
-      segments.toStringPrep,
+      segments.toStringPrep(),
       "OptimizedSegmentBuilder2{[0, 10), s=1:1, u=1:1, t=1:1, l=11, sz=3, na=3: [0, 5), a:' ', [5, 10) }"
     )
-    assertEquals(segments.toString(sequence).length, segments.length)
+    assertEquals(segments.toString(sequence).length, segments.length())
   }
 
   test("test_optimizerExtendNext") {
@@ -489,10 +494,10 @@ final class PlainSegmentBuilderSuite extends munit.FunSuite {
     segments.append(" 3456")
     segments.append(7, 10)
     assertEquals(
-      segments.toStringPrep,
+      segments.toStringPrep(),
       "OptimizedSegmentBuilder2{[0, 10), s=1:1, u=1:1, t=1:1, l=11, sz=3, na=3: [0, 3), a:' ', [3, 10) }"
     )
-    assertEquals(segments.toString(sequence).length, segments.length)
+    assertEquals(segments.toString(sequence).length, segments.length())
   }
 
   test("test_optimizerExtendNext1") {
@@ -505,7 +510,7 @@ final class PlainSegmentBuilderSuite extends munit.FunSuite {
     segments.append(" 345")
     segments.append(6, 10)
     assertEquals(
-      segments.toStringPrep,
+      segments.toStringPrep(),
       "OptimizedSegmentBuilder2{[0, 10), s=1:1, u=1:1, t=1:1, l=11, sz=3, na=3: [0, 3), a:' ', [3, 10) }"
     )
   }
@@ -520,10 +525,10 @@ final class PlainSegmentBuilderSuite extends munit.FunSuite {
     segments.append(" 345")
     segments.append(6, 10)
     assertEquals(
-      segments.toStringPrep,
+      segments.toStringPrep(),
       "OptimizedSegmentBuilder2{[0, 10), s=1:1, u=1:1, t=1:1, l=11, sz=3, na=3: [0, 3), a:' ', [3, 10) }"
     )
-    assertEquals(segments.toString(sequence).length, segments.length)
+    assertEquals(segments.toString(sequence).length, segments.length())
   }
 
   /*
@@ -538,8 +543,8 @@ final class PlainSegmentBuilderSuite extends munit.FunSuite {
 
     segments.append("    ")
     segments.append(2, 12)
-    assertEquals(segments.toStringPrep, "OptimizedSegmentBuilder2{[0, 12), s=1:2, u=1:2, t=1:2, l=14, sz=2, na=2: a:2x' ', [0, 12) }")
-    assertEquals(segments.toString(sequence).length, segments.length)
+    assertEquals(segments.toStringPrep(), "OptimizedSegmentBuilder2{[0, 12), s=1:2, u=1:2, t=1:2, l=14, sz=2, na=2: a:2x' ', [0, 12) }")
+    assertEquals(segments.toString(sequence).length, segments.length())
   }
 
   test("test_optimizersSpacesNone") {
@@ -552,10 +557,10 @@ final class PlainSegmentBuilderSuite extends munit.FunSuite {
     segments.append("    ")
     segments.append(7, 12)
     assertEquals(
-      segments.toStringPrep,
+      segments.toStringPrep(),
       "OptimizedSegmentBuilder2{[0, 12), s=1:2, u=1:2, t=1:2, l=14, sz=3, na=3: [0, 6), a:2x' ', [6, 12) }"
     )
-    assertEquals(segments.toString(sequence).length, segments.length)
+    assertEquals(segments.toString(sequence).length, segments.length())
   }
 
   test("test_optimizersSpacesLeft") {
@@ -568,10 +573,10 @@ final class PlainSegmentBuilderSuite extends munit.FunSuite {
     segments.append("    ")
     segments.append(7, 12)
     assertEquals(
-      segments.toStringPrep,
+      segments.toStringPrep(),
       "OptimizedSegmentBuilder2{[0, 12), s=1:2, u=1:2, t=1:2, l=14, sz=3, na=3: [0, 5), a:2x' ', [5, 12) }"
     )
-    assertEquals(segments.toString(sequence).length, segments.length)
+    assertEquals(segments.toString(sequence).length, segments.length())
   }
 
   test("test_optimizersSpacesRight") {
@@ -584,10 +589,10 @@ final class PlainSegmentBuilderSuite extends munit.FunSuite {
     segments.append("    ")
     segments.append(7, 12)
     assertEquals(
-      segments.toStringPrep,
+      segments.toStringPrep(),
       "OptimizedSegmentBuilder2{[0, 12), s=1:2, u=1:2, t=1:2, l=14, sz=3, na=3: [0, 7), a:2x' ', [7, 12) }"
     )
-    assertEquals(segments.toString(sequence).length, segments.length)
+    assertEquals(segments.toString(sequence).length, segments.length())
   }
 
   test("test_optimizersIndent1Left") {
@@ -598,8 +603,8 @@ final class PlainSegmentBuilderSuite extends munit.FunSuite {
 
     segments.append("    ")
     segments.append(2, 12)
-    assertEquals(segments.toStringPrep, "OptimizedSegmentBuilder2{[0, 12), s=1:2, u=1:2, t=1:2, l=14, sz=2, na=2: a:2x' ', [0, 12) }")
-    assertEquals(segments.toString(sequence).length, segments.length)
+    assertEquals(segments.toStringPrep(), "OptimizedSegmentBuilder2{[0, 12), s=1:2, u=1:2, t=1:2, l=14, sz=2, na=2: a:2x' ', [0, 12) }")
+    assertEquals(segments.toString(sequence).length, segments.length())
   }
 
   test("test_optimizersIndent1Right") {
@@ -610,8 +615,8 @@ final class PlainSegmentBuilderSuite extends munit.FunSuite {
 
     segments.append("    ")
     segments.append(2, 12)
-    assertEquals(segments.toStringPrep, "OptimizedSegmentBuilder2{[0, 12), s=1:2, u=1:2, t=1:2, l=14, sz=2, na=2: a:2x' ', [0, 12) }")
-    assertEquals(segments.toString(sequence).length, segments.length)
+    assertEquals(segments.toStringPrep(), "OptimizedSegmentBuilder2{[0, 12), s=1:2, u=1:2, t=1:2, l=14, sz=2, na=2: a:2x' ', [0, 12) }")
+    assertEquals(segments.toString(sequence).length, segments.length())
   }
 
   test("test_optimizersEOL1None") {
@@ -624,10 +629,10 @@ final class PlainSegmentBuilderSuite extends munit.FunSuite {
     segments.append("\n    ")
     segments.append(8, 12)
     assertEquals(
-      segments.toStringPrep,
+      segments.toStringPrep(),
       "OptimizedSegmentBuilder2{[0, 12), s=1:2, u=1:2, t=1:2, l=14, sz=3, na=3: [0, 6), a:2x' ', [6, 12) }"
     )
-    assertEquals(segments.toString(sequence).length, segments.length)
+    assertEquals(segments.toString(sequence).length, segments.length())
   }
 
   test("test_optimizersEOL1Left") {
@@ -640,10 +645,10 @@ final class PlainSegmentBuilderSuite extends munit.FunSuite {
     segments.append("\n    ")
     segments.append(8, 12)
     assertEquals(
-      segments.toStringPrep,
+      segments.toStringPrep(),
       "OptimizedSegmentBuilder2{[0, 12), s=1:2, u=1:2, t=1:2, l=14, sz=3, na=3: [0, 6), a:2x' ', [6, 12) }"
     )
-    assertEquals(segments.toString(sequence).length, segments.length)
+    assertEquals(segments.toString(sequence).length, segments.length())
   }
 
   test("test_optimizersEOL1Right") {
@@ -656,10 +661,10 @@ final class PlainSegmentBuilderSuite extends munit.FunSuite {
     segments.append("\n    ")
     segments.append(8, 12)
     assertEquals(
-      segments.toStringPrep,
+      segments.toStringPrep(),
       "OptimizedSegmentBuilder2{[0, 12), s=1:2, u=1:2, t=1:2, l=14, sz=3, na=3: [0, 6), a:2x' ', [6, 12) }"
     )
-    assertEquals(segments.toString(sequence).length, segments.length)
+    assertEquals(segments.toString(sequence).length, segments.length())
   }
 
   test("test_optimizersEOL2None") {
@@ -672,10 +677,10 @@ final class PlainSegmentBuilderSuite extends munit.FunSuite {
     segments.append("\n\n   ")
     segments.append(8, 12)
     assertEquals(
-      segments.toStringPrep,
+      segments.toStringPrep(),
       "OptimizedSegmentBuilder2{[0, 12), s=1:2, u=1:2, t=1:2, l=14, sz=3, na=3: [0, 7), a:2x' ', [7, 12) }"
     )
-    assertEquals(segments.toString(sequence).length, segments.length)
+    assertEquals(segments.toString(sequence).length, segments.length())
   }
 
   test("test_optimizersEOL2Left") {
@@ -688,10 +693,10 @@ final class PlainSegmentBuilderSuite extends munit.FunSuite {
     segments.append("\n\n   ")
     segments.append(8, 12)
     assertEquals(
-      segments.toStringPrep,
+      segments.toStringPrep(),
       "OptimizedSegmentBuilder2{[0, 12), s=1:2, u=1:2, t=1:2, l=14, sz=3, na=3: [0, 7), a:2x' ', [7, 12) }"
     )
-    assertEquals(segments.toString(sequence).length, segments.length)
+    assertEquals(segments.toString(sequence).length, segments.length())
   }
 
   test("test_optimizersEOL2Right") {
@@ -704,10 +709,10 @@ final class PlainSegmentBuilderSuite extends munit.FunSuite {
     segments.append("\n\n   ")
     segments.append(8, 12)
     assertEquals(
-      segments.toStringPrep,
+      segments.toStringPrep(),
       "OptimizedSegmentBuilder2{[0, 12), s=1:2, u=1:2, t=1:2, l=14, sz=3, na=3: [0, 7), a:2x' ', [7, 12) }"
     )
-    assertEquals(segments.toString(sequence).length, segments.length)
+    assertEquals(segments.toString(sequence).length, segments.length())
   }
 
   test("test_optimizersEOL3None") {
@@ -720,10 +725,10 @@ final class PlainSegmentBuilderSuite extends munit.FunSuite {
     segments.append("34\n    ")
     segments.append(8, 12)
     assertEquals(
-      segments.toStringPrep,
+      segments.toStringPrep(),
       "OptimizedSegmentBuilder2{[0, 12), s=1:2, u=1:2, t=1:2, l=14, sz=3, na=3: [0, 6), a:2x' ', [6, 12) }"
     )
-    assertEquals(segments.toString(sequence).length, segments.length)
+    assertEquals(segments.toString(sequence).length, segments.length())
   }
 
   test("test_optimizersEOL3Left") {
@@ -736,10 +741,10 @@ final class PlainSegmentBuilderSuite extends munit.FunSuite {
     segments.append("34\n    ")
     segments.append(8, 12)
     assertEquals(
-      segments.toStringPrep,
+      segments.toStringPrep(),
       "OptimizedSegmentBuilder2{[0, 12), s=1:2, u=1:2, t=1:2, l=14, sz=3, na=3: [0, 6), a:2x' ', [6, 12) }"
     )
-    assertEquals(segments.toString(sequence).length, segments.length)
+    assertEquals(segments.toString(sequence).length, segments.length())
   }
 
   test("test_optimizersEOL3LeftNonAscii") {
@@ -752,10 +757,10 @@ final class PlainSegmentBuilderSuite extends munit.FunSuite {
     segments.append("34\n\u2026\u2026\u2026\u2026")
     segments.append(8, 12)
     assertEquals(
-      escapeJavaString(segments.toStringPrep),
+      escapeJavaString(segments.toStringPrep()),
       "OptimizedSegmentBuilder2{[0, 12), s=0:0, u=0:0, t=1:2, l=14, sz=3, na=3: [0, 6), 2x'\u2026', [6, 12) }"
     )
-    assertEquals(segments.toString(sequence).length, segments.length)
+    assertEquals(segments.toString(sequence).length, segments.length())
   }
 
   test("test_optimizersEOL3Right") {
@@ -768,10 +773,10 @@ final class PlainSegmentBuilderSuite extends munit.FunSuite {
     segments.append("34\n    ")
     segments.append(8, 12)
     assertEquals(
-      segments.toStringPrep,
+      segments.toStringPrep(),
       "OptimizedSegmentBuilder2{[0, 12), s=1:2, u=1:2, t=1:2, l=14, sz=3, na=3: [0, 6), a:2x' ', [6, 12) }"
     )
-    assertEquals(segments.toString(sequence).length, segments.length)
+    assertEquals(segments.toString(sequence).length, segments.length())
   }
 
   test("test_optimizers1") {
@@ -784,10 +789,10 @@ final class PlainSegmentBuilderSuite extends munit.FunSuite {
     segments.append("\n  ")
     segments.append(7, 12)
     assertEquals(
-      segments.toStringPrep,
+      segments.toStringPrep(),
       "OptimizedSegmentBuilder2{[0, 12), s=1:2, u=1:2, t=1:2, l=13, sz=4, na=4: [0, 5), [6, 7), a:2x' ', [7, 12) }"
     )
-    assertEquals(segments.toString(sequence).length, segments.length)
+    assertEquals(segments.toString(sequence).length, segments.length())
   }
 
   test("test_optimizers2") {
@@ -798,8 +803,8 @@ final class PlainSegmentBuilderSuite extends munit.FunSuite {
 
     segments.append(0, 5)
     segments.append("\n")
-    assertEquals(segments.toStringPrep, "OptimizedSegmentBuilder2{[0, 7), s=0:0, u=0:0, t=0:0, l=6, sz=2, na=2: [0, 5), [6, 7) }")
-    assertEquals(segments.toString(sequence).length, segments.length)
+    assertEquals(segments.toStringPrep(), "OptimizedSegmentBuilder2{[0, 7), s=0:0, u=0:0, t=0:0, l=6, sz=2, na=2: [0, 5), [6, 7) }")
+    assertEquals(segments.toString(sequence).length, segments.length())
   }
 
   test("test_optimizers2a") {
@@ -811,8 +816,8 @@ final class PlainSegmentBuilderSuite extends munit.FunSuite {
 
     segments.append(0, 5)
     segments.append(" \n")
-    assertEquals(segments.toStringPrep, "OptimizedSegmentBuilder2{[0, 8), s=0:0, u=0:0, t=0:0, l=7, sz=2, na=2: [0, 6), [7, 8) }")
-    assertEquals(segments.toString(sequence).length, segments.length)
+    assertEquals(segments.toStringPrep(), "OptimizedSegmentBuilder2{[0, 8), s=0:0, u=0:0, t=0:0, l=7, sz=2, na=2: [0, 6), [7, 8) }")
+    assertEquals(segments.toString(sequence).length, segments.length())
   }
 
   test("test_optimizers3") {
@@ -824,10 +829,10 @@ final class PlainSegmentBuilderSuite extends munit.FunSuite {
     segments.append(0, 5)
     segments.append("01234")
     assertEquals(
-      segments.toStringPrep,
+      segments.toStringPrep(),
       escapeJavaString("OptimizedSegmentBuilder2{[0, 10), s=0:0, u=0:0, t=0:0, l=10, sz=1, na=1: [0, 10) }")
     )
-    assertEquals(segments.toString(sequence).length, segments.length)
+    assertEquals(segments.toString(sequence).length, segments.length())
   }
 
   test("test_optimizers4") {
@@ -840,10 +845,10 @@ final class PlainSegmentBuilderSuite extends munit.FunSuite {
     segments.append("\n")
     segments.append(8, 13)
     assertEquals(
-      segments.toStringPrep,
+      segments.toStringPrep(),
       "OptimizedSegmentBuilder2{[0, 13), s=0:0, u=0:0, t=0:0, l=11, sz=3, na=3: [0, 5), [6, 7), [8, 13) }"
     )
-    assertEquals(segments.toString(sequence).length, segments.length)
+    assertEquals(segments.toString(sequence).length, segments.length())
   }
 
   test("test_optimizersCompoundNoAnchors1") {
@@ -858,14 +863,14 @@ final class PlainSegmentBuilderSuite extends munit.FunSuite {
     val segments  = new OptimizedSegmentBuilder2(sequence, optimizer, F_TRACK_FIRST256)
 
     val lines = sequence.splitListEOL(false)
-    lines.asScala.foreach { line =>
+    lines.foreach { line =>
       val trim = line.trim()
       if (!trim.isEmpty) segments.append("    ")
-      segments.append(trim.getSourceRange)
+      segments.append(trim.getSourceRange())
       segments.append("\n")
     }
     assertEquals(
-      escapeJavaString(segments.toStringPrep),
+      escapeJavaString(segments.toStringPrep()),
       "OptimizedSegmentBuilder2{[0, 30), s=3:6, u=3:6, t=3:6, l=34, sz=8, na=8: a:2x' ', [0, 8), [9, 10), a:2x' ', [10, 18), [19, 21), a:2x' ', [21, 30) }"
     )
     assertEquals(
@@ -895,17 +900,17 @@ final class PlainSegmentBuilderSuite extends munit.FunSuite {
     val segments  = new OptimizedSegmentBuilder2(sequence, optimizer, F_TRACK_FIRST256)
 
     val lines = sequence.splitListEOL(false)
-    lines.asScala.foreach { line =>
+    lines.foreach { line =>
       val trim = line.trim()
       if (!trim.isEmpty) segments.append("  ")
-      segments.append(trim.getSourceRange)
+      segments.append(trim.getSourceRange())
       segments.append("\n")
     }
     assertEquals(
-      escapeJavaString(segments.toStringPrep),
+      escapeJavaString(segments.toStringPrep()),
       "OptimizedSegmentBuilder2{[0, 30), s=0:0, u=0:0, t=0:0, l=28, sz=3, na=3: [0, 8), [9, 18), [19, 30) }"
     )
-    assertEquals(segments.toString(sequence).length, segments.length)
+    assertEquals(segments.toString(sequence).length, segments.length())
 
     assertEquals(
       segments.toStringWithRangesVisibleWhitespace(input),
@@ -934,17 +939,17 @@ final class PlainSegmentBuilderSuite extends munit.FunSuite {
     val segments  = new OptimizedSegmentBuilder2(sequence, optimizer, F_TRACK_FIRST256)
 
     val lines = sequence.splitListEOL(false)
-    lines.asScala.foreach { line =>
+    lines.foreach { line =>
       val trim = line.trim()
 //            if (!trim.isEmpty()) segments.append("  ")
-      segments.append(trim.getSourceRange)
+      segments.append(trim.getSourceRange())
       segments.append("\n")
     }
     assertEquals(
-      escapeJavaString(segments.toStringPrep),
+      escapeJavaString(segments.toStringPrep()),
       "OptimizedSegmentBuilder2{[0, 23), s=0:0, u=0:0, t=0:0, l=22, sz=2, na=2: [0, 13), [14, 23) }"
     )
-    assertEquals(segments.toString(sequence).length, segments.length)
+    assertEquals(segments.toString(sequence).length, segments.length())
 
     assertEquals(segments.toStringWithRangesVisibleWhitespace(input), "\u27e6line 1\\nline 2\u27e7\u27e6\\n\\nline 3\\n\u27e7")
 
@@ -970,14 +975,14 @@ final class PlainSegmentBuilderSuite extends munit.FunSuite {
     val segments  = new OptimizedSegmentBuilder2(sequence, optimizer, F_TRACK_FIRST256 | F_INCLUDE_ANCHORS)
 
     val lines = sequence.splitListEOL(false)
-    lines.asScala.foreach { line =>
+    lines.foreach { line =>
       val trim = line.trim()
       if (!trim.isEmpty) segments.append("    ")
-      segments.append(trim.getSourceRange)
+      segments.append(trim.getSourceRange())
       segments.append("\n")
     }
     assertEquals(
-      escapeJavaString(segments.toStringPrep),
+      escapeJavaString(segments.toStringPrep()),
       "OptimizedSegmentBuilder2{[0, 30), s=3:6, u=3:6, t=3:6, l=34, sz=8, na=8: a:2x' ', [0, 8), [9, 10), a:2x' ', [10, 18), [19, 21), a:2x' ', [21, 30) }"
     )
     assertEquals(
@@ -1007,17 +1012,17 @@ final class PlainSegmentBuilderSuite extends munit.FunSuite {
     val segments  = new OptimizedSegmentBuilder2(sequence, optimizer, F_TRACK_FIRST256 | F_INCLUDE_ANCHORS)
 
     val lines = sequence.splitListEOL(false)
-    lines.asScala.foreach { line =>
+    lines.foreach { line =>
       val trim = line.trim()
       if (!trim.isEmpty) segments.append("  ")
-      segments.append(trim.getSourceRange)
+      segments.append(trim.getSourceRange())
       segments.append("\n")
     }
     assertEquals(
-      escapeJavaString(segments.toStringPrep),
+      escapeJavaString(segments.toStringPrep()),
       "OptimizedSegmentBuilder2{[0, 30), s=0:0, u=0:0, t=0:0, l=28, sz=3, na=3: [0, 8), [9, 18), [19, 30) }"
     )
-    assertEquals(segments.toString(sequence).length, segments.length)
+    assertEquals(segments.toString(sequence).length, segments.length())
 
     assertEquals(
       segments.toStringWithRangesVisibleWhitespace(input),
@@ -1046,17 +1051,17 @@ final class PlainSegmentBuilderSuite extends munit.FunSuite {
     val segments  = new OptimizedSegmentBuilder2(sequence, optimizer, F_TRACK_FIRST256 | F_INCLUDE_ANCHORS)
 
     val lines = sequence.splitListEOL(false)
-    lines.asScala.foreach { line =>
+    lines.foreach { line =>
       val trim = line.trim()
 //            if (!trim.isEmpty()) segments.append("  ")
-      segments.append(trim.getSourceRange)
+      segments.append(trim.getSourceRange())
       segments.append("\n")
     }
     assertEquals(
-      escapeJavaString(segments.toStringPrep),
+      escapeJavaString(segments.toStringPrep()),
       "OptimizedSegmentBuilder2{[0, 23), s=0:0, u=0:0, t=0:0, l=22, sz=2, na=2: [0, 13), [14, 23) }"
     )
-    assertEquals(segments.toString(sequence).length, segments.length)
+    assertEquals(segments.toString(sequence).length, segments.length())
 
     assertEquals(segments.toStringWithRangesVisibleWhitespace(input), "\u27e6line 1\\nline 2\u27e7\u27e6\\n\\nline 3\\n\u27e7")
 

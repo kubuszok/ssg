@@ -36,7 +36,9 @@ final class UsageExampleSuite extends munit.FunSuite {
     var wordCount: Int = 0
 
     private val myVisitor: NodeVisitor = new NodeVisitor(
-      new VisitHandler[Text](classOf[Text], (text: Text) => visit(text))
+      Array[ssg.md.util.ast.VisitHandler[?]](
+        new VisitHandler[Text](classOf[Text], (text: Text) => visit(text))
+      )
     )
 
     def countWords(node: Node): Unit =

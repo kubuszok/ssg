@@ -21,15 +21,15 @@ import scala.language.implicitConversions
 final class MergeAutoLinkSuite extends munit.FunSuite {
 
   private val OPTIONS: DataHolder = new MutableDataSet()
-    .set(Parser.BLANK_LINES_IN_AST, true)
-    .set(Parser.PARSE_INNER_HTML_COMMENTS, true)
-    .set(Parser.HEADING_NO_ATX_SPACE, true)
+    .set(Parser.BLANK_LINES_IN_AST, java.lang.Boolean.valueOf(true))
+    .set(Parser.PARSE_INNER_HTML_COMMENTS, java.lang.Boolean.valueOf(true))
+    .set(Parser.HEADING_NO_ATX_SPACE, java.lang.Boolean.valueOf(true))
     .set(Parser.EXTENSIONS, Collections.singletonList(AutolinkExtension.create()))
-    .set(Formatter.DEFAULT_LINK_RESOLVER, true)
-    .set(Formatter.MAX_TRAILING_BLANK_LINES, 0)
-    .toImmutable
+    .set(Formatter.DEFAULT_LINK_RESOLVER, java.lang.Boolean.valueOf(true))
+    .set(Formatter.MAX_TRAILING_BLANK_LINES, java.lang.Integer.valueOf(0))
+    .toImmutable()
 
-  private val FORMATTER: Formatter = Formatter.builder(Nullable(OPTIONS)).build()
+  private val FORMATTER: Formatter = Formatter.builder(OPTIONS).build()
   private val PARSER:    Parser    = Parser.builder(OPTIONS).build()
 
   private def assertMerged(expected: String, markdownSources: String*): Unit =

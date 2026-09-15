@@ -18,11 +18,13 @@ final class AbstractVisitorSuite extends munit.FunSuite {
 
   test("replacingNodeInVisitorShouldNotDestroyVisitOrder") {
     val visitor = new NodeVisitor(
-      new VisitHandler[Text](classOf[Text],
-                             (node: Text) => {
-                               node.insertAfter(new Code(node.chars))
-                               node.unlink()
-                             }
+      Array[VisitHandler[?]](
+        new VisitHandler[Text](classOf[Text],
+                               (node: Text) => {
+                                 node.insertAfter(new Code(node.chars))
+                                 node.unlink()
+                               }
+        )
       )
     )
 
@@ -32,10 +34,10 @@ final class AbstractVisitorSuite extends munit.FunSuite {
 
     visitor.visit(paragraph)
 
-    assertCode("foo", paragraph.firstChild.get)
-    assertCode("bar", paragraph.firstChild.get.next.get)
-    assert(paragraph.firstChild.get.next.get.next.isEmpty)
-    assertCode("bar", paragraph.lastChild.get)
+    assertCode("foo", paragraph.getFirstChild())
+    assertCode("bar", paragraph.getFirstChild().getNext())
+    assert(paragraph.getFirstChild().getNext().getNext() == null)
+    assertCode("bar", paragraph.getLastChild())
   }
 
   private def assertCode(expectedLiteral: String, node: Node): Unit = {

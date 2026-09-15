@@ -20,12 +20,12 @@ import scala.language.implicitConversions
 
 final class ComboYouTubeLinkSpecTest extends RendererSpecTestSuite {
   override def specResource:   ResourceLocation                       = ComboYouTubeLinkSpecTest.RESOURCE_LOCATION
-  override def defaultOptions: Nullable[DataHolder]                   = Nullable(ComboYouTubeLinkSpecTest.OPTIONS)
+  override def defaultOptions: Nullable[DataHolder]                   = ComboYouTubeLinkSpecTest.OPTIONS
   override def optionsMap:     java.util.Map[String, ? <: DataHolder] = new java.util.HashMap[String, DataHolder]()
 }
 
 object ComboYouTubeLinkSpecTest {
   val SPEC_RESOURCE:     String           = "/ssg/md/ext/youtube/embedded/test/ext_youtube_link_spec.md"
   val RESOURCE_LOCATION: ResourceLocation = ResourceLocation.of(classOf[ComboYouTubeLinkSpecTest], SPEC_RESOURCE)
-  val OPTIONS:           DataHolder       = new MutableDataSet().set(Parser.EXTENSIONS, Collections.singleton(YouTubeLinkExtension.create())).toImmutable
+  val OPTIONS:           DataHolder       = new MutableDataSet().set(Parser.EXTENSIONS, Collections.singleton(YouTubeLinkExtension.create())).toImmutable()
 }

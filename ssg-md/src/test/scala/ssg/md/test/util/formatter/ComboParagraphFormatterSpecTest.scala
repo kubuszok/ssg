@@ -22,12 +22,11 @@ import ssg.md.util.sequence.{ BasedSequence, SequenceUtils }
 import ssg.md.util.sequence.builder.SequenceBuilder
 
 import java.{ util => ju }
-import scala.jdk.CollectionConverters.*
 import scala.language.implicitConversions
 
 final class ComboParagraphFormatterSpecTest extends FormatterSpecTestSuite {
   override def specResource:         ResourceLocation                       = ComboParagraphFormatterSpecTest.RESOURCE_LOCATION
-  override def defaultOptions:       Nullable[DataHolder]                   = Nullable(ComboParagraphFormatterSpecTest.OPTIONS)
+  override def defaultOptions:       Nullable[DataHolder]                   = ComboParagraphFormatterSpecTest.OPTIONS
   override def optionsMap:           java.util.Map[String, ? <: DataHolder] = ComboParagraphFormatterSpecTest.OPTIONS_MAP
   override def knownFailurePrefixes: Set[String]                            = Set("Wrap -")
 
@@ -38,12 +37,12 @@ final class ComboParagraphFormatterSpecTest extends FormatterSpecTestSuite {
     val out           = new StringBuilder()
 
     val info     = TestUtils.extractMarkup(input)
-    val sequence = BasedSequence.of(info.first.get)
+    val sequence = BasedSequence.of(info.getFirst())
 
     val effectiveOptions = options
 
     val paragraph = new MarkdownParagraph(sequence, CharWidthProvider.NULL)
-    paragraph.options = Nullable(effectiveOptions)
+    paragraph.setOptions(effectiveOptions)
 
     val restoreTrackedSpaces = Formatter.RESTORE_TRACKED_SPACES.get(effectiveOptions)
     val rightMargin          = Formatter.RIGHT_MARGIN.get(effectiveOptions)
@@ -51,46 +50,46 @@ final class ComboParagraphFormatterSpecTest extends FormatterSpecTestSuite {
     val firstIndent: CharSequence = Formatter.DOCUMENT_FIRST_PREFIX.get(effectiveOptions)
 
     if (restoreTrackedSpaces && (prefix.length > 0 || firstIndent.length > 0)) {
-      paragraph.restoreTrackedSpaces = true
-      paragraph.firstWidthOffset = firstIndent.length - prefix.length
-      paragraph.width = rightMargin - prefix.length
+      paragraph.setRestoreTrackedSpaces(true)
+      paragraph.setFirstWidthOffset(firstIndent.length - prefix.length)
+      paragraph.setWidth(rightMargin - prefix.length)
     } else {
-      paragraph.restoreTrackedSpaces = restoreTrackedSpaces
-      paragraph.width = rightMargin
-      paragraph.firstWidthOffset = ComboParagraphFormatterSpecTest.FIRST_WIDTH_DELTA.get(effectiveOptions)
+      paragraph.setRestoreTrackedSpaces(restoreTrackedSpaces)
+      paragraph.setWidth(rightMargin)
+      paragraph.setFirstWidthOffset(ComboParagraphFormatterSpecTest.FIRST_WIDTH_DELTA.get(effectiveOptions))
       paragraph.setIndent(prefix)
       paragraph.setFirstIndent(firstIndent)
     }
 
-    paragraph.keepSoftLineBreaks = false // cannot keep line breaks when formatting as you type
-    paragraph.keepHardLineBreaks = true
+    paragraph.setKeepSoftBreaks(false) // cannot keep line breaks when formatting as you type
+    paragraph.setKeepHardBreaks(true)
 
-    val offsets: Array[Int] = info.second.get
+    val offsets: Array[Int] = info.getSecond()
 
     for (offset <- offsets) {
       val c      = FormatterSpecTestSuite.EDIT_OP_CHAR.get(effectiveOptions)
       val editOp = FormatterSpecTestSuite.EDIT_OP.get(effectiveOptions)
 
       val trackedOffset = TrackedOffset.track(offset, editOp != 0 && c == ' ', editOp > 0, editOp < 0)
-      trackedOffset.spacesBefore = sequence.getBaseSequence.countTrailingSpaceTab(offset)
-      trackedOffset.spacesAfter = sequence.getBaseSequence.countLeadingSpaceTab(offset)
+      trackedOffset.setSpacesBefore(sequence.getBaseSequence().countTrailingSpaceTab(offset))
+      trackedOffset.setSpacesAfter(sequence.getBaseSequence().countLeadingSpaceTab(offset))
 
       paragraph.addTrackedOffset(trackedOffset)
     }
 
     val actual = paragraph.wrapText()
 
-    val builder: SequenceBuilder = sequence.getBuilder
-    actual.addSegments(builder.segmentBuilder)
+    val builder: SequenceBuilder = sequence.getBuilder()
+    actual.addSegments(builder.getSegmentBuilder())
 
-    val trackedOffsets = paragraph.getTrackedOffsets.asScala.toList
+    val trackedOffsets = paragraph.getTrackedOffsets().toList
     val resultOffsets  = new Array[Int](offsets.length)
 
     if (trackedOffsets.nonEmpty) {
       TestUtils.appendBanner(out, ComboParagraphFormatterSpecTest.BANNER_TRACKED_OFFSETS)
       var r = 0
       for (trackedOffset <- trackedOffsets) {
-        val offset = trackedOffset.getIndex
+        val offset = trackedOffset.getIndex()
         out.append("[").append(r).append("]: ").append(trackedOffset.toString).append("\n")
         resultOffsets(r) = offset
         r += 1
@@ -100,7 +99,7 @@ final class ComboParagraphFormatterSpecTest extends FormatterSpecTestSuite {
     TestUtils.appendBannerIfNeeded(out, ComboParagraphFormatterSpecTest.BANNER_WITH_RANGES)
     out.append(builder.toStringWithRanges(false).replace("\\n", "\n")).append(SequenceUtils.EOL)
     TestUtils.appendBannerIfNeeded(out, ComboParagraphFormatterSpecTest.BANNER_RESULT)
-    out.append(TestUtils.insertCaretMarkup(actual, resultOffsets).toSequence)
+    out.append(TestUtils.insertCaretMarkup(actual, resultOffsets).toSequence())
 
     out.toString
   }
@@ -110,11 +109,11 @@ object ComboParagraphFormatterSpecTest {
   val SPEC_RESOURCE:     String           = "/ssg/md/test/util/formatter/core_paragraph_formatter_spec.md"
   val RESOURCE_LOCATION: ResourceLocation = ResourceLocation.of(classOf[ComboParagraphFormatterSpecTest], SPEC_RESOURCE)
 
-  val FIRST_WIDTH_DELTA: DataKey[Int] = new DataKey[Int]("FIRST_WIDTH_DELTA", 0)
+  val FIRST_WIDTH_DELTA: DataKey[java.lang.Integer] = new DataKey[java.lang.Integer]("FIRST_WIDTH_DELTA", 0)
 
   val OPTIONS: DataHolder = new MutableDataSet()
-    .set(SharedDataKeys.RUNNING_TESTS, false) // Set to true to get stdout printout of intermediate wrapping information
-    .toImmutable
+    .set(SharedDataKeys.RUNNING_TESTS, java.lang.Boolean.valueOf(false)) // Set to true to get stdout printout of intermediate wrapping information
+    .toImmutable()
 
   val OPTIONS_MAP: java.util.Map[String, DataHolder] = {
     val map = new ju.HashMap[String, DataHolder]()
@@ -123,15 +122,15 @@ object ComboParagraphFormatterSpecTest {
       new MutableDataSet()
         .set(
           TestUtils.CUSTOM_OPTION,
-          ((option: String, params: String) => TestUtils.customIntOption(option, Nullable(params), (v: Int) => firstWidthDeltaOption(v))): java.util.function.BiFunction[String, String, DataHolder]
+          ((option: String, params: String) => TestUtils.customIntOption(option, params, (v: Int) => firstWidthDeltaOption(v))): java.util.function.BiFunction[String, String, DataHolder]
         )
-        .toImmutable
+        .toImmutable()
     )
     map
   }
 
   private def firstWidthDeltaOption(params: Int): DataHolder =
-    new MutableDataSet().set(FIRST_WIDTH_DELTA, params).toImmutable
+    new MutableDataSet().set(FIRST_WIDTH_DELTA, params).toImmutable()
 
   val BANNER_TRACKED_OFFSETS: String = TestUtils.bannerText("Tracked Offsets")
   val BANNER_WITH_RANGES:     String = TestUtils.bannerText("Ranges")

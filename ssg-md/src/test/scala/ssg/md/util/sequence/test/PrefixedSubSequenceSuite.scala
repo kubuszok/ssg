@@ -13,7 +13,7 @@ final class PrefixedSubSequenceSuite extends munit.FunSuite {
   private val substring = PrefixedSubSequence.prefixOf("0123", sequence)
 
   test("testLength") {
-    assertEquals(substring.length(), 7)
+    assertEquals(substring.length, 7)
   }
 
   test("testCharAt") {

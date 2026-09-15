@@ -26,8 +26,8 @@ object TestUtils {
   val MARKUP_CARET:                String        = Character.toString(MARKUP_CARET_CHAR)
   val MARKUP_SELECTION_START:      String        = Character.toString(MARKUP_SELECTION_START_CHAR)
   val MARKUP_SELECTION_END:        String        = Character.toString(MARKUP_SELECTION_END_CHAR)
-  val CARET_PREDICATE:             CharPredicate = CharPredicate.anyOf(MARKUP_CARET_CHAR)
-  val MARKUP_PREDICATE:            CharPredicate = CharPredicate.anyOf(MARKUP_CARET_CHAR, MARKUP_SELECTION_START_CHAR, MARKUP_SELECTION_END_CHAR)
+  val CARET_PREDICATE:             CharPredicate = CharPredicate.anyOf(Array(MARKUP_CARET_CHAR))
+  val MARKUP_PREDICATE:            CharPredicate = CharPredicate.anyOf(Array(MARKUP_CARET_CHAR, MARKUP_SELECTION_START_CHAR, MARKUP_SELECTION_END_CHAR))
   val EMPTY_OFFSETS:               Array[Int]    = new Array[Int](0)
 
   val DISABLED_OPTION_PREFIX_CHAR: Char   = '-'
@@ -41,12 +41,12 @@ object TestUtils {
   val TIMED_ITERATIONS_OPTION_NAME: String = "TIMED_ITERATIONS"
   val TIMED_OPTION_NAME:            String = "TIMED"
 
-  val EMBED_TIMED:      DataKey[Boolean] = new DataKey[Boolean](TIMED_OPTION_NAME, false)
-  val FAIL:             DataKey[Boolean] = new DataKey[Boolean](FAIL_OPTION_NAME, false)
-  val IGNORE:           DataKey[Boolean] = new DataKey[Boolean](IGNORE_OPTION_NAME, false)
-  val NO_FILE_EOL:      DataKey[Boolean] = new DataKey[Boolean](NO_FILE_EOL_OPTION_NAME, true)
-  val TIMED:            DataKey[Boolean] = new DataKey[Boolean](TIMED_OPTION_NAME, false)
-  val TIMED_ITERATIONS: DataKey[Int]     = new DataKey[Int](TIMED_ITERATIONS_OPTION_NAME, 100)
+  val EMBED_TIMED:      DataKey[java.lang.Boolean] = new DataKey[java.lang.Boolean](TIMED_OPTION_NAME, false)
+  val FAIL:             DataKey[java.lang.Boolean] = new DataKey[java.lang.Boolean](FAIL_OPTION_NAME, false)
+  val IGNORE:           DataKey[java.lang.Boolean] = new DataKey[java.lang.Boolean](IGNORE_OPTION_NAME, false)
+  val NO_FILE_EOL:      DataKey[java.lang.Boolean] = new DataKey[java.lang.Boolean](NO_FILE_EOL_OPTION_NAME, true)
+  val TIMED:            DataKey[java.lang.Boolean] = new DataKey[java.lang.Boolean](TIMED_OPTION_NAME, false)
+  val TIMED_ITERATIONS: DataKey[java.lang.Integer] = new DataKey[java.lang.Integer](TIMED_ITERATIONS_OPTION_NAME, 100)
 
   val TIMED_FORMAT_STRING: String = "Timing %s: parse %.3f ms, render %.3f ms, total %.3f\n"
 
@@ -55,7 +55,7 @@ object TestUtils {
   val SOURCE_SUFFIX:     DataKey[String] = new DataKey[String]("SOURCE_SUFFIX", "")
   val SOURCE_INDENT:     DataKey[String] = new DataKey[String]("SOURCE_INDENT", "")
 
-  val NO_FILE_EOL_FALSE:     DataHolder                                      = new MutableDataSet().set(NO_FILE_EOL, false).toImmutable
+  val NO_FILE_EOL_FALSE:     DataHolder                                      = new MutableDataSet().set(NO_FILE_EOL, java.lang.Boolean.valueOf(false)).toImmutable()
   val UNLOAD_EXTENSIONS:     DataKey[ju.Collection[Class[? <: Extension]]]   = LoadUnloadDataKeyAggregator.UNLOAD_EXTENSIONS
   val LOAD_EXTENSIONS:       DataKey[ju.Collection[Extension]]               = LoadUnloadDataKeyAggregator.LOAD_EXTENSIONS
   private val EMPTY_OPTIONS: DataHolder                                      = new DataSet()
@@ -64,11 +64,11 @@ object TestUtils {
   val FILE_PROTOCOL: String = ResourceUrlResolver.FILE_PROTOCOL
 
   def processOption(optionsMap: ju.Map[String, ? <: DataHolder], option: String): Nullable[DataHolder] = {
-    var dataHolder: Nullable[DataHolder] = Nullable.empty
+    var dataHolder: Nullable[DataHolder] = Nullable.empty[DataHolder]
     if (!option.startsWith(DISABLED_OPTION_PREFIX)) {
-      dataHolder = Nullable(optionsMap.get(option))
+      dataHolder = optionsMap.get(option)
       var customOption = option
-      var params: Nullable[String] = Nullable.empty
+      var params: Nullable[String] = Nullable.empty[String]
 
       if (dataHolder.isEmpty) {
         // see if parameterized option
@@ -77,7 +77,7 @@ object TestUtils {
           // parameterized, see if there is a handler defined for it
           customOption = exampleOption.getOptionName
           params = exampleOption.getCustomParams
-          dataHolder = Nullable(optionsMap.get(customOption))
+          dataHolder = optionsMap.get(customOption)
         }
       }
 
@@ -86,7 +86,7 @@ object TestUtils {
         val customHandler = CUSTOM_OPTION.get(dataHolder.get)
         @annotation.nowarn("msg=deprecated") // orNull needed for Java BiFunction interop
         val paramsOrNull = params.orNull
-        dataHolder = Nullable(customHandler.apply(customOption, paramsOrNull))
+        dataHolder = customHandler.apply(customOption, paramsOrNull)
       }
     }
     dataHolder
@@ -134,7 +134,7 @@ object TestUtils {
       val sb = new DelimitedBuilder(",\n    ")
       sb.append("    ")
       val iter = builtInSet.iterator()
-      while (iter.hasNext)
+      while (iter.hasNext())
         sb.append(iter.next()).mark()
 
       throw new IllegalStateException("Not all built-in options present. Missing:\n" + sb.toString())
@@ -142,14 +142,14 @@ object TestUtils {
     hashMap
   }
 
-  def addSpecSection(headingLine: String, headingText: String, sectionHeadings: Array[Nullable[String]]): Pair[String, Int] = {
+  def addSpecSection(headingLine: String, headingText: String, sectionHeadings: Array[Nullable[String]]): Pair[String, Integer] = {
     assert(sectionHeadings.length == 7)
     val lastSectionLevel = Math.max(1, Math.min(6, RichSequence.of(headingLine).countLeading(CharPredicate.HASH)))
-    sectionHeadings(lastSectionLevel) = Nullable(headingText)
+    sectionHeadings(lastSectionLevel) = headingText
     val iMax = 7
     var i    = lastSectionLevel + 1
     while (i < iMax) {
-      sectionHeadings(i) = Nullable.empty
+      sectionHeadings(i) = Nullable.empty[String]
       i += 1
     }
 
@@ -170,7 +170,7 @@ object TestUtils {
 
     val section = sb.toString()
     val result  = if (section.isEmpty) headingText else section
-    Pair.of(result, lastSectionLevel)
+    Pair.of[String, Integer](result, java.lang.Integer.valueOf(lastSectionLevel))
   }
 
   /** process comma separated list of option sets and combine them for final set to use
@@ -186,10 +186,10 @@ object TestUtils {
     */
   def getOptions(example: SpecExample, optionSets: Nullable[String], optionsProvider: String => Nullable[DataHolder]): Nullable[DataHolder] =
     if (optionSets.isEmpty) {
-      Nullable.empty
+      Nullable.empty[DataHolder]
     } else {
       val optionNames = optionSets.get.replace('\u00A0', ' ').split(",")
-      var options: Nullable[DataHolder] = Nullable.empty
+      var options: Nullable[DataHolder] = Nullable.empty[DataHolder]
       for (optionName <- optionNames) {
         val option = optionName.trim
         if (option.nonEmpty && !option.startsWith("-")) {
@@ -197,15 +197,15 @@ object TestUtils {
             case IGNORE_OPTION_NAME =>
               throwIgnoredOption(example, optionSets.get, option)
             case FAIL_OPTION_NAME =>
-              options = Nullable(addOption(options, FAIL, true))
+              options = addOption(options, FAIL, true)
             case NO_FILE_EOL_OPTION_NAME =>
-              options = Nullable(addOption(options, NO_FILE_EOL, true))
+              options = addOption(options, NO_FILE_EOL, true)
             case FILE_EOL_OPTION_NAME =>
-              options = Nullable(addOption(options, NO_FILE_EOL, false))
+              options = addOption(options, NO_FILE_EOL, false)
             case TIMED_OPTION_NAME =>
-              options = Nullable(addOption(options, TIMED, true))
+              options = addOption(options, TIMED, true)
             case EMBED_TIMED_OPTION_NAME =>
-              options = Nullable(addOption(options, EMBED_TIMED, true))
+              options = addOption(options, EMBED_TIMED, true)
             case _ =>
               if (options.isEmpty) {
                 options = optionsProvider(option)
@@ -214,13 +214,13 @@ object TestUtils {
                   throwIllegalStateException(example, option)
                 }
 
-                options = Nullable(options.get.toImmutable)
+                options = options.get.toImmutable()
               } else {
                 val dataSet = optionsProvider(option)
 
                 if (dataSet.isDefined) {
                   // CAUTION: have to only aggregate actions here
-                  options = Nullable(DataSet.aggregateActions(options.get.toImmutable, dataSet.get))
+                  options = DataSet.aggregateActions(options.get.toImmutable(), dataSet.get)
                 } else {
                   throwIllegalStateException(example, option)
                 }
@@ -232,10 +232,10 @@ object TestUtils {
           }
         }
       }
-      options.map(_.toImmutable)
+      options.map(_.toImmutable())
     }
 
-  def addOption[T](options: Nullable[DataHolder], key: DataKey[T], value: T): MutableDataSet =
+  def addOption[T <: Object](options: Nullable[DataHolder], key: DataKey[T], value: T): MutableDataSet =
     options.fold(new MutableDataSet().set(key, value))(o => new MutableDataSet(o).set(key, value))
 
   def throwIllegalStateException(example: SpecExample, option: String): Unit =
@@ -252,7 +252,7 @@ object TestUtils {
 
   def stripIndent(input: BasedSequence, sourceIndent: CharSequence): BasedSequence = {
     var result = input
-    if (sourceIndent.length() != 0) {
+    if (sourceIndent.length != 0) {
       // strip out indent to test how segmented input parses
       val segments = new ju.ArrayList[BasedSequence]()
       var lastPos  = 0
@@ -265,7 +265,7 @@ object TestUtils {
         if (lastPos < end && (pos <= 0 || input.charAt(pos - 1) == '\n')) {
           segments.add(input.subSequence(lastPos, end))
         }
-        lastPos = end + sourceIndent.length()
+        lastPos = end + sourceIndent.length
       }
 
       result = SegmentedSequence.create(input, segments)
@@ -590,7 +590,7 @@ object TestUtils {
     data.add(Array[AnyRef](SpecExample.NULL.withResourceLocation(location)))
 
     val iter = examples.iterator()
-    while (iter.hasNext)
+    while (iter.hasNext())
       data.add(Array[AnyRef](iter.next()))
     data
   }
@@ -600,17 +600,17 @@ object TestUtils {
 
   def combineDefaultOptions(defaultOptions: Nullable[Array[DataHolder]]): Nullable[DataHolder] =
     defaultOptions.flatMap { opts =>
-      var combinedOptions: Nullable[DataHolder] = Nullable.empty
+      var combinedOptions: Nullable[DataHolder] = Nullable.empty[DataHolder]
       for (options <- opts)
-        combinedOptions = Nullable(DataSet.aggregate(combinedOptions, Nullable(options)))
-      combinedOptions.map(_.toImmutable)
+        combinedOptions = Nullable(DataSet.aggregate(combinedOptions.getOrElse(null.asInstanceOf[DataHolder]), options))
+      combinedOptions.map(_.toImmutable())
     }
 
   def optionsMaps(other: Nullable[ju.Map[String, ? <: DataHolder]], overrides: Nullable[ju.Map[String, ? <: DataHolder]]): Nullable[ju.Map[String, ? <: DataHolder]] =
     if (other.isDefined && overrides.isDefined) {
       val map = new ju.HashMap[String, DataHolder](other.get)
       map.putAll(overrides.get)
-      Nullable(map)
+      map
     } else if (other.isDefined) {
       other
     } else {
@@ -621,13 +621,13 @@ object TestUtils {
     if (other.isEmpty) {
       overrides
     } else if (overrides.isEmpty || overrides.exists(_.isEmpty)) {
-      Nullable(Array[DataHolder](other.get))
+      Array[DataHolder](other.get)
     } else {
       val ov      = overrides.get
       val holders = new Array[DataHolder](ov.length + 1)
       System.arraycopy(ov, 0, holders, 1, ov.length)
       holders(0) = other.get
-      Nullable(holders)
+      holders
     }
 
   def getTestResourceRootDirectoryForModule(resourceClass: Class[?], moduleRootPackage: String): String = {
@@ -639,7 +639,7 @@ object TestUtils {
   def getRootDirectoryForModule(resourceClass: Class[?], moduleDirectoryName: String): String = {
     import ssg.md.util.misc.Utils._
     // get project root from our class file url path
-    var fileUrl = SpecExample.ofCaller(0, resourceClass, "", "", Nullable("")).fileUrl
+    var fileUrl = SpecExample.ofCaller(0, resourceClass, "", "", "").fileUrl
     val pos     = fileUrl.indexOf(wrapWith(moduleDirectoryName, '/'))
     if (pos != -1) {
       fileUrl = fileUrl.substring(0, pos)
@@ -668,7 +668,7 @@ object TestUtils {
   }
 
   def insertCaretMarkup(sequence: BasedSequence, offsets: Array[Int]): SequenceBuilder = {
-    val builder: SequenceBuilder = sequence.getBuilder[SequenceBuilder]
+    val builder: SequenceBuilder = sequence.getBuilder()
     java.util.Arrays.sort(offsets)
 
     val length     = sequence.length
@@ -677,7 +677,7 @@ object TestUtils {
       val useOffset = Math.min(length, offset)
 
       if (useOffset > lastOffset) {
-        sequence.subSequence(lastOffset, useOffset).addSegments(builder.segmentBuilder)
+        sequence.subSequence(lastOffset, useOffset).addSegments(builder.getSegmentBuilder())
       }
       if (useOffset == offset) builder.append("\u2999")
       lastOffset = useOffset
@@ -685,7 +685,7 @@ object TestUtils {
 
     val offset = sequence.length
     if (offset > lastOffset) {
-      sequence.subSequence(lastOffset, offset).addSegments(builder.segmentBuilder)
+      sequence.subSequence(lastOffset, offset).addSegments(builder.getSegmentBuilder())
     }
 
     builder
@@ -753,7 +753,7 @@ object TestUtils {
       val sequence = BasedSequence.of(toWrap)
 
       // now we delete the indents to simulate prefix removal
-      val builder: SequenceBuilder = sequence.getBuilder[SequenceBuilder]
+      val builder: SequenceBuilder = sequence.getBuilder()
       val jMax       = starts.length
       var lastOffset = 0
       var j          = 0
@@ -762,7 +762,7 @@ object TestUtils {
         val end   = ends(j)
 
         if (start > lastOffset) {
-          sequence.subSequence(lastOffset, start).addSegments(builder.segmentBuilder)
+          sequence.subSequence(lastOffset, start).addSegments(builder.getSegmentBuilder())
         }
         lastOffset = end
         j += 1
@@ -770,10 +770,10 @@ object TestUtils {
 
       val offset = sequence.length
       if (offset > lastOffset) {
-        sequence.subSequence(lastOffset, offset).addSegments(builder.segmentBuilder)
+        sequence.subSequence(lastOffset, offset).addSegments(builder.getSegmentBuilder())
       }
 
-      Pair.of(builder.toSequence, offsets)
+      Pair.of(builder.toSequence(), offsets)
     } else {
       Pair.of(input, EMPTY_OFFSETS)
     }

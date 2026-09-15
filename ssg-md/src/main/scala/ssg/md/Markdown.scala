@@ -156,7 +156,7 @@ object Markdown {
     */
   def render(markdown: String, options: DataHolder): String = {
     val doc = Parser.builder(options).build().parse(markdown)
-    HtmlRenderer.builder(Nullable(options)).build().render(doc)
+    HtmlRenderer.builder(options).build().render(doc)
   }
 
   /** Parse and render a markdown string to HTML with the given options, returning a diagnostics envelope (ISS-1373).

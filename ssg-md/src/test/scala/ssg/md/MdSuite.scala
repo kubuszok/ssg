@@ -17,7 +17,7 @@ final class MdSuite extends munit.FunSuite {
     val parser = ssg.md.parser.Parser.builder().build()
     val doc    = parser.parse("hello")
     assert(doc != null)
-    assert(doc.hasChildren)
+    assert(doc.hasChildren())
   }
 
   test("renderer can be created") {

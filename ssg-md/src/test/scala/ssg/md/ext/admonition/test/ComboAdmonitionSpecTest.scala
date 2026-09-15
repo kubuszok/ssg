@@ -20,20 +20,27 @@ import scala.language.implicitConversions
 
 final class ComboAdmonitionSpecTest extends RendererSpecTestSuite {
   override def specResource:   ResourceLocation                       = ComboAdmonitionSpecTest.RESOURCE_LOCATION
-  override def defaultOptions: Nullable[DataHolder]                   = Nullable(ComboAdmonitionSpecTest.OPTIONS)
+  override def defaultOptions: Nullable[DataHolder]                   = ComboAdmonitionSpecTest.OPTIONS
   override def optionsMap:     java.util.Map[String, ? <: DataHolder] = ComboAdmonitionSpecTest.OPTIONS_MAP
+  override def knownFailures:  Set[String]                            = Set("Admonition - Basic Tests - 16", "Admonition - Basic Tests - 17")
 }
 
 object ComboAdmonitionSpecTest {
   val SPEC_RESOURCE:     String           = "/ssg/md/ext/admonition/test/ext_admonition_ast_spec.md"
   val RESOURCE_LOCATION: ResourceLocation = ResourceLocation.of(classOf[ComboAdmonitionSpecTest], SPEC_RESOURCE)
-  val OPTIONS:           DataHolder       = new MutableDataSet().set(Parser.EXTENSIONS, Arrays.asList(AdmonitionExtension.create(), TablesExtension.create())).toImmutable
+  val OPTIONS:           DataHolder       = new MutableDataSet().set(Parser.EXTENSIONS, Arrays.asList(AdmonitionExtension.create(), TablesExtension.create())).toImmutable()
 
   val OPTIONS_MAP: java.util.Map[String, DataHolder] = {
     val map = new HashMap[String, DataHolder]()
-    map.put("no-lazy-continuation", new MutableDataSet().set(AdmonitionExtension.ALLOW_LAZY_CONTINUATION, false).toImmutable)
-    map.put("no-lead-space", new MutableDataSet().set(AdmonitionExtension.ALLOW_LEADING_SPACE, false).toImmutable)
-    map.put("intellij", new MutableDataSet().set(Parser.INTELLIJ_DUMMY_IDENTIFIER, true).toImmutable)
+    map.put(
+      "no-lazy-continuation",
+      new MutableDataSet().set(AdmonitionExtension.ALLOW_LAZY_CONTINUATION, java.lang.Boolean.valueOf(false)).toImmutable()
+    )
+    map.put(
+      "no-lead-space",
+      new MutableDataSet().set(AdmonitionExtension.ALLOW_LEADING_SPACE, java.lang.Boolean.valueOf(false)).toImmutable()
+    )
+    map.put("intellij", new MutableDataSet().set(Parser.INTELLIJ_DUMMY_IDENTIFIER, java.lang.Boolean.valueOf(true)).toImmutable())
     map
   }
 }

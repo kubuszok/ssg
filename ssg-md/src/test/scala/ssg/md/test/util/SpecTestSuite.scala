@@ -25,7 +25,7 @@ abstract class SpecTestSuite extends munit.FunSuite {
   def specResource: ResourceLocation
 
   /** Default data options for parsing/rendering. */
-  def defaultOptions: Nullable[DataHolder] = Nullable.empty
+  def defaultOptions: Nullable[DataHolder] = Nullable.empty[DataHolder]
 
   /** Whether to use compound (hierarchical) section names. */
   def compoundSections: Boolean = true
@@ -55,7 +55,7 @@ abstract class SpecTestSuite extends munit.FunSuite {
       if (opts.isDefined) {
         val combined = new MutableDataSet(base)
         combined.setAll(opts.get)
-        combined.toImmutable
+        combined.toImmutable()
       } else {
         base
       }
@@ -68,7 +68,7 @@ abstract class SpecTestSuite extends munit.FunSuite {
   protected def renderHtml(example: SpecExample, options: DataHolder): String
 
   /** Optionally render AST — subclasses override if needed. */
-  protected def renderAst(example: SpecExample, options: DataHolder): Nullable[String] = Nullable.empty
+  protected def renderAst(example: SpecExample, options: DataHolder): Nullable[String] = Nullable.empty[String]
 
   // Read spec file and register tests
   private lazy val specReader: SpecReader = {
@@ -76,7 +76,7 @@ abstract class SpecTestSuite extends munit.FunSuite {
     reader
   }
 
-  private lazy val examples: List[SpecExample] = specReader.getExamples.asScala.toList
+  private lazy val examples: List[SpecExample] = specReader.getExamples.iterator().asScala.toList
 
   // Register all spec examples as individual tests
   examples.foreach { example =>

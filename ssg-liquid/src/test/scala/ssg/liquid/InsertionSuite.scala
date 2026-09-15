@@ -2,35 +2,32 @@
 package ssg
 package liquid
 
-import lowlevel.Nullable
 import ssg.data.DataView
 
 /** Tests ported from liqp's InsertionTest.java — 11 tests + ISS-1021 regression tests. */
 final class InsertionSuite extends munit.FunSuite {
 
-  test("ISS-1021: Insertions.get returns Nullable[Insertion] — missing key is empty") {
+  test("ISS-1021: Insertions.get returns null for missing key") {
     val insertions = Insertions.STANDARD_INSERTIONS
-    val result: Nullable[Insertion] = insertions.get("nonexistent_tag_xyz")
-    assert(result.isEmpty, "get for non-existent name must return Nullable.empty, not raw null")
+    val result     = insertions.get("nonexistent_tag_xyz")
+    assert(result == null, "get for non-existent name must return null")
   }
 
-  test("ISS-1021: Insertions.get returns Nullable[Insertion] — existing key is defined") {
+  test("ISS-1021: Insertions.get returns Insertion for existing key") {
     val insertions = Insertions.STANDARD_INSERTIONS
-    val result: Nullable[Insertion] = insertions.get("assign")
-    assert(result.isDefined, "get for existing name 'assign' must return a defined Nullable")
-    assertEquals(result.get.name, "assign")
+    val result     = insertions.get("assign")
+    assert(result != null, "get for existing name 'assign' must return a non-null Insertion")
+    assertEquals(result.name, "assign")
   }
 
-  test("ISS-1021: Insertions.get works with Nullable API (fold/getOrElse)") {
+  test("ISS-1021: Insertions.get null check pattern") {
     val insertions = Insertions.STANDARD_INSERTIONS
-    // missing key — fold takes the empty branch
     val missing    = insertions.get("no_such_tag")
-    val foldResult = missing.fold("EMPTY")(_.name)
+    val foldResult = if (missing == null) "EMPTY" else missing.name
     assertEquals(foldResult, "EMPTY")
 
-    // existing key — fold takes the non-empty branch
     val present     = insertions.get("if")
-    val foldResult2 = present.fold("EMPTY")(_.name)
+    val foldResult2 = if (present == null) "EMPTY" else present.name
     assertEquals(foldResult2, "if")
   }
 

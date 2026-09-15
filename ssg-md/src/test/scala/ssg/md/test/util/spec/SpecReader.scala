@@ -27,12 +27,12 @@ class SpecReader(
   protected var lastSectionLevel: Int                     = 1
 
   protected var state:             SpecReader.State        = SpecReader.State.BEFORE
-  protected var section:           Nullable[String]        = Nullable.empty
+  protected var section:           Nullable[String]        = Nullable.empty[String]
   protected var optionsSet:        String                  = ""
   protected var source:            StringBuilder           = new StringBuilder()
   protected var html:              StringBuilder           = new StringBuilder()
   protected var ast:               StringBuilder           = new StringBuilder()
-  protected var comment:           Nullable[StringBuilder] = Nullable.empty
+  protected var comment:           Nullable[StringBuilder] = Nullable.empty[StringBuilder]
   protected var exampleNumber:     Int                     = 0
   protected var lineNumber:        Int                     = 0
   protected var contentLineNumber: Int                     = 0
@@ -45,7 +45,7 @@ class SpecReader(
   def getExamplesSourceAsString: ju.List[String] = {
     val result = new ju.ArrayList[String]()
     val iter   = examples.iterator()
-    while (iter.hasNext)
+    while (iter.hasNext())
       result.add(iter.next().source)
     result
   }
@@ -113,10 +113,10 @@ class SpecReader(
           if (matcher.matches()) {
             if (compoundSections) {
               val pair = TestUtils.addSpecSection(matcher.group(), matcher.group(1), sections)
-              lastSectionLevel = pair.second.get
-              section = pair.first
+              lastSectionLevel = pair.getSecond()
+              section = pair.getFirst()
             } else {
-              section = Nullable(matcher.group(1))
+              section = matcher.group(1)
             }
 
             lineProcessed = true
@@ -152,12 +152,12 @@ class SpecReader(
             new SpecExample(
               resourceLocation,
               contentLineNumber,
-              Nullable(optionsSet),
+              optionsSet,
               section,
               exampleNumber,
               source.toString(),
               html.toString(),
-              Nullable.empty,
+              Nullable.empty[String],
               comment.map(_.toString)
             )
           )
@@ -179,12 +179,12 @@ class SpecReader(
             new SpecExample(
               resourceLocation,
               contentLineNumber,
-              Nullable(optionsSet),
+              optionsSet,
               section,
               exampleNumber,
               source.toString(),
               html.toString(),
-              Nullable(ast.toString()),
+              ast.toString(),
               comment.map(_.toString)
             )
           )
@@ -197,10 +197,10 @@ class SpecReader(
 
     if (!lineAbsorbed) {
       if (lineProcessed) {
-        comment = Nullable.empty
+        comment = Nullable.empty[StringBuilder]
       } else if (section.isDefined && state == SpecReader.State.BEFORE) {
         if (comment.isEmpty) {
-          comment = Nullable(new StringBuilder())
+          comment = new StringBuilder()
         }
         comment.foreach(_.append(line).append('\n'))
       }
@@ -213,7 +213,7 @@ class SpecReader(
     source = new StringBuilder()
     html = new StringBuilder()
     ast = new StringBuilder()
-    comment = Nullable.empty
+    comment = Nullable.empty[StringBuilder]
     contentLineNumber = 0
   }
 }

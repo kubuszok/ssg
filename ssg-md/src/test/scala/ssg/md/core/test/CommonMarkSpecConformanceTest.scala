@@ -75,7 +75,11 @@ object CommonMarkSpecConformanceTest {
   /** Parser/renderer options matching the ComboCoreSpecTest baseline: INDENT_SIZE=0, percent-encode URLs, no directional punctuations.
     */
   private val OPTIONS: DataHolder =
-    new MutableDataSet().set(HtmlRenderer.INDENT_SIZE, 0).set(Parser.INLINE_DELIMITER_DIRECTIONAL_PUNCTUATIONS, false).set(HtmlRenderer.PERCENT_ENCODE_URLS, true).toImmutable
+    new MutableDataSet()
+      .set(HtmlRenderer.INDENT_SIZE, java.lang.Integer.valueOf(0))
+      .set(Parser.INLINE_DELIMITER_DIRECTIONAL_PUNCTUATIONS, java.lang.Boolean.valueOf(false))
+      .set(HtmlRenderer.PERCENT_ENCODE_URLS, java.lang.Boolean.valueOf(true))
+      .toImmutable()
 
   private val parser:   Parser       = Parser.builder(OPTIONS).build()
   private val renderer: HtmlRenderer = HtmlRenderer.builder(OPTIONS).build()
@@ -98,7 +102,7 @@ object CommonMarkSpecConformanceTest {
   private def loadExamples(resource: String): List[SpecExample] = {
     val location = ResourceLocation.of(classOf[CommonMarkSpecConformanceTest], resource)
     val reader   = SpecReader.createAndReadExamples(location, false)
-    reader.getExamples.asScala.toList.filter(_.isSpecExample)
+    reader.getExamples.iterator().asScala.toList.filter(_.isSpecExample)
   }
 
   /** Run a single example: parse source, render HTML, compare to expected. */

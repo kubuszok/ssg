@@ -10,15 +10,15 @@ import ssg.md.util.ast.{ Node, NodeVisitorBase }
 
 class AstCollectingVisitor extends NodeVisitorBase {
 
-  val EOL:                  String        = "\n"
-  protected var output:     StringBuilder = new StringBuilder()
-  protected var indent:     Int           = 0
-  protected var eolPending: Boolean       = false
+  val EOL:                  String                  = "\n"
+  protected var output:     java.lang.StringBuilder = new java.lang.StringBuilder()
+  protected var indent:     Int                     = 0
+  protected var eolPending: Boolean                 = false
 
   def ast: String = output.toString()
 
   def clear(): Unit = {
-    output = new StringBuilder()
+    output = new java.lang.StringBuilder()
     indent = 0
     eolPending = false
   }
@@ -48,7 +48,7 @@ class AstCollectingVisitor extends NodeVisitorBase {
   def collect(node: Node): Unit =
     visit(node)
 
-  override protected def visit(node: Node): Unit = {
+  override def visit(node: Node): Unit = {
     appendIndent()
     node.astString(output, true)
     output.append(EOL)

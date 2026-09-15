@@ -75,7 +75,7 @@ final class MappedRichSequenceSuite extends munit.FunSuite {
 
     assertEquals(sequence.toString, input)
     assertEquals(mapEncoded.toString, encodedInput)
-    assert(mapEncoded.getBaseSequence eq sequence)
+    assert(mapEncoded.getBaseSequence() eq sequence)
   }
 
   test("chainToMapped") {
@@ -88,6 +88,6 @@ final class MappedRichSequenceSuite extends munit.FunSuite {
 
     assertEquals(sequence.toString, input)
     assertEquals(mapEncoded.toString, encodedInput)
-    assert(mapEncoded.getBaseSequence eq sequence)
+    assert(mapEncoded.getBaseSequence() eq sequence)
   }
 }

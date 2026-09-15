@@ -6,7 +6,6 @@ package md
 package test
 package util
 
-import ssg.md.Nullable
 import ssg.md.util.data._
 import ssg.md.util.misc.Extension
 
@@ -25,19 +24,21 @@ class LoadUnloadDataKeyAggregator private () extends DataKeyAggregator {
         val unloadExtensions = LoadUnloadDataKeyAggregator.UNLOAD_EXTENSIONS.get(combined)
 
         if (!loadExtensions.isEmpty || !unloadExtensions.isEmpty && !extensions.isEmpty) {
-          val resolvedExtensions = new ju.LinkedHashSet[Extension](extensions)
+          val resolvedExtensions = new ju.LinkedHashSet[Extension]()
+          for (ext <- extensions) resolvedExtensions.add(ext)
           resolvedExtensions.addAll(loadExtensions)
           resolvedExtensions.removeIf((extension: Extension) => unloadExtensions.contains(extension.getClass))
-          combined.toMutable
+          combined
+            .toMutable()
             .remove(LoadUnloadDataKeyAggregator.LOAD_EXTENSIONS)
             .remove(LoadUnloadDataKeyAggregator.UNLOAD_EXTENSIONS)
             .set(SharedDataKeys.EXTENSIONS, new ju.ArrayList[Extension](resolvedExtensions).asInstanceOf[ju.Collection[Extension]])
-            .toImmutable
+            .toImmutable()
         } else {
-          combined.toMutable.remove(LoadUnloadDataKeyAggregator.LOAD_EXTENSIONS).remove(LoadUnloadDataKeyAggregator.UNLOAD_EXTENSIONS)
+          combined.toMutable().remove(LoadUnloadDataKeyAggregator.LOAD_EXTENSIONS).remove(LoadUnloadDataKeyAggregator.UNLOAD_EXTENSIONS)
         }
       } else {
-        combined.toMutable.remove(LoadUnloadDataKeyAggregator.LOAD_EXTENSIONS).remove(LoadUnloadDataKeyAggregator.UNLOAD_EXTENSIONS)
+        combined.toMutable().remove(LoadUnloadDataKeyAggregator.LOAD_EXTENSIONS).remove(LoadUnloadDataKeyAggregator.UNLOAD_EXTENSIONS)
       }
     } else {
       combined
@@ -49,26 +50,26 @@ class LoadUnloadDataKeyAggregator private () extends DataKeyAggregator {
       // have to combine these
       val loadExtensions = new ju.ArrayList[Extension](LoadUnloadDataKeyAggregator.LOAD_EXTENSIONS.get(other))
       loadExtensions.addAll(LoadUnloadDataKeyAggregator.LOAD_EXTENSIONS.get(overrides))
-      result = result.toMutable.set(LoadUnloadDataKeyAggregator.LOAD_EXTENSIONS, loadExtensions.asInstanceOf[ju.Collection[Extension]])
+      result = result.toMutable().set(LoadUnloadDataKeyAggregator.LOAD_EXTENSIONS, loadExtensions.asInstanceOf[ju.Collection[Extension]])
     }
 
     if (other.contains(LoadUnloadDataKeyAggregator.UNLOAD_EXTENSIONS) && overrides.contains(LoadUnloadDataKeyAggregator.UNLOAD_EXTENSIONS)) {
       // have to combine these
       val unloadExtensions = new ju.ArrayList[Class[? <: Extension]](LoadUnloadDataKeyAggregator.UNLOAD_EXTENSIONS.get(other))
       unloadExtensions.addAll(LoadUnloadDataKeyAggregator.UNLOAD_EXTENSIONS.get(overrides))
-      result = result.toMutable.set(LoadUnloadDataKeyAggregator.UNLOAD_EXTENSIONS, unloadExtensions.asInstanceOf[ju.Collection[Class[? <: Extension]]])
+      result = result.toMutable().set(LoadUnloadDataKeyAggregator.UNLOAD_EXTENSIONS, unloadExtensions.asInstanceOf[ju.Collection[Class[? <: Extension]]])
     }
     result
   }
 
   override def clean(combined: DataHolder): DataHolder =
     if (combined.contains(LoadUnloadDataKeyAggregator.LOAD_EXTENSIONS) || combined.contains(LoadUnloadDataKeyAggregator.UNLOAD_EXTENSIONS)) {
-      combined.toMutable.remove(LoadUnloadDataKeyAggregator.LOAD_EXTENSIONS).remove(LoadUnloadDataKeyAggregator.UNLOAD_EXTENSIONS)
+      combined.toMutable().remove(LoadUnloadDataKeyAggregator.LOAD_EXTENSIONS).remove(LoadUnloadDataKeyAggregator.UNLOAD_EXTENSIONS)
     } else {
       combined
     }
 
-  override def invokeAfterSet(): Nullable[Set[Class[?]]] = Nullable.empty
+  override def invokeAfterSet(): scala.collection.mutable.Set[Class[?]] = scala.collection.mutable.HashSet.empty
 }
 
 object LoadUnloadDataKeyAggregator {

@@ -80,7 +80,7 @@ final class HtmlEmbeddedAttributeSuite extends munit.FunSuite {
   }
 
   private class TestNodeFactory(options: DataHolder) extends NodePostProcessorFactory(false) {
-    addNodes(classOf[Paragraph])
+    addNodes(Array(classOf[Paragraph]))
 
     override def apply(document: Document): NodePostProcessor =
       new TestNodePostProcessor()

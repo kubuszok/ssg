@@ -15,11 +15,11 @@ import scala.language.implicitConversions
 // JUnit 4: @Test annotation — will need adaptation to munit later
 abstract class TemplateTestCase extends TemplateReaderFactory {
 
-  private var dumpTemplateReader: Nullable[DumpTemplateReader] = Nullable.empty
+  private var dumpTemplateReader: Nullable[DumpTemplateReader] = Nullable.empty[DumpTemplateReader]
 
   override def create(inputStream: InputStream): TemplateReader = {
     val reader = new DumpTemplateReader(inputStream, this)
-    dumpTemplateReader = Nullable(reader)
+    dumpTemplateReader = reader
     reader
   }
 
@@ -43,8 +43,8 @@ abstract class TemplateTestCase extends TemplateReaderFactory {
   // JUnit 4: @Test — will need adaptation to munit later
   def testDumpSpec(): Unit = {
     val specResourcePath = templateResourceName
-    TemplateReader.readEntries(Nullable(specResourcePath), Nullable(this))
-    val fullSpec = TemplateReader.readSpec(Nullable(specResourcePath))
+    TemplateReader.readEntries(specResourcePath, this)
+    val fullSpec = TemplateReader.readSpec(specResourcePath)
     val actual   = dumpTemplateReader.get.template
     processTemplate(fullSpec, actual)
   }
