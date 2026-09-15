@@ -83,6 +83,9 @@ jobs:
       - name: Checkout submodules for Java ports
         run: git submodule update --init --depth=1 original-src/liqp original-src/flexmark-java
 
+      - name: Generate liqp ANTLR parser
+        run: cd original-src/liqp && chmod +x mvnw && ./mvnw -q generate-sources -pl .
+
       - name: Setup Baltic Porter
         run: |
           git clone --depth=1 https://github.com/kubuszok/balticporter.git ../balticporter
@@ -171,6 +174,9 @@ jobs:
       - name: Checkout submodules for Java ports
         run: git submodule update --init --depth=1 original-src/liqp original-src/flexmark-java
 
+      - name: Generate liqp ANTLR parser
+        run: cd original-src/liqp && chmod +x mvnw && ./mvnw -q generate-sources -pl .
+
       - name: Setup Baltic Porter
         run: |
           git clone --depth=1 https://github.com/kubuszok/balticporter.git ../balticporter
@@ -249,6 +255,9 @@ jobs:
 
       - name: Checkout submodules for Java ports
         run: git submodule update --init --depth=1 original-src/liqp original-src/flexmark-java
+
+      - name: Generate liqp ANTLR parser
+        run: cd original-src/liqp && chmod +x mvnw && ./mvnw -q generate-sources -pl .
 
       - name: Setup Baltic Porter
         run: |
