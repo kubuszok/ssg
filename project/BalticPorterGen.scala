@@ -112,7 +112,7 @@ object BalticPorterGen {
     }
 
     val ssgMdSrc = ssgRoot.resolve("ssg-md/src/main")
-    val result = collectScalaFiles(outPath, excludeDuplicatesOf = Some(ssgMdSrc))
+    val result   = collectScalaFiles(outPath, excludeDuplicatesOf = Some(ssgMdSrc))
     log.info(s"[Baltic Porter] ssg-md: collected ${result.size} files from $outPath (exists=${Files.isDirectory(outPath)})")
     if (result.isEmpty && Files.isDirectory(portRoot)) {
       val all = Files.walk(portRoot).iterator().asScala.filter(_.toString.endsWith(".scala")).toList
