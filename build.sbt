@@ -167,12 +167,13 @@ lazy val `ssg-graphs-commons` = (projectMatrix in file("ssg-graphs-commons"))
   .settings(
     name := "ssg-graphs-commons",
     Compile / sourceGenerators += Def.task {
+      val bpRast = (ThisBuild / baseDirectory).value / ".." / "balticporter" / "balticporter" / "frontend-ts" / "src" / "test" / "resources" / "rast"
       BalticPorterGen.generateNonJavaModule(
         "ssg-graphs-commons",
         (ThisBuild / baseDirectory).value / "ssg-graphs-commons" / "reference" / "scala",
         (Compile / sourceManaged).value / "balticporter",
         streams.value.log,
-)
+        rastDir = Some(bpRast / "roughjs"))
     }.taskValue
   )
   .settings(publishSettings)
@@ -239,12 +240,13 @@ lazy val `ssg-js` = (projectMatrix in file("ssg-js"))
   .settings(
     name := "ssg-js",
     Compile / sourceGenerators += Def.task {
+      val bpRast = (ThisBuild / baseDirectory).value / ".." / "balticporter" / "balticporter" / "frontend-ts" / "src" / "test" / "resources" / "rast"
       BalticPorterGen.generateNonJavaModule(
         "ssg-js",
         (ThisBuild / baseDirectory).value / "ssg-js" / "reference" / "scala",
         (Compile / sourceManaged).value / "balticporter",
         streams.value.log,
-)
+        rastDir = Some(bpRast / "terser"))
     }.taskValue,
     // The Terser port's name mangler keeps process-global mutable state (object Base54's char/frequency
     // table — terser's lib/scope.js Base54 is a single module-level singleton, reset per minify call).
@@ -265,12 +267,13 @@ lazy val `ssg-katex` = (projectMatrix in file("ssg-katex"))
   .settings(
     name := "ssg-katex",
     Compile / sourceGenerators += Def.task {
+      val bpRast = (ThisBuild / baseDirectory).value / ".." / "balticporter" / "balticporter" / "frontend-ts" / "src" / "test" / "resources" / "rast"
       BalticPorterGen.generateNonJavaModule(
         "ssg-katex",
         (ThisBuild / baseDirectory).value / "ssg-katex" / "reference" / "scala",
         (Compile / sourceManaged).value / "balticporter",
         streams.value.log,
-)
+        rastDir = Some(bpRast / "katex"))
     }.taskValue,
     // ISS-1348: The KaTeX port's macro registry (Macros.registerAll) populates a process-global
     // mutable map. Parallel test suites race on that shared state. Run ssg-katex tests serially
@@ -408,12 +411,13 @@ lazy val `ssg-mermaid` = (projectMatrix in file("ssg-mermaid"))
   .settings(
     name := "ssg-mermaid",
     Compile / sourceGenerators += Def.task {
+      val bpRast = (ThisBuild / baseDirectory).value / ".." / "balticporter" / "balticporter" / "frontend-ts" / "src" / "test" / "resources" / "rast"
       BalticPorterGen.generateNonJavaModule(
         "ssg-mermaid",
         (ThisBuild / baseDirectory).value / "ssg-mermaid" / "reference" / "scala",
         (Compile / sourceManaged).value / "balticporter",
         streams.value.log,
-)
+        rastDir = Some(bpRast / "mermaid"))
     }.taskValue,
     libraryDependencies ++= Seq(
       "io.github.cquiroz" %% "scala-java-time"          % versions.scalaJavaTime,
@@ -444,12 +448,13 @@ lazy val `ssg-sass` = (projectMatrix in file("ssg-sass"))
   .settings(
     name := "ssg-sass",
     Compile / sourceGenerators += Def.task {
+      val bpRast = (ThisBuild / baseDirectory).value / ".." / "balticporter" / "balticporter" / "frontend-ts" / "src" / "test" / "resources" / "rast"
       BalticPorterGen.generateNonJavaModule(
         "ssg-sass",
         (ThisBuild / baseDirectory).value / "ssg-sass" / "reference" / "scala",
         (Compile / sourceManaged).value / "balticporter",
         streams.value.log,
-)
+        rastDir = Some(bpRast / "dart-sass"))
     }.taskValue
   )
   .settings(publishSettings)
