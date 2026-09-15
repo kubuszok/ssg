@@ -86,7 +86,7 @@ jobs:
       - name: Setup Baltic Porter
         run: |
           git clone --depth=1 https://github.com/kubuszok/balticporter.git ../balticporter
-          cd ../balticporter && sbt --batch 'set every (Compile / doc / sources) := Nil; publishLocal'
+          cd ../balticporter && sbt --batch publishLocal
 
 
 
@@ -174,7 +174,7 @@ jobs:
       - name: Setup Baltic Porter
         run: |
           git clone --depth=1 https://github.com/kubuszok/balticporter.git ../balticporter
-          cd ../balticporter && sbt --batch 'set every (Compile / doc / sources) := Nil; publishLocal'
+          cd ../balticporter && sbt --batch publishLocal
 
       - uses: actions/setup-node@v7
         with:
@@ -253,7 +253,7 @@ jobs:
       - name: Setup Baltic Porter
         run: |
           git clone --depth=1 https://github.com/kubuszok/balticporter.git ../balticporter
-          cd ../balticporter && sbt --batch 'set every (Compile / doc / sources) := Nil; publishLocal'
+          cd ../balticporter && sbt --batch publishLocal
 
 
 
