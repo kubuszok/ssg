@@ -120,7 +120,14 @@ object BalticPorterGen {
     }
 
     val ssgMdSrc = ssgRoot.resolve("ssg-md/src/main")
-    collectScalaFiles(outPath, excludeDuplicatesOf = Some(ssgMdSrc))
+    val result = collectScalaFiles(outPath, excludeDuplicatesOf = Some(ssgMdSrc))
+    log.info(s"[Baltic Porter] ssg-md: collected ${result.size} files from $outPath (exists=${Files.isDirectory(outPath)})")
+    if (result.isEmpty && Files.isDirectory(portRoot)) {
+      val all = Files.walk(portRoot).iterator().asScala.filter(_.toString.endsWith(".scala")).toList
+      log.warn(s"[Baltic Porter] ssg-md: 0 files collected but ${all.size} scala files exist under portRoot=$portRoot")
+      if (all.nonEmpty) log.warn(s"[Baltic Porter] ssg-md: first 5: ${all.take(5).mkString(", ")}")
+    }
+    result
   }
 
   /** Generate ssg-md-ext Scala sources from flexmark extension modules. */
