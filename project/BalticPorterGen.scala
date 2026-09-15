@@ -41,19 +41,17 @@ object BalticPorterGen {
       val confPath = bp.resolve("balticporter/corpus/ports/liqp/main.conf")
       require(Files.exists(confPath), s"liqp port config not found at $confPath — publish balticporter-corpus first")
 
-      balticporter.corpus.liqp.LiqpClasspath.ensure(bp)
-
       System.setProperty("balticporter.root", bp.toAbsolutePath.normalize.toString)
       try {
+        balticporter.corpus.liqp.LiqpClasspath.ensure(bp)
         val config = balticporter.runner.PortConfig.load(confPath)
         config.execute()
         log.info(s"[Baltic Porter] Generated ssg-liquid sources to $outPath")
+        postProcess(outPath, log)
       } catch {
         case e: Exception =>
-          log.warn(s"[Baltic Porter] Port completed with findings (files may have been written): ${e.getMessage}")
+          log.warn(s"[Baltic Porter] ssg-liquid generation failed (files may have been written): ${e.getMessage}")
       }
-
-      postProcess(outPath, log)
 
       Files.createDirectories(marker.getParent)
       Files.writeString(marker, commit)
@@ -91,19 +89,17 @@ object BalticPorterGen {
       val confPath = bp.resolve("balticporter/corpus/ports/ssg-md/main.conf")
       require(Files.exists(confPath), s"flexmark port config not found at $confPath — publish balticporter-corpus first")
 
-      balticporter.corpus.flexmark.FlexmarkClasspath.ensure(bp)
-
       System.setProperty("balticporter.root", bp.toAbsolutePath.normalize.toString)
       try {
+        balticporter.corpus.flexmark.FlexmarkClasspath.ensure(bp)
         val config = balticporter.runner.PortConfig.load(confPath)
         config.execute()
         log.info(s"[Baltic Porter] Generated ssg-md sources to $outPath")
+        postProcess(outPath, log, skipIsEmpty = true)
       } catch {
         case e: Exception =>
-          log.warn(s"[Baltic Porter] Port completed with findings (files may have been written): ${e.getMessage}")
+          log.warn(s"[Baltic Porter] ssg-md generation failed (files may have been written): ${e.getMessage}")
       }
-
-      postProcess(outPath, log, skipIsEmpty = true)
 
       Files.createDirectories(marker.getParent)
       Files.writeString(marker, commit)
@@ -148,19 +144,17 @@ object BalticPorterGen {
       val confPath = bp.resolve("balticporter/corpus/ports/ssg-md/ext.conf")
       require(Files.exists(confPath), s"flexmark-ext port config not found at $confPath — publish balticporter-corpus first")
 
-      balticporter.corpus.flexmark.FlexmarkClasspath.ensure(bp)
-
       System.setProperty("balticporter.root", bp.toAbsolutePath.normalize.toString)
       try {
+        balticporter.corpus.flexmark.FlexmarkClasspath.ensure(bp)
         val config = balticporter.runner.PortConfig.load(confPath)
         config.execute()
         log.info(s"[Baltic Porter] Generated ssg-md-ext sources to $outPath")
+        postProcess(outPath, log, skipIsEmpty = true)
       } catch {
         case e: Exception =>
-          log.warn(s"[Baltic Porter] Port completed with findings (files may have been written): ${e.getMessage}")
+          log.warn(s"[Baltic Porter] ssg-md-ext generation failed (files may have been written): ${e.getMessage}")
       }
-
-      postProcess(outPath, log, skipIsEmpty = true)
 
       Files.createDirectories(marker.getParent)
       Files.writeString(marker, commit)
