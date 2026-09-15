@@ -25,7 +25,7 @@ object BalticPorterGen {
     }
     val bp = bpRoot(ssgRoot)
 
-    val portRoot = outDir.toPath
+    val portRoot = bp.resolve("ported/ssg-liquid")
     val outPath  = portRoot.resolve("src_managed/main/scala")
     val marker   = ssgRoot.resolve("target/balticporter-ssg-liquid/.generated-marker")
 
@@ -45,11 +45,7 @@ object BalticPorterGen {
 
       System.setProperty("balticporter.root", bp.toAbsolutePath.normalize.toString)
       try {
-        val config = balticporter.runner.PortConfig.load(confPath,
-                                                         Seq(
-                                                           s"--portRoot=$portRoot"
-                                                         )
-        )
+        val config = balticporter.runner.PortConfig.load(confPath)
         config.execute()
         log.info(s"[Baltic Porter] Generated ssg-liquid sources to $outPath")
       } catch {
@@ -79,7 +75,7 @@ object BalticPorterGen {
     }
     val bp = bpRoot(ssgRoot)
 
-    val portRoot = outDir.toPath
+    val portRoot = bp.resolve("ported/ssg-md")
     val outPath  = portRoot.resolve("src_managed/main/scala")
     val marker   = ssgRoot.resolve("target/balticporter-ssg-md/.generated-marker")
 
@@ -99,11 +95,7 @@ object BalticPorterGen {
 
       System.setProperty("balticporter.root", bp.toAbsolutePath.normalize.toString)
       try {
-        val config = balticporter.runner.PortConfig.load(confPath,
-                                                         Seq(
-                                                           s"--portRoot=$portRoot"
-                                                         )
-        )
+        val config = balticporter.runner.PortConfig.load(confPath)
         config.execute()
         log.info(s"[Baltic Porter] Generated ssg-md sources to $outPath")
       } catch {
@@ -140,7 +132,7 @@ object BalticPorterGen {
     }
     val bp = bpRoot(ssgRoot)
 
-    val portRoot = outDir.toPath
+    val portRoot = bp.resolve("ported/ssg-md-ext")
     val outPath  = portRoot.resolve("src_managed/main/scala")
     val marker   = ssgRoot.resolve("target/balticporter-ssg-md-ext/.generated-marker")
 
@@ -160,11 +152,7 @@ object BalticPorterGen {
 
       System.setProperty("balticporter.root", bp.toAbsolutePath.normalize.toString)
       try {
-        val config = balticporter.runner.PortConfig.load(confPath,
-                                                         Seq(
-                                                           s"--portRoot=$portRoot"
-                                                         )
-        )
+        val config = balticporter.runner.PortConfig.load(confPath)
         config.execute()
         log.info(s"[Baltic Porter] Generated ssg-md-ext sources to $outPath")
       } catch {
