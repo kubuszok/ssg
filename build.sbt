@@ -9,6 +9,10 @@ import kubuszok.sbt.KubuszokPlugin.autoImport._
 // anonymous refinement, breaking `versions.X` field access.
 val versions = Versions
 
+// Exclude Baltic Porter generated code from scoverage — coverageAggregate cannot find
+// source roots for files under target/balticporter-*/src_managed/ or sourceManaged/balticporter/.
+ThisBuild / coverageExcludedFiles := ".*(target/balticporter.*/src_managed/|sourceManaged/balticporter/).*"
+
 val dev = new DevProperties(
   scala213 = None,
   scala3 = Some(versions.scala3),
