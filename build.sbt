@@ -381,11 +381,14 @@ lazy val `ssg-md` = (projectMatrix in file("ssg-md"))
       val base = (ThisBuild / baseDirectory).value
       val out  = (Compile / sourceManaged).value
       val bpRoot = base / ".." / "balticporter"
+      // Enable the artifact layer so the base port writes port-report/port-map.tsv,
+      // which the ext port needs to answer contract questions about base types.
+      val reportDir = bpRoot / "ported" / "ssg-md" / "port-report"
+      System.setProperty("balticporter.reportPathRoot", reportDir.getAbsolutePath)
       val md    = BalticPorterGen.generateFlexmark(base, out / "balticporter", log)
-      // Point ext port to the base's report so it can answer contract questions.
-      val baseReport = bpRoot / "ported" / "ssg-md" / "port-report"
-      if (baseReport.exists())
-        System.setProperty("balticporter.baseReports", baseReport.getAbsolutePath)
+      // Point ext port to the base's report.
+      if (reportDir.exists())
+        System.setProperty("balticporter.baseReports", reportDir.getAbsolutePath)
       val ext   = BalticPorterGen.generateFlexmarkExt(base, out / "balticporter-ext", log)
       md ++ ext
     }.taskValue,
