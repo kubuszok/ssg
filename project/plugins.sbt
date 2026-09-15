@@ -9,5 +9,5 @@ ThisBuild / libraryDependencySchemes += "org.scala-lang.modules" %% "scala-xml" 
 // upstream Java originals. The frontend-ts module provides the non-Java emitters
 // (ParityDerive, TerserEmitter, KaTeXEmitter, MermaidEmitter, DartSassEmitter, roughjs emitters).
 resolvers += "Central Portal Snapshots" at "https://central.sonatype.com/repository/maven-snapshots"
-libraryDependencies += "com.kubuszok" %% "balticporter-corpus" % "637f03b3a13df2863068979146444abc06bee3d6-SNAPSHOT"
-libraryDependencies += "com.kubuszok" %% "balticporter-frontend-ts" % "637f03b3a13df2863068979146444abc06bee3d6-SNAPSHOT"
+libraryDependencies += "com.kubuszok" %% "balticporter-corpus" % "ea3ad52f91f70fb1eeadf10c29d51d0bef98faa3-SNAPSHOT"
+libraryDependencies += "com.kubuszok" %% "balticporter-frontend-ts" % "ea3ad52f91f70fb1eeadf10c29d51d0bef98faa3-SNAPSHOT"
