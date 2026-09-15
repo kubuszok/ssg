@@ -328,7 +328,7 @@ lazy val `ssg-liquid` = (projectMatrix in file("ssg-liquid"))
         (Compile / sourceManaged).value / "balticporter",
         streams.value.log)
     }.taskValue,
-    scalacOptions += "-Wconf:src=.*/sourceManaged/.*:s"
+    scalacOptions += "-Wconf:src=.*/sourceManaged/.*:s,src=.*/ported/.*/src_managed/.*:s"
   )
   .settings(publishSettings)
   .settings(mimaSettings)
@@ -380,7 +380,7 @@ lazy val `ssg-md` = (projectMatrix in file("ssg-md"))
         (Compile / sourceManaged).value / "balticporter-ext",
         streams.value.log)
     }.taskValue,
-    scalacOptions += "-Wconf:src=.*/sourceManaged/.*:s",
+    scalacOptions += "-Wconf:src=.*/sourceManaged/.*:s,src=.*/ported/.*/src_managed/.*:s",
     Test / scalacOptions += "-language:implicitConversions"
   )
   .settings(publishSettings)
