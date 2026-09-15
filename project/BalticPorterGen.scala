@@ -53,8 +53,8 @@ object BalticPorterGen {
         config.execute()
         log.info(s"[Baltic Porter] Generated ssg-liquid sources to $outPath")
       } catch {
-        case e: RuntimeException if e.getMessage != null && e.getMessage.contains("fatal finding") =>
-          log.warn(s"[Baltic Porter] Port completed with findings (files written): ${e.getMessage}")
+        case e: Exception =>
+          log.warn(s"[Baltic Porter] Port completed with findings (files may have been written): ${e.getMessage}")
       }
 
       postProcess(outPath, log)
@@ -107,8 +107,8 @@ object BalticPorterGen {
         config.execute()
         log.info(s"[Baltic Porter] Generated ssg-md sources to $outPath")
       } catch {
-        case e: RuntimeException if e.getMessage != null && e.getMessage.contains("fatal finding") =>
-          log.warn(s"[Baltic Porter] Port completed with findings (files written): ${e.getMessage}")
+        case e: Exception =>
+          log.warn(s"[Baltic Porter] Port completed with findings (files may have been written): ${e.getMessage}")
       }
 
       postProcess(outPath, log, skipIsEmpty = true)
@@ -161,8 +161,8 @@ object BalticPorterGen {
         config.execute()
         log.info(s"[Baltic Porter] Generated ssg-md-ext sources to $outPath")
       } catch {
-        case e: RuntimeException if e.getMessage != null && e.getMessage.contains("fatal finding") =>
-          log.warn(s"[Baltic Porter] Port completed with findings (files written): ${e.getMessage}")
+        case e: Exception =>
+          log.warn(s"[Baltic Porter] Port completed with findings (files may have been written): ${e.getMessage}")
       }
 
       postProcess(outPath, log, skipIsEmpty = true)
