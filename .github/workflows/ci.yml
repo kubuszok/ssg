@@ -78,6 +78,15 @@ jobs:
 
       - uses: sbt/setup-sbt@v1
 
+      - uses: coursier/setup-action@v3.0.2
+
+      - name: Checkout submodules for Java ports
+        run: git submodule update --init --depth=1 original-src/liqp original-src/flexmark-java
+
+      - name: Setup Baltic Porter
+        run: |
+          git clone --depth=1 https://github.com/kubuszok/balticporter.git ../balticporter
+          cd ../balticporter && sbt --batch publishLocal
 
 
 
@@ -157,6 +166,15 @@ jobs:
 
       - uses: sbt/setup-sbt@v1
 
+      - uses: coursier/setup-action@v3.0.2
+
+      - name: Checkout submodules for Java ports
+        run: git submodule update --init --depth=1 original-src/liqp original-src/flexmark-java
+
+      - name: Setup Baltic Porter
+        run: |
+          git clone --depth=1 https://github.com/kubuszok/balticporter.git ../balticporter
+          cd ../balticporter && sbt --batch publishLocal
 
       - uses: actions/setup-node@v7
         with:
@@ -227,6 +245,15 @@ jobs:
 
       - uses: sbt/setup-sbt@v1
 
+      - uses: coursier/setup-action@v3.0.2
+
+      - name: Checkout submodules for Java ports
+        run: git submodule update --init --depth=1 original-src/liqp original-src/flexmark-java
+
+      - name: Setup Baltic Porter
+        run: |
+          git clone --depth=1 https://github.com/kubuszok/balticporter.git ../balticporter
+          cd ../balticporter && sbt --batch publishLocal
 
 
 
