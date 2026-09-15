@@ -377,7 +377,12 @@ lazy val `ssg-md` = (projectMatrix in file("ssg-md"))
       val log = streams.value.log
       val base = (ThisBuild / baseDirectory).value
       val out  = (Compile / sourceManaged).value
+      val bpRoot = base / ".." / "balticporter"
       val md    = BalticPorterGen.generateFlexmark(base, out / "balticporter", log)
+      // Point ext port to the base's report so it can answer contract questions.
+      val baseReport = bpRoot / "ported" / "ssg-md" / "port-report"
+      if (baseReport.exists())
+        System.setProperty("balticporter.baseReports", baseReport.getAbsolutePath)
       val ext   = BalticPorterGen.generateFlexmarkExt(base, out / "balticporter-ext", log)
       md ++ ext
     }.taskValue,
