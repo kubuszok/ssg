@@ -371,19 +371,15 @@ lazy val `ssg-md` = (projectMatrix in file("ssg-md"))
       if (resDir.exists()) resDir
       else (Compile / resourceManaged).value / "balticporter"
     },
-    // Baltic Porter: generate ssg-md Scala sources from flexmark-java originals.
+    // Baltic Porter: generate ssg-md + ssg-md-ext Scala sources from flexmark-java.
+    // ONE generator, sequential: the ext port needs the base's port-map, so base runs first.
     Compile / sourceGenerators += Def.task {
-      BalticPorterGen.generateFlexmark(
-        (ThisBuild / baseDirectory).value,
-        (Compile / sourceManaged).value / "balticporter",
-        streams.value.log)
-    }.taskValue,
-    // Baltic Porter: generate ssg-md-ext Scala sources from flexmark extension modules.
-    Compile / sourceGenerators += Def.task {
-      BalticPorterGen.generateFlexmarkExt(
-        (ThisBuild / baseDirectory).value,
-        (Compile / sourceManaged).value / "balticporter-ext",
-        streams.value.log)
+      val log = streams.value.log
+      val base = (ThisBuild / baseDirectory).value
+      val out  = (Compile / sourceManaged).value
+      val md    = BalticPorterGen.generateFlexmark(base, out / "balticporter", log)
+      val ext   = BalticPorterGen.generateFlexmarkExt(base, out / "balticporter-ext", log)
+      md ++ ext
     }.taskValue,
     scalacOptions += "-Wconf:src=.*/sourceManaged/.*:s,src=.*/ported/.*/src_managed/.*:s",
     Test / scalacOptions += "-language:implicitConversions"
