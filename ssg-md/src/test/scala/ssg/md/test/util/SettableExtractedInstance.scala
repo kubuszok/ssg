@@ -41,7 +41,7 @@ final class SettableExtractedInstance[T, S](
       // both, need to combine
       val otherSetter     = myConsumerKey.get(other.get)
       val overridesSetter = myConsumerKey.get(overrides.get)
-      dataHolder.toMutable.set(myConsumerKey, otherSetter.andThen(overridesSetter))
+      dataHolder.toMutable().set(myConsumerKey, otherSetter.andThen(overridesSetter))
     } else {
       dataHolder
     }

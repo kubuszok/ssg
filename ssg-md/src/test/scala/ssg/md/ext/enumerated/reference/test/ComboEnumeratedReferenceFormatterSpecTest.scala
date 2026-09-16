@@ -22,7 +22,7 @@ import scala.language.implicitConversions
 
 final class ComboEnumeratedReferenceFormatterSpecTest extends FormatterSpecTestSuite {
   override def specResource:         ResourceLocation                       = ComboEnumeratedReferenceFormatterSpecTest.RESOURCE_LOCATION
-  override def defaultOptions:       Nullable[DataHolder]                   = Nullable(ComboEnumeratedReferenceFormatterSpecTest.OPTIONS)
+  override def defaultOptions:       Nullable[DataHolder]                   = ComboEnumeratedReferenceFormatterSpecTest.OPTIONS
   override def optionsMap:           java.util.Map[String, ? <: DataHolder] = ComboEnumeratedReferenceFormatterSpecTest.OPTIONS_MAP
   override def knownFailurePrefixes: Set[String]                            = Set("Enumerated Reference -")
 }
@@ -30,11 +30,12 @@ final class ComboEnumeratedReferenceFormatterSpecTest extends FormatterSpecTestS
 object ComboEnumeratedReferenceFormatterSpecTest {
   val SPEC_RESOURCE:     String           = "/ssg/md/ext/enumerated/reference/test/ext_enumerated_reference_formatter_spec.md"
   val RESOURCE_LOCATION: ResourceLocation = ResourceLocation.of(classOf[ComboEnumeratedReferenceFormatterSpecTest], SPEC_RESOURCE)
-  val OPTIONS:           DataHolder       = new MutableDataSet().set(Parser.EXTENSIONS, Collections.singleton(EnumeratedReferenceExtension.create())).set(Parser.LISTS_AUTO_LOOSE, false).toImmutable
+  val OPTIONS:           DataHolder       =
+    new MutableDataSet().set(Parser.EXTENSIONS, Collections.singleton(EnumeratedReferenceExtension.create())).set(Parser.LISTS_AUTO_LOOSE, java.lang.Boolean.valueOf(false)).toImmutable()
 
   val OPTIONS_MAP: java.util.Map[String, DataHolder] = FormatterSpecTestSuite.placementAndSortOptions(
-    Nullable(EnumeratedReferenceExtension.ENUMERATED_REFERENCES_KEEP),
-    Nullable(EnumeratedReferenceExtension.ENUMERATED_REFERENCE_PLACEMENT),
-    Nullable(EnumeratedReferenceExtension.ENUMERATED_REFERENCE_SORT)
+    EnumeratedReferenceExtension.ENUMERATED_REFERENCES_KEEP,
+    EnumeratedReferenceExtension.ENUMERATED_REFERENCE_PLACEMENT,
+    EnumeratedReferenceExtension.ENUMERATED_REFERENCE_SORT
   )
 }

@@ -45,9 +45,9 @@ class EnumeratedReferenceExtensionSuite extends FunSuite {
       BasedSequence.of("fig:label"),
       BasedSequence.of("]")
     )
-    assertEquals(node.text.toString, "fig:label")
-    assertEquals(node.openingMarker.toString, "[#")
-    assertEquals(node.closingMarker.toString, "]")
+    assertEquals(node.getText().toString, "fig:label")
+    assertEquals(node.getOpeningMarker().toString, "[#")
+    assertEquals(node.getClosingMarker().toString, "]")
   }
 
   test("EnumeratedReferenceLink can be constructed") {
@@ -57,8 +57,8 @@ class EnumeratedReferenceExtensionSuite extends FunSuite {
       BasedSequence.of("fig:label"),
       BasedSequence.of("]")
     )
-    assertEquals(node.text.toString, "fig:label")
-    assertEquals(node.openingMarker.toString, "[@")
+    assertEquals(node.getText().toString, "fig:label")
+    assertEquals(node.getOpeningMarker().toString, "[@")
   }
 
   // --- End-to-end rendering tests ---

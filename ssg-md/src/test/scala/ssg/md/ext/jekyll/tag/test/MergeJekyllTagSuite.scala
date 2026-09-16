@@ -40,18 +40,18 @@ final class MergeJekyllTagSuite extends munit.FunSuite {
 
   private val OPTIONS: DataHolder = new MutableDataSet()
     .set(Parser.EXTENSIONS, Collections.singleton(JekyllTagExtension.create()))
-    .set(Parser.BLANK_LINES_IN_AST, true)
-    .set(Parser.PARSE_INNER_HTML_COMMENTS, true)
-    .set(Parser.HEADING_NO_ATX_SPACE, true)
-    .set(Formatter.MAX_TRAILING_BLANK_LINES, 0)
-    .set(JekyllTagExtension.INCLUDED_HTML, content)
-    .set(JekyllTagExtension.EMBED_INCLUDED_CONTENT, true)
-    .toImmutable
+    .set(Parser.BLANK_LINES_IN_AST, java.lang.Boolean.valueOf(true))
+    .set(Parser.PARSE_INNER_HTML_COMMENTS, java.lang.Boolean.valueOf(true))
+    .set(Parser.HEADING_NO_ATX_SPACE, java.lang.Boolean.valueOf(true))
+    .set(Formatter.MAX_TRAILING_BLANK_LINES, java.lang.Integer.valueOf(0))
+    .set(JekyllTagExtension.INCLUDED_HTML, { import scala.jdk.CollectionConverters.*; content.asScala })
+    .set(JekyllTagExtension.EMBED_INCLUDED_CONTENT, java.lang.Boolean.valueOf(true))
+    .toImmutable()
 
-  private val NON_EMBEDDING_OPTIONS: DataHolder = new MutableDataSet(Nullable(OPTIONS)).set(JekyllTagExtension.EMBED_INCLUDED_CONTENT, false).toImmutable
+  private val NON_EMBEDDING_OPTIONS: DataHolder = new MutableDataSet(OPTIONS).set(JekyllTagExtension.EMBED_INCLUDED_CONTENT, java.lang.Boolean.valueOf(false)).toImmutable()
 
-  private val EMBEDDING_FORMATTER:     Formatter = Formatter.builder(Nullable(OPTIONS)).build()
-  private val NON_EMBEDDING_FORMATTER: Formatter = Formatter.builder(Nullable(NON_EMBEDDING_OPTIONS)).build()
+  private val EMBEDDING_FORMATTER:     Formatter = Formatter.builder(OPTIONS).build()
+  private val NON_EMBEDDING_FORMATTER: Formatter = Formatter.builder(NON_EMBEDDING_OPTIONS).build()
   private val EMBEDDING_PARSER:        Parser    = Parser.builder(OPTIONS).build()
   private val NON_EMBEDDING_PARSER:    Parser    = Parser.builder(NON_EMBEDDING_OPTIONS).build()
 

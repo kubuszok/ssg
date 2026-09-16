@@ -18,7 +18,7 @@ import scala.language.implicitConversions
 final class TableTextCollectingVisitorTest extends munit.FunSuite {
 
   test("test_basic") {
-    val options: DataHolder = new MutableDataSet().set(Parser.EXTENSIONS, Arrays.asList(TablesExtension.create())).toImmutable
+    val options: DataHolder = new MutableDataSet().set(Parser.EXTENSIONS, Arrays.asList(TablesExtension.create())).toImmutable()
 
     val parser   = Parser.builder(options).build()
     val markdown =
@@ -47,7 +47,7 @@ final class TableTextCollectingVisitorTest extends munit.FunSuite {
   }
 
   test("test_linkURL") {
-    val options: DataHolder = new MutableDataSet().set(Parser.EXTENSIONS, Arrays.asList(TablesExtension.create())).toImmutable
+    val options: DataHolder = new MutableDataSet().set(Parser.EXTENSIONS, Arrays.asList(TablesExtension.create())).toImmutable()
 
     val parser   = Parser.builder(options).build()
     val markdown =
@@ -67,7 +67,7 @@ final class TableTextCollectingVisitorTest extends munit.FunSuite {
   }
 
   test("test_linkNodeText") {
-    val options: DataHolder = new MutableDataSet().set(Parser.EXTENSIONS, Arrays.asList(TablesExtension.create())).toImmutable
+    val options: DataHolder = new MutableDataSet().set(Parser.EXTENSIONS, Arrays.asList(TablesExtension.create())).toImmutable()
 
     val parser   = Parser.builder(options).build()
     val markdown =
@@ -87,7 +87,7 @@ final class TableTextCollectingVisitorTest extends munit.FunSuite {
   }
 
   test("test_linkUrlNodeText") {
-    val options: DataHolder = new MutableDataSet().set(Parser.EXTENSIONS, Arrays.asList(TablesExtension.create())).toImmutable
+    val options: DataHolder = new MutableDataSet().set(Parser.EXTENSIONS, Arrays.asList(TablesExtension.create())).toImmutable()
 
     val parser   = Parser.builder(options).build()
     val markdown =

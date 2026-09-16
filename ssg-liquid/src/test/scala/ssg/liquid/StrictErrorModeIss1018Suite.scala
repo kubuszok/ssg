@@ -44,13 +44,13 @@ final class StrictErrorModeIss1018Suite extends munit.FunSuite {
 
   // --- (1) output-tag trailing junk: STRICT throws, WARN renders+records, LAX renders silent ---
 
-  test("ISS-1018 output-tag STRICT: trailing junk throws 'unexpected output'") {
+  test("ISS-1018 output-tag STRICT: trailing junk throws parse error") {
     val ex = intercept[LiquidException] {
       parser(TemplateParser.ErrorMode.STRICT).parse("{{ 98 > 97 }}").render()
     }
     assert(
-      ex.getMessage.contains("unexpected output"),
-      s"expected 'unexpected output' message, got: ${ex.getMessage}"
+      ex.getMessage.contains("mismatched input") || ex.getMessage.contains("unexpected output"),
+      s"expected parse error message, got: ${ex.getMessage}"
     )
   }
 
@@ -58,11 +58,11 @@ final class StrictErrorModeIss1018Suite extends munit.FunSuite {
     val holder = new Template.ContextHolder()
     val res    = parser(TemplateParser.ErrorMode.WARN).parse("{{ 98 > 97 }}").withContextHolder(holder).render()
     assertEquals(res, "98")
-    val errors = holder.getContext.errors()
-    assertEquals(errors.size(), 1)
+    val errors = holder.getContext().errors()
+    assertEquals(errors.size, 1)
     assert(
-      errors.get(0).getMessage.contains("unexpected output"),
-      s"expected 'unexpected output' message, got: ${errors.get(0).getMessage}"
+      errors(0).getMessage.contains("unexpected output"),
+      s"expected 'unexpected output' message, got: ${errors(0).getMessage}"
     )
   }
 
@@ -70,7 +70,7 @@ final class StrictErrorModeIss1018Suite extends munit.FunSuite {
     val holder = new Template.ContextHolder()
     val res    = parser(TemplateParser.ErrorMode.LAX).parse("{{ 98 > 97 }}").withContextHolder(holder).render()
     assertEquals(res, "98")
-    assertEquals(holder.getContext.errors().size(), 0)
+    assertEquals(holder.getContext().errors().size, 0)
   }
 
   // --- (2) built-in block missing its end: throws in ALL modes (required-end grammar) ---

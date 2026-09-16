@@ -9,6 +9,10 @@ import kubuszok.sbt.KubuszokPlugin.autoImport._
 // anonymous refinement, breaking `versions.X` field access.
 val versions = Versions
 
+// Exclude Baltic Porter generated code from scoverage — coverageAggregate cannot find
+// source roots for files under target/balticporter-*/src_managed/ or sourceManaged/balticporter/.
+ThisBuild / coverageExcludedFiles := ".*(target/balticporter.*/src_managed/|sourceManaged/balticporter/).*"
+
 val dev = new DevProperties(
   scala213 = None,
   scala3 = Some(versions.scala3),
@@ -161,7 +165,16 @@ lazy val `ssg-graphs-commons` = (projectMatrix in file("ssg-graphs-commons"))
   .defaultAxes(VirtualAxis.jvm, VirtualAxis.scalaABIVersion(versions.scala3))
   .someVariations(versions.scalas, versions.platforms)((commonSettings ++ dev.only1VersionInIDE) *)
   .settings(
-    name := "ssg-graphs-commons"
+    name := "ssg-graphs-commons",
+    Compile / sourceGenerators += Def.task {
+      val bpRast = (ThisBuild / baseDirectory).value / ".." / "balticporter" / "balticporter" / "frontend-ts" / "src" / "test" / "resources" / "rast"
+      BalticPorterGen.generateNonJavaModule(
+        "ssg-graphs-commons",
+        (ThisBuild / baseDirectory).value / "ssg-graphs-commons" / "reference" / "scala",
+        (Compile / sourceManaged).value / "balticporter",
+        streams.value.log,
+        rastDir = Some(bpRast / "roughjs"))
+    }.taskValue
   )
   .settings(publishSettings)
   .settings(mimaSettings)
@@ -226,6 +239,15 @@ lazy val `ssg-js` = (projectMatrix in file("ssg-js"))
   .someVariations(versions.scalas, versions.platforms)((commonSettings ++ dev.only1VersionInIDE) *)
   .settings(
     name := "ssg-js",
+    Compile / sourceGenerators += Def.task {
+      val bpRast = (ThisBuild / baseDirectory).value / ".." / "balticporter" / "balticporter" / "frontend-ts" / "src" / "test" / "resources" / "rast"
+      BalticPorterGen.generateNonJavaModule(
+        "ssg-js",
+        (ThisBuild / baseDirectory).value / "ssg-js" / "reference" / "scala",
+        (Compile / sourceManaged).value / "balticporter",
+        streams.value.log,
+        rastDir = Some(bpRast / "terser"))
+    }.taskValue,
     // The Terser port's name mangler keeps process-global mutable state (object Base54's char/frequency
     // table — terser's lib/scope.js Base54 is a single module-level singleton, reset per minify call).
     // sbt 2.0 runs test suites in parallel within one forked JVM by default, so concurrent minify calls
@@ -244,6 +266,15 @@ lazy val `ssg-katex` = (projectMatrix in file("ssg-katex"))
   .someVariations(versions.scalas, versions.platforms)((commonSettings ++ dev.only1VersionInIDE) *)
   .settings(
     name := "ssg-katex",
+    Compile / sourceGenerators += Def.task {
+      val bpRast = (ThisBuild / baseDirectory).value / ".." / "balticporter" / "balticporter" / "frontend-ts" / "src" / "test" / "resources" / "rast"
+      BalticPorterGen.generateNonJavaModule(
+        "ssg-katex",
+        (ThisBuild / baseDirectory).value / "ssg-katex" / "reference" / "scala",
+        (Compile / sourceManaged).value / "balticporter",
+        streams.value.log,
+        rastDir = Some(bpRast / "katex"))
+    }.taskValue,
     // ISS-1348: The KaTeX port's macro registry (Macros.registerAll) populates a process-global
     // mutable map. Parallel test suites race on that shared state. Run ssg-katex tests serially
     // to preserve the single-threaded contract (same pattern as ssg-js / Base54).
@@ -269,8 +300,43 @@ lazy val `ssg-liquid` = (projectMatrix in file("ssg-liquid"))
     name := "ssg-liquid",
     libraryDependencies ++= Seq(
       "io.github.cquiroz" %% "scala-java-time"    % versions.scalaJavaTime,
-      "io.github.cquiroz" %% "scala-java-locales" % versions.scalaJavaLocales
-    )
+      "io.github.cquiroz" %% "scala-java-locales" % versions.scalaJavaLocales,
+      // Baltic Porter generated code dependencies: the mechanically ported liqp code
+      // uses these libraries directly (the hand-port had rewrote them away).
+      "com.kubuszok"                    %% "balticporter-runtime"      % "9fb82906bd9ee9a30ebdb4fbdc39aea0f447ccd9-SNAPSHOT",
+      "org.antlr"                        % "antlr4-runtime"            % "4.13.0",
+      "com.fasterxml.jackson.core"       % "jackson-core"              % "2.15.0",
+      "com.fasterxml.jackson.core"       % "jackson-databind"          % "2.13.4.2",
+      "com.fasterxml.jackson.core"       % "jackson-annotations"       % "2.15.0",
+      "com.fasterxml.jackson.datatype"   % "jackson-datatype-jsr310"   % "2.15.0",
+      "ua.co.k"                          % "strftime4j"                % "1.0.6",
+      "com.kubuszok"                    %% "multiarch-serviceloader"   % "0.4.0-12-gc168b2f-SNAPSHOT",
+    ),
+    resolvers += "Central Portal Snapshots" at "https://central.sonatype.com/repository/maven-snapshots",
+    // ANTLR-generated parser class directory: the generated liqp code imports liquid.parser.v4.*
+    // which is compiled from the grammar by LiqpClasspath in balticporter.
+    // LiqpClasspath.ensure compiles the parser; call it here (not in the sourceGenerator)
+    // so the classes exist before sbt evaluates the compile classpath.
+    Compile / unmanagedClasspath ++= {
+      val bpRoot = (ThisBuild / baseDirectory).value / ".." / "balticporter"
+      val parserDir = bpRoot / "out" / "liqp-parser-classes"
+      if (java.nio.file.Files.isDirectory(bpRoot.toPath.resolve("balticporter/corpus"))) {
+        try { balticporter.corpus.liqp.LiqpClasspath.ensure(bpRoot.toPath) } catch { case _: Exception => () }
+      }
+      if (parserDir.exists()) {
+        val fc = fileConverter.value
+        Seq(Attributed.blank(fc.toVirtualFile(parserDir.toPath)))
+      } else Nil
+    },
+    Test / unmanagedClasspath ++= (Compile / unmanagedClasspath).value,
+    // Baltic Porter: generate ssg-liquid Scala sources from liqp Java originals.
+    Compile / sourceGenerators += Def.task {
+      BalticPorterGen.generateLiquid(
+        (ThisBuild / baseDirectory).value,
+        (Compile / sourceManaged).value / "balticporter",
+        streams.value.log)
+    }.taskValue,
+    scalacOptions += "-Wconf:src=.*/sourceManaged/.*:s,src=.*/ported/.*/src_managed/.*:s"
   )
   .settings(publishSettings)
   .settings(mimaSettings)
@@ -295,7 +361,43 @@ lazy val `ssg-md` = (projectMatrix in file("ssg-md"))
   )) *)
   .settings(
     name := "ssg-md",
-    libraryDependencies += "com.kubuszok" %% "multiarch-resources" % versions.multiarch
+    libraryDependencies ++= Seq(
+      "com.kubuszok"       %% "multiarch-resources"   % versions.multiarch,
+      "com.kubuszok"       %% "balticporter-runtime"  % "9fb82906bd9ee9a30ebdb4fbdc39aea0f447ccd9-SNAPSHOT",
+      "org.jetbrains"       % "annotations"           % "24.0.1" % Provided,
+      "org.nibor.autolink"  % "autolink"              % "0.6.0",
+    ),
+    // Baltic Porter: generated flexmark resources (entities.properties for Html5Entities).
+    Compile / unmanagedResourceDirectories += {
+      val bpRoot = (ThisBuild / baseDirectory).value / ".." / "balticporter"
+      val resDir = bpRoot / "ported" / "ssg-md" / "src_managed" / "main" / "resources"
+      if (resDir.exists()) resDir
+      else (Compile / resourceManaged).value / "balticporter"
+    },
+    // Baltic Porter: generate ssg-md + ssg-md-ext Scala sources from flexmark-java.
+    // ONE generator, sequential: the ext port needs the base's port-map, so base runs first.
+    Compile / sourceGenerators += Def.task {
+      val log = streams.value.log
+      val base = (ThisBuild / baseDirectory).value
+      val out  = (Compile / sourceManaged).value
+      val bpRoot = base / ".." / "balticporter"
+      // Enable the artifact layer so the base port writes port-map.tsv.
+      // CheckReport.enabled requires `reportDir` (not `reportPathRoot`) to be set when
+      // running under sbt, because sbt's main class is filtered out by mainClassKey.
+      // The directory is named after the module label so PortMap.discover can find it:
+      //   <reportRoot>/<module-dir>/run-latest/port-map.tsv
+      val reportRoot = bpRoot / "ported" / "ssg-md" / "port-report"
+      System.setProperty("balticporter.reportDir", (reportRoot / "ssg-md").getAbsolutePath)
+      val md    = BalticPorterGen.generateFlexmark(base, out / "balticporter", log)
+      // Switch reportDir to the ext port's own directory (avoids overwriting the base map)
+      // and point baseReports at the root so the ext discovers the base's ssg-md map.
+      System.setProperty("balticporter.reportDir", (reportRoot / "ssg-md-ext").getAbsolutePath)
+      System.setProperty("balticporter.baseReports", reportRoot.getAbsolutePath)
+      val ext   = BalticPorterGen.generateFlexmarkExt(base, out / "balticporter-ext", log)
+      md ++ ext
+    }.taskValue,
+    scalacOptions += "-Wconf:src=.*/sourceManaged/.*:s,src=.*/ported/.*/src_managed/.*:s",
+    Test / scalacOptions += "-language:implicitConversions"
   )
   .settings(publishSettings)
   .settings(mimaSettings)
@@ -315,6 +417,15 @@ lazy val `ssg-mermaid` = (projectMatrix in file("ssg-mermaid"))
   )) *)
   .settings(
     name := "ssg-mermaid",
+    Compile / sourceGenerators += Def.task {
+      val bpRast = (ThisBuild / baseDirectory).value / ".." / "balticporter" / "balticporter" / "frontend-ts" / "src" / "test" / "resources" / "rast"
+      BalticPorterGen.generateNonJavaModule(
+        "ssg-mermaid",
+        (ThisBuild / baseDirectory).value / "ssg-mermaid" / "reference" / "scala",
+        (Compile / sourceManaged).value / "balticporter",
+        streams.value.log,
+        rastDir = Some(bpRast / "mermaid"))
+    }.taskValue,
     libraryDependencies ++= Seq(
       "io.github.cquiroz" %% "scala-java-time"          % versions.scalaJavaTime,
       "com.kubuszok"      %% "kindlings-yaml-derivation" % versions.kindlingsYaml
@@ -342,7 +453,16 @@ lazy val `ssg-sass` = (projectMatrix in file("ssg-sass"))
   .defaultAxes(VirtualAxis.jvm, VirtualAxis.scalaABIVersion(versions.scala3))
   .someVariations(versions.scalas, versions.platforms)((commonSettings ++ dev.only1VersionInIDE) *)
   .settings(
-    name := "ssg-sass"
+    name := "ssg-sass",
+    Compile / sourceGenerators += Def.task {
+      val bpRast = (ThisBuild / baseDirectory).value / ".." / "balticporter" / "balticporter" / "frontend-ts" / "src" / "test" / "resources" / "rast"
+      BalticPorterGen.generateNonJavaModule(
+        "ssg-sass",
+        (ThisBuild / baseDirectory).value / "ssg-sass" / "reference" / "scala",
+        (Compile / sourceManaged).value / "balticporter",
+        streams.value.log,
+        rastDir = Some(bpRast / "dart-sass"))
+    }.taskValue
   )
   .settings(publishSettings)
   .settings(mimaSettings)
@@ -359,7 +479,16 @@ lazy val `ssg-site` = (projectMatrix in file("ssg-site"))
     // ISS-1353: the SiteBuildPhase suites each run a full site build (SASS compile + file writes);
     // run them serially so concurrent filesystem access can't race — intermittent IOException on
     // Native-Windows only, where file locking is strict (POSIX tolerates it). Mirrors ssg-js/ssg-katex.
-    Test / parallelExecution := false
+    Test / parallelExecution := false,
+    // ANTLR parser classes from ssg-liquid's generated code (unmanagedClasspath is not transitive).
+    Test / unmanagedClasspath ++= {
+      val bpRoot = (ThisBuild / baseDirectory).value / ".." / "balticporter"
+      val parserDir = bpRoot / "out" / "liqp-parser-classes"
+      if (parserDir.exists()) {
+        val fc = fileConverter.value
+        Seq(Attributed.blank(fc.toVirtualFile(parserDir.toPath)))
+      } else Nil
+    }
   )
   .settings(publishSettings)
   .settings(mimaSettings)
@@ -395,7 +524,17 @@ lazy val root = (project in file("."))
   .settings(
     addCommandAlias("ci-jvm-3", ciTestFull("JVM", "3")),
     addCommandAlias("ci-js-3", ciTestFull("JS", "3")),
-    addCommandAlias("ci-native-3", ciTestFull("Native", "3"))
+    // Generated ssg-md/ssg-liquid code uses JVM-only APIs (jackson, Class.getEnumConstants);
+    // compile all Native modules but testFull only the ones whose generated code is Native-compatible.
+    addCommandAlias("ci-native-3", {
+      val allModules = Seq("ssg-commons", "ssg-data-commons", "ssg-graphs-commons", "ssg-graphviz",
+        "ssg-highlight", "ssg-js", "ssg-katex", "ssg-liquid", "ssg-md", "ssg-mermaid",
+        "ssg-minify", "ssg-sass", "ssg-site")
+      val jvmOnly = Set("ssg-md", "ssg-liquid", "ssg-highlight", "ssg-site")
+      val compile = allModules.map(m => s"${m}Native/compile").mkString(" ; ")
+      val test = allModules.filterNot(jvmOnly).map(m => s"${m}Native/testFull").mkString(" ; ")
+      s"clean ; $compile ; ssgNative/compile ; $test"
+    })
   )
   .aggregate(`ssg-commons`.projectRefs *)
   .aggregate(`ssg-data-commons`.projectRefs *)

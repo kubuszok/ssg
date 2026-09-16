@@ -25,7 +25,7 @@ import scala.language.implicitConversions
 
 final class ComboAttributesTranslationFormatterSpecTest extends TranslationFormatterSpecTestSuite {
   override def specResource:         ResourceLocation                       = ComboAttributesTranslationFormatterSpecTest.RESOURCE_LOCATION
-  override def defaultOptions:       Nullable[DataHolder]                   = Nullable(ComboAttributesTranslationFormatterSpecTest.OPTIONS)
+  override def defaultOptions:       Nullable[DataHolder]                   = ComboAttributesTranslationFormatterSpecTest.OPTIONS
   override def optionsMap:           java.util.Map[String, ? <: DataHolder] = ComboAttributesTranslationFormatterSpecTest.OPTIONS_MAP
   override def knownFailurePrefixes: Set[String]                            = Set(
     "Anchor Targets -",
@@ -44,7 +44,7 @@ final class ComboAttributesTranslationFormatterSpecTest extends TranslationForma
 object ComboAttributesTranslationFormatterSpecTest {
   val SPEC_RESOURCE:     String           = "/ssg/md/ext/attributes/test/ext_attributes_translation_format_spec.md"
   val RESOURCE_LOCATION: ResourceLocation = ResourceLocation.of(classOf[ComboAttributesTranslationFormatterSpecTest], SPEC_RESOURCE)
-  val OPTIONS:           DataHolder       = new MutableDataSet().set(Parser.EXTENSIONS, Collections.singleton(AttributesExtension.create())).toImmutable
+  val OPTIONS:           DataHolder       = new MutableDataSet().set(Parser.EXTENSIONS, Collections.singleton(AttributesExtension.create())).toImmutable()
 
   val OPTIONS_MAP: java.util.Map[String, DataHolder] = {
     val map = new HashMap[String, DataHolder]()
@@ -55,12 +55,18 @@ object ComboAttributesTranslationFormatterSpecTest {
           Parser.EXTENSIONS,
           Arrays.asList(AnchorLinkExtension.create(), AttributesExtension.create(), TocExtension.create(), EmojiExtension.create())
         )
-        .set(AnchorLinkExtension.ANCHORLINKS_WRAP_TEXT, false)
-        .set(HtmlRenderer.RENDER_HEADER_ID, false)
-        .toImmutable
+        .set(AnchorLinkExtension.ANCHORLINKS_WRAP_TEXT, java.lang.Boolean.valueOf(false))
+        .set(HtmlRenderer.RENDER_HEADER_ID, java.lang.Boolean.valueOf(false))
+        .toImmutable()
     )
-    map.put("text-attributes", new MutableDataSet().set(AttributesExtension.ASSIGN_TEXT_ATTRIBUTES, true).toImmutable)
-    map.put("no-text-attributes", new MutableDataSet().set(AttributesExtension.ASSIGN_TEXT_ATTRIBUTES, false).toImmutable)
+    map.put(
+      "text-attributes",
+      new MutableDataSet().set(AttributesExtension.ASSIGN_TEXT_ATTRIBUTES, java.lang.Boolean.valueOf(true)).toImmutable()
+    )
+    map.put(
+      "no-text-attributes",
+      new MutableDataSet().set(AttributesExtension.ASSIGN_TEXT_ATTRIBUTES, java.lang.Boolean.valueOf(false)).toImmutable()
+    )
     map
   }
 }

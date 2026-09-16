@@ -17,12 +17,12 @@ import scala.language.implicitConversions
 
 abstract class IParseBase(val options: Nullable[DataHolder]) extends IParse {
 
-  def this() = this(Nullable.empty)
+  def this() = this(Nullable.empty[DataHolder])
 
   override def parse(input: String): Node =
     parse(BasedSequence.of(input))
 
-  override def transferReferences(document: Document, included: Document, onlyIfUndefined: Nullable[Boolean]): Boolean =
+  override def transferReferences(document: Document, included: Document, onlyIfUndefined: java.lang.Boolean): Boolean =
     false
 
   @throws[IOException]

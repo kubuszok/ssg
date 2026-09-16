@@ -22,7 +22,7 @@ final class ComboCoreDirectionalSpecTest extends RendererSpecTestSuite {
 
   override def specResource: ResourceLocation = ComboCoreDirectionalSpecTest.RESOURCE_LOCATION
 
-  override def defaultOptions: Nullable[DataHolder] = Nullable(ComboCoreDirectionalSpecTest.MERGED_OPTIONS)
+  override def defaultOptions: Nullable[DataHolder] = ComboCoreDirectionalSpecTest.MERGED_OPTIONS
 
   override def optionsMap: ju.Map[String, ? <: DataHolder] = CoreRendererOptions.OPTIONS_MAP
 
@@ -34,13 +34,13 @@ object ComboCoreDirectionalSpecTest {
   val RESOURCE_LOCATION: ResourceLocation = ResourceLocation.of(classOf[ComboCoreDirectionalSpecTest], SPEC_RESOURCE)
 
   val OPTIONS: DataHolder = new MutableDataSet()
-    .set(HtmlRenderer.INDENT_SIZE, 0)
-    .set(Parser.INLINE_DELIMITER_DIRECTIONAL_PUNCTUATIONS, true)
-    .set(HtmlRenderer.PERCENT_ENCODE_URLS, true)
-    .set(TestUtils.NO_FILE_EOL, false)
-    .toImmutable
+    .set(HtmlRenderer.INDENT_SIZE, java.lang.Integer.valueOf(0))
+    .set(Parser.INLINE_DELIMITER_DIRECTIONAL_PUNCTUATIONS, java.lang.Boolean.valueOf(true))
+    .set(HtmlRenderer.PERCENT_ENCODE_URLS, java.lang.Boolean.valueOf(true))
+    .set(TestUtils.NO_FILE_EOL, java.lang.Boolean.valueOf(false))
+    .toImmutable()
 
   /** Merged: CoreRendererOptions.BASE_OPTIONS + this test's OPTIONS */
   val MERGED_OPTIONS: DataHolder =
-    DataSet.aggregate(Nullable(CoreRendererOptions.BASE_OPTIONS), Nullable(OPTIONS)).toImmutable
+    DataSet.aggregate(CoreRendererOptions.BASE_OPTIONS, OPTIONS).toImmutable()
 }

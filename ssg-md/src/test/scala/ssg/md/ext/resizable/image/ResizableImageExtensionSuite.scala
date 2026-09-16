@@ -31,7 +31,7 @@ class ResizableImageExtensionSuite extends FunSuite {
     val width  = base.subSequence(19, 22) // "100"
     val height = base.subSequence(23, 26) // "200"
     val node   = new ResizableImage(text, source, width, height)
-    assertEquals(node.text.toString, "alt text")
+    assertEquals(node.getText().toString, "alt text")
     assertEquals(node.source.toString, "image.png")
     assertEquals(node.width.toString, "100")
     assertEquals(node.height.toString, "200")

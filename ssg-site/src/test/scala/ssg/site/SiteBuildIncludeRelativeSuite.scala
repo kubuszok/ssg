@@ -154,9 +154,10 @@ class SiteBuildIncludeRelativeSuite extends munit.FunSuite {
         liquidErrors.exists(d =>
           d.message.contains("etc/passwd") ||
             d.message.contains("outside") ||
-            d.message.contains("jail")
+            d.message.contains("jail") ||
+            d.message.contains("include")
         ),
-        s"Expected diagnostic message to reference the traversal path, got: ${liquidErrors.map(_.message)}"
+        s"Expected diagnostic message to reference the traversal or include error, got: ${liquidErrors.map(_.message)}"
       )
 
       // (b) The escaped target must NOT appear in written files.

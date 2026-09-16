@@ -90,7 +90,7 @@ object RootJail {
       */
     private val DefaultExtension: String = ".liquid"
 
-    override def resolve(name: String): NameResolver.ResolvedSource = {
+    override def resolve(name: String): ssg.liquid.antlr.CharStreamWithLocation = {
       // Pre-compute the resolved path the same way LocalFSNameResolver does,
       // then check the jail BEFORE delegating (so the file is never read if
       // it escapes the root).

@@ -22,7 +22,7 @@ class DumpSpecReader(
 
   protected val sb:             StringBuilder           = new StringBuilder()
   protected val sbExp:          StringBuilder           = new StringBuilder()
-  protected var exampleComment: Nullable[StringBuilder] = Nullable.empty
+  protected var exampleComment: Nullable[StringBuilder] = Nullable.empty[StringBuilder]
 
   def fullSpec: String = sb.toString()
 
@@ -41,7 +41,7 @@ class DumpSpecReader(
     super.addSpecExample(specExample)
 
     val example = testCase.checkExample(specExample)
-    var exampleOptions: Nullable[DataHolder] = Nullable.empty
+    var exampleOptions: Nullable[DataHolder] = Nullable.empty[DataHolder]
     var ignoredTestCase = false
 
     try
@@ -50,7 +50,7 @@ class DumpSpecReader(
       // JUnit 4: AssumptionViolatedException — stubbed as generic exception check
       case _: Exception =>
         ignoredTestCase = true
-        exampleOptions = Nullable.empty
+        exampleOptions = Nullable.empty[DataHolder]
     }
 
     if (exampleOptions.exists(TestUtils.FAIL.get(_))) {
@@ -95,7 +95,7 @@ class DumpSpecReader(
     }
 
     val ast: Nullable[String] = if (example.ast.isEmpty) {
-      Nullable.empty
+      Nullable.empty[String]
     } else if (!ignoredTestCase) {
       exampleRenderer.getAst
     } else {

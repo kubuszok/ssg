@@ -2,7 +2,6 @@
 package ssg
 package liquid
 
-import ssg.liquid.antlr.NameResolver
 import ssg.liquid.parser.Flavor
 
 import java.util.{ HashMap => JHashMap }
@@ -20,7 +19,7 @@ final class IncludeExtraSuite extends munit.FunSuite {
   ): TemplateParser = {
     val map = new JHashMap[String, String]()
     templates.foreach { case (name, content) => map.put(name, content) }
-    new TemplateParser.Builder().withFlavor(flavor).withNameResolver(new NameResolver.InMemory(map)).withShowExceptionsFromInclude(showExceptions).build()
+    new TemplateParser.Builder().withFlavor(flavor).withNameResolver(new TestBridges.InMemoryNameResolver(map)).withShowExceptionsFromInclude(showExceptions).build()
   }
 
   // ---------------------------------------------------------------------------
@@ -70,9 +69,11 @@ final class IncludeExtraSuite extends munit.FunSuite {
   test("include: with keyword should throw in Jekyll strict mode") {
     val parser = new TemplateParser.Builder()
       .withFlavor(Flavor.JEKYLL)
-      .withNameResolver(new NameResolver.InMemory(new JHashMap[String, String]() {
-        put("color", "color: '{{ color }}'\nshape: '{{ shape }}'")
-      }))
+      .withNameResolver(
+        new TestBridges.InMemoryNameResolver(new JHashMap[String, String]() {
+          put("color", "color: '{{ color }}'\nshape: '{{ shape }}'")
+        })
+      )
       .withShowExceptionsFromInclude(true)
       .withErrorMode(TemplateParser.ErrorMode.STRICT)
       .build()
@@ -270,7 +271,11 @@ final class IncludeExtraSuite extends munit.FunSuite {
     val map = new JHashMap[String, String]()
     map.put("nonexistent_filter_tpl", "{{ 'THE_ERROR' | unknown_and_for_sure_enexist_filter }}")
     val parser =
-      new TemplateParser.Builder().withFlavor(Flavor.JEKYLL).withNameResolver(new NameResolver.InMemory(map)).withFilter(new filters.Filter("unknown_and_for_sure_enexist_filter") {}).build()
+      new TemplateParser.Builder()
+        .withFlavor(Flavor.JEKYLL)
+        .withNameResolver(new TestBridges.InMemoryNameResolver(map))
+        .withFilter(new filters.Filter("unknown_and_for_sure_enexist_filter") {})
+        .build()
     val template = parser.parse("{% include 'nonexistent_filter_tpl' %}")
     val result   = template.render()
     assert(result.contains("THE_ERROR"))

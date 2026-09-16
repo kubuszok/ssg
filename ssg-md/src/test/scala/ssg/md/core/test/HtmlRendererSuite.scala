@@ -119,18 +119,18 @@ final class HtmlRendererSuite extends munit.FunSuite {
   test("overrideNodeRender") {
     val nodeRendererFactory: NodeRendererFactory = (options: DataHolder) =>
       new NodeRenderer {
-        override def getNodeRenderingHandlers: Nullable[Set[NodeRenderingHandler[?]]] = {
+        override def getNodeRenderingHandlers(): scala.collection.mutable.Set[NodeRenderingHandler[?]] = {
           val set = mutable.HashSet.empty[NodeRenderingHandler[?]]
           set.add(
             new NodeRenderingHandler[Link](
               classOf[Link],
               new NodeRenderingHandler.CustomNodeRenderer[Link] {
                 override def render(node: Link, context: NodeRendererContext, html: HtmlWriter): Unit =
-                  context.getHtmlWriter.text("test")
+                  context.getHtmlWriter().text("test")
               }
             )
           )
-          Nullable(set.toSet)
+          set
         }
       }
 
@@ -142,22 +142,22 @@ final class HtmlRendererSuite extends munit.FunSuite {
   test("overrideInheritNodeRender") {
     val nodeRendererFactory: NodeRendererFactory = (options: DataHolder) =>
       new NodeRenderer {
-        override def getNodeRenderingHandlers: Nullable[Set[NodeRenderingHandler[?]]] = {
+        override def getNodeRenderingHandlers(): scala.collection.mutable.Set[NodeRenderingHandler[?]] = {
           val set = mutable.HashSet.empty[NodeRenderingHandler[?]]
           set.add(
             new NodeRenderingHandler[Link](
               classOf[Link],
               new NodeRenderingHandler.CustomNodeRenderer[Link] {
                 override def render(node: Link, context: NodeRendererContext, html: HtmlWriter): Unit =
-                  if (node.text.equals("bar")) {
-                    context.getHtmlWriter.text("test")
+                  if (node.getText().equals("bar")) {
+                    context.getHtmlWriter().text("test")
                   } else {
                     context.delegateRender()
                   }
               }
             )
           )
-          Nullable(set.toSet)
+          set
         }
       }
 
@@ -172,28 +172,28 @@ final class HtmlRendererSuite extends munit.FunSuite {
   test("overrideInheritNodeRenderSubContext") {
     val nodeRendererFactory: NodeRendererFactory = (options: DataHolder) =>
       new NodeRenderer {
-        override def getNodeRenderingHandlers: Nullable[Set[NodeRenderingHandler[?]]] = {
+        override def getNodeRenderingHandlers(): scala.collection.mutable.Set[NodeRenderingHandler[?]] = {
           val set = mutable.HashSet.empty[NodeRenderingHandler[?]]
           set.add(
             new NodeRenderingHandler[Link](
               classOf[Link],
               new NodeRenderingHandler.CustomNodeRenderer[Link] {
                 override def render(node: Link, context: NodeRendererContext, html: HtmlWriter): Unit =
-                  if (node.text.equals("bar")) {
-                    context.getHtmlWriter.text("test")
+                  if (node.getText().equals("bar")) {
+                    context.getHtmlWriter().text("test")
                   } else {
                     val subContext = context.getDelegatedSubContext(true)
-                    if (node.text.equals("raw")) {
+                    if (node.getText().equals("raw")) {
                       subContext.doNotRenderLinks()
                     }
                     subContext.delegateRender()
-                    val s = subContext.getHtmlWriter.asInstanceOf[LineAppendable].toString(-1, -1)
+                    val s = subContext.getHtmlWriter().asInstanceOf[LineAppendable].toString(-1, -1)
                     html.raw(s)
                   }
               }
             )
           )
-          Nullable(set.toSet)
+          set
         }
       }
 
@@ -214,52 +214,52 @@ final class HtmlRendererSuite extends munit.FunSuite {
   test("overrideInheritDependentNodeRender") {
     val nodeRendererFactory: NodeRendererFactory = (options: DataHolder) =>
       new NodeRenderer {
-        override def getNodeRenderingHandlers: Nullable[Set[NodeRenderingHandler[?]]] = {
+        override def getNodeRenderingHandlers(): scala.collection.mutable.Set[NodeRenderingHandler[?]] = {
           val set = mutable.HashSet.empty[NodeRenderingHandler[?]]
           set.add(
             new NodeRenderingHandler[Link](
               classOf[Link],
               new NodeRenderingHandler.CustomNodeRenderer[Link] {
                 override def render(node: Link, context: NodeRendererContext, html: HtmlWriter): Unit =
-                  if (node.text.equals("bar")) {
-                    context.getHtmlWriter.text("test")
-                  } else if (node.text.equals("bars")) {
-                    context.getHtmlWriter.text("tests")
+                  if (node.getText().equals("bar")) {
+                    context.getHtmlWriter().text("test")
+                  } else if (node.getText().equals("bars")) {
+                    context.getHtmlWriter().text("tests")
                   } else {
                     context.delegateRender()
                   }
               }
             )
           )
-          Nullable(set.toSet)
+          set
         }
       }
 
     val nodeRendererFactory2: DelegatingNodeRendererFactory = new DelegatingNodeRendererFactory {
       override def apply(options: DataHolder): NodeRenderer = new NodeRenderer {
-        override def getNodeRenderingHandlers: Nullable[Set[NodeRenderingHandler[?]]] = {
+        override def getNodeRenderingHandlers(): scala.collection.mutable.Set[NodeRenderingHandler[?]] = {
           val set = mutable.HashSet.empty[NodeRenderingHandler[?]]
           set.add(
             new NodeRenderingHandler[Link](
               classOf[Link],
               new NodeRenderingHandler.CustomNodeRenderer[Link] {
                 override def render(node: Link, context: NodeRendererContext, html: HtmlWriter): Unit =
-                  if (node.text.equals("bar")) {
-                    context.getHtmlWriter.text("testing")
+                  if (node.getText().equals("bar")) {
+                    context.getHtmlWriter().text("testing")
                   } else {
                     context.delegateRender()
                   }
               }
             )
           )
-          Nullable(set.toSet)
+          set
         }
       }
 
-      override def getDelegates: Nullable[Set[Class[?]]] = {
+      override def getDelegates(): scala.collection.mutable.Set[Class[?]] = {
         val set = mutable.HashSet.empty[Class[?]]
         set.add(nodeRendererFactory.getClass)
-        Nullable(set.toSet)
+        set
       }
     }
 
@@ -274,52 +274,52 @@ final class HtmlRendererSuite extends munit.FunSuite {
   test("overrideInheritDependentNodeRenderReversed") {
     val nodeRendererFactory: NodeRendererFactory = (options: DataHolder) =>
       new NodeRenderer {
-        override def getNodeRenderingHandlers: Nullable[Set[NodeRenderingHandler[?]]] = {
+        override def getNodeRenderingHandlers(): scala.collection.mutable.Set[NodeRenderingHandler[?]] = {
           val set = mutable.HashSet.empty[NodeRenderingHandler[?]]
           set.add(
             new NodeRenderingHandler[Link](
               classOf[Link],
               new NodeRenderingHandler.CustomNodeRenderer[Link] {
                 override def render(node: Link, context: NodeRendererContext, html: HtmlWriter): Unit =
-                  if (node.text.equals("bar")) {
-                    context.getHtmlWriter.text("test")
-                  } else if (node.text.equals("bars")) {
-                    context.getHtmlWriter.text("tests")
+                  if (node.getText().equals("bar")) {
+                    context.getHtmlWriter().text("test")
+                  } else if (node.getText().equals("bars")) {
+                    context.getHtmlWriter().text("tests")
                   } else {
                     context.delegateRender()
                   }
               }
             )
           )
-          Nullable(set.toSet)
+          set
         }
       }
 
     val nodeRendererFactory2: DelegatingNodeRendererFactory = new DelegatingNodeRendererFactory {
       override def apply(options: DataHolder): NodeRenderer = new NodeRenderer {
-        override def getNodeRenderingHandlers: Nullable[Set[NodeRenderingHandler[?]]] = {
+        override def getNodeRenderingHandlers(): scala.collection.mutable.Set[NodeRenderingHandler[?]] = {
           val set = mutable.HashSet.empty[NodeRenderingHandler[?]]
           set.add(
             new NodeRenderingHandler[Link](
               classOf[Link],
               new NodeRenderingHandler.CustomNodeRenderer[Link] {
                 override def render(node: Link, context: NodeRendererContext, html: HtmlWriter): Unit =
-                  if (node.text.equals("bar")) {
-                    context.getHtmlWriter.text("testing")
+                  if (node.getText().equals("bar")) {
+                    context.getHtmlWriter().text("testing")
                   } else {
                     context.delegateRender()
                   }
               }
             )
           )
-          Nullable(set.toSet)
+          set
         }
       }
 
-      override def getDelegates: Nullable[Set[Class[?]]] = {
+      override def getDelegates(): scala.collection.mutable.Set[Class[?]] = {
         val set = mutable.HashSet.empty[Class[?]]
         set.add(nodeRendererFactory.getClass)
-        Nullable(set.toSet)
+        set
       }
     }
 
@@ -366,9 +366,9 @@ final class HtmlRendererSuite extends munit.FunSuite {
 
   test("withOptions_linkRefCustomLinkResolver") {
     // make sure custom link resolver is preserved when using withOptions() on HTML builder
-    val OPTIONS:  DataHolder = new MutableDataSet().set(CustomLinkResolverImpl.DOC_RELATIVE_URL, "/url").toImmutable
-    val OPTIONS1: DataHolder = new MutableDataSet().set(CustomLinkResolverImpl.DOC_RELATIVE_URL, "/url1").toImmutable
-    val OPTIONS2: DataHolder = new MutableDataSet().set(CustomLinkResolverImpl.DOC_RELATIVE_URL, "/url2").toImmutable
+    val OPTIONS:  DataHolder = new MutableDataSet().set(CustomLinkResolverImpl.DOC_RELATIVE_URL, "/url").toImmutable()
+    val OPTIONS1: DataHolder = new MutableDataSet().set(CustomLinkResolverImpl.DOC_RELATIVE_URL, "/url1").toImmutable()
+    val OPTIONS2: DataHolder = new MutableDataSet().set(CustomLinkResolverImpl.DOC_RELATIVE_URL, "/url2").toImmutable()
 
     val rendererBase = HtmlRenderer.builder(OPTIONS).linkResolverFactory(new CustomLinkResolverFactory()).build()
     val renderer1    = HtmlRenderer.builder(OPTIONS1).linkResolverFactory(new CustomLinkResolverFactory()).build()
@@ -378,9 +378,9 @@ final class HtmlRendererSuite extends munit.FunSuite {
     val rendered1 = renderer1.render(parse("foo [bar](/url)"))
     val rendered2 = renderer2.render(parse("foo [bar](/url)"))
 
-    assertEquals(rendered, "<p>foo <a href=\"www.url.com/url\">bar</a></p>\n")
-    assertEquals(rendered1, "<p>foo <a href=\"www.url.com/url1\">bar</a></p>\n")
-    assertEquals(rendered2, "<p>foo <a href=\"www.url.com/url2\">bar</a></p>\n")
+    assertEquals(rendered, "<p>foo <a href=\"www.getUrl().com/url\">bar</a></p>\n")
+    assertEquals(rendered1, "<p>foo <a href=\"www.getUrl().com/url1\">bar</a></p>\n")
+    assertEquals(rendered2, "<p>foo <a href=\"www.getUrl().com/url2\">bar</a></p>\n")
   }
 
   // Helper methods
@@ -403,13 +403,13 @@ final class HtmlRendererSuite extends munit.FunSuite {
   // Custom link resolver implementations
 
   private class CustomLinkResolverImpl(context: LinkResolverBasicContext) extends LinkResolver {
-    private val docUrl: String = CustomLinkResolverImpl.DOC_RELATIVE_URL.get(Nullable(context.getOptions))
+    private val docUrl: String = CustomLinkResolverImpl.DOC_RELATIVE_URL.get(context.getOptions())
 
     override def resolveLink(node: Node, context: LinkResolverBasicContext, link: ResolvedLink): ResolvedLink =
       node match {
         case linkNode: Link =>
-          if (linkNode.url.equals("/url")) {
-            link.withUrl("www.url.com" + docUrl)
+          if (linkNode.getUrl().equals("/url")) {
+            link.withUrl("www.getUrl().com" + docUrl)
           } else {
             link
           }

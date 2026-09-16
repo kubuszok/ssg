@@ -23,7 +23,7 @@ final class ComboIssuesSpecTest extends RendererSpecTestSuite {
 
   override def specResource: ResourceLocation = ComboIssuesSpecTest.RESOURCE_LOCATION
 
-  override def defaultOptions: Nullable[DataHolder] = Nullable(ComboIssuesSpecTest.MERGED_OPTIONS)
+  override def defaultOptions: Nullable[DataHolder] = ComboIssuesSpecTest.MERGED_OPTIONS
 
   override def optionsMap: ju.Map[String, ? <: DataHolder] = ComboIssuesSpecTest.MERGED_OPTIONS_MAP
 
@@ -36,45 +36,51 @@ object ComboIssuesSpecTest {
   val SPEC_RESOURCE:     String           = "/ssg/md/core/test/core_issues_ast_spec.md"
   val RESOURCE_LOCATION: ResourceLocation = ResourceLocation.of(classOf[ComboIssuesSpecTest], SPEC_RESOURCE)
 
-  val OPTIONS: DataHolder = new MutableDataSet().set(HtmlRenderer.INDENT_SIZE, 2).set(HtmlRenderer.PERCENT_ENCODE_URLS, true).toImmutable
+  val OPTIONS: DataHolder = new MutableDataSet().set(HtmlRenderer.INDENT_SIZE, java.lang.Integer.valueOf(2)).set(HtmlRenderer.PERCENT_ENCODE_URLS, java.lang.Boolean.valueOf(true)).toImmutable()
 
   /** Merged: CoreRendererOptions.BASE_OPTIONS + this test's OPTIONS */
   val MERGED_OPTIONS: DataHolder =
-    DataSet.aggregate(Nullable(CoreRendererOptions.BASE_OPTIONS), Nullable(OPTIONS)).toImmutable
+    DataSet.aggregate(CoreRendererOptions.BASE_OPTIONS, OPTIONS).toImmutable()
 
   /** This test's own options. */
   private val LOCAL_OPTIONS_MAP: ju.Map[String, DataHolder] = {
     val map = new ju.HashMap[String, DataHolder]()
-    map.put("block-no-interrupt-paragraph", new MutableDataSet().set(Parser.BLOCK_QUOTE_INTERRUPTS_PARAGRAPH, false))
+    map.put(
+      "block-no-interrupt-paragraph",
+      new MutableDataSet().set(Parser.BLOCK_QUOTE_INTERRUPTS_PARAGRAPH, java.lang.Boolean.valueOf(false))
+    )
     map.put("fixed-indent", new MutableDataSet().setFrom(ParserEmulationProfile.FIXED_INDENT))
-    map.put("html-comment-full-lines", new MutableDataSet().set(Parser.HTML_BLOCK_COMMENT_ONLY_FULL_LINE, true))
+    map.put(
+      "html-comment-full-lines",
+      new MutableDataSet().set(Parser.HTML_BLOCK_COMMENT_ONLY_FULL_LINE, java.lang.Boolean.valueOf(true))
+    )
     map.put("allow-javascript", new MutableDataSet().set(HtmlRenderer.SUPPRESSED_LINKS, ""))
     map.put("pass-through", new MutableDataSet().set(HtmlRenderer.FORMAT_FLAGS, LineAppendable.F_PASS_THROUGH))
     map.put("strip-indent", new MutableDataSet().set(TestUtils.SOURCE_INDENT, "> > "))
-    map.put("link-over-linkref", new MutableDataSet().set(Parser.LINK_TEXT_PRIORITY_OVER_LINK_REF, true))
-    map.put("no-html-blocks", new MutableDataSet().set(Parser.HTML_BLOCK_PARSER, false))
+    map.put("link-over-linkref", new MutableDataSet().set(Parser.LINK_TEXT_PRIORITY_OVER_LINK_REF, java.lang.Boolean.valueOf(true)))
+    map.put("no-html-blocks", new MutableDataSet().set(Parser.HTML_BLOCK_PARSER, java.lang.Boolean.valueOf(false)))
     map.put(
       "sub-parse",
       new MutableDataSet().set(TestUtils.SOURCE_PREFIX, "Source Prefix\n").set(TestUtils.SOURCE_SUFFIX, "Source Suffix\n")
     )
 
-    val customHtmlBlockTags = Parser.HTML_BLOCK_TAGS.get(Nullable.empty) :+ "warp10-warpscript-widget"
+    val customHtmlBlockTags = Parser.HTML_BLOCK_TAGS.get(null) :+ "warp10-warpscript-widget"
     map.put(
       "custom-html-block",
       new MutableDataSet()
         .set(Parser.HTML_BLOCK_TAGS, customHtmlBlockTags)
-        .set(Parser.HTML_BLOCK_DEEP_PARSER, true)
-        .set(Parser.HTML_BLOCK_DEEP_PARSE_BLANK_LINE_INTERRUPTS, false)
-        .set(Parser.HTML_BLOCK_DEEP_PARSE_FIRST_OPEN_TAG_ON_ONE_LINE, true)
-        .set(Parser.HTML_BLOCK_DEEP_PARSE_BLANK_LINE_INTERRUPTS_PARTIAL_TAG, false)
+        .set(Parser.HTML_BLOCK_DEEP_PARSER, java.lang.Boolean.valueOf(true))
+        .set(Parser.HTML_BLOCK_DEEP_PARSE_BLANK_LINE_INTERRUPTS, java.lang.Boolean.valueOf(false))
+        .set(Parser.HTML_BLOCK_DEEP_PARSE_FIRST_OPEN_TAG_ON_ONE_LINE, java.lang.Boolean.valueOf(true))
+        .set(Parser.HTML_BLOCK_DEEP_PARSE_BLANK_LINE_INTERRUPTS_PARTIAL_TAG, java.lang.Boolean.valueOf(false))
     )
     map.put(
       "deep-html-parser",
       new MutableDataSet()
-        .set(Parser.HTML_BLOCK_DEEP_PARSER, true)
-        .set(Parser.HTML_BLOCK_DEEP_PARSE_BLANK_LINE_INTERRUPTS, false)
-        .set(Parser.HTML_BLOCK_DEEP_PARSE_FIRST_OPEN_TAG_ON_ONE_LINE, true)
-        .set(Parser.HTML_BLOCK_DEEP_PARSE_BLANK_LINE_INTERRUPTS_PARTIAL_TAG, false)
+        .set(Parser.HTML_BLOCK_DEEP_PARSER, java.lang.Boolean.valueOf(true))
+        .set(Parser.HTML_BLOCK_DEEP_PARSE_BLANK_LINE_INTERRUPTS, java.lang.Boolean.valueOf(false))
+        .set(Parser.HTML_BLOCK_DEEP_PARSE_FIRST_OPEN_TAG_ON_ONE_LINE, java.lang.Boolean.valueOf(true))
+        .set(Parser.HTML_BLOCK_DEEP_PARSE_BLANK_LINE_INTERRUPTS_PARTIAL_TAG, java.lang.Boolean.valueOf(false))
     )
     map
   }

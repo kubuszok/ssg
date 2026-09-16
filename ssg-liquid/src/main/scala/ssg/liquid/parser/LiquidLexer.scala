@@ -290,7 +290,7 @@ final class LiquidLexer(
       skipWhitespace()
 
       if (pos >= input.length()) {
-        throw new LiquidException("Unterminated tag", line, col)
+        throw new LiquidException("Unterminated tag", line, col, null)
       }
 
       val c = input.charAt(pos)
@@ -606,7 +606,8 @@ final class LiquidLexer(
       throw new LiquidException(
         "Each line of an inline comment must start with '#'",
         line,
-        col
+        col,
+        null
       )
     }
   }

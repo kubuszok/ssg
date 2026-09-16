@@ -28,8 +28,10 @@ final class DelimitedNodeSuite extends munit.FunSuite {
 
     val list    = ArrayBuffer.empty[DelimitedNode]
     val visitor = new NodeVisitor(
-      new VisitHandler[Emphasis](classOf[Emphasis], (node: Emphasis) => list.addOne(node)),
-      new VisitHandler[StrongEmphasis](classOf[StrongEmphasis], (node: StrongEmphasis) => list.addOne(node))
+      Array[ssg.md.util.ast.VisitHandler[?]](
+        new VisitHandler[Emphasis](classOf[Emphasis], (node: Emphasis) => list.addOne(node)),
+        new VisitHandler[StrongEmphasis](classOf[StrongEmphasis], (node: StrongEmphasis) => list.addOne(node))
+      )
     )
 
     visitor.visit(document)
@@ -41,13 +43,13 @@ final class DelimitedNodeSuite extends munit.FunSuite {
     val important = list(2)
     val critical  = list(3)
 
-    assertEquals(String.valueOf(emphasis.openingMarker), "*")
-    assertEquals(String.valueOf(emphasis.closingMarker), "*")
-    assertEquals(String.valueOf(strong.openingMarker), "**")
-    assertEquals(String.valueOf(strong.closingMarker), "**")
-    assertEquals(String.valueOf(important.openingMarker), "_")
-    assertEquals(String.valueOf(important.closingMarker), "_")
-    assertEquals(String.valueOf(critical.openingMarker), "__")
-    assertEquals(String.valueOf(critical.closingMarker), "__")
+    assertEquals(String.valueOf(emphasis.getOpeningMarker()), "*")
+    assertEquals(String.valueOf(emphasis.getClosingMarker()), "*")
+    assertEquals(String.valueOf(strong.getOpeningMarker()), "**")
+    assertEquals(String.valueOf(strong.getClosingMarker()), "**")
+    assertEquals(String.valueOf(important.getOpeningMarker()), "_")
+    assertEquals(String.valueOf(important.getClosingMarker()), "_")
+    assertEquals(String.valueOf(critical.getOpeningMarker()), "__")
+    assertEquals(String.valueOf(critical.getClosingMarker()), "__")
   }
 }

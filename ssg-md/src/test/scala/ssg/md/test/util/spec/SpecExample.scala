@@ -57,7 +57,7 @@ final class SpecExample private (
   def fileUrlWithLineNumber: String = getFileUrlWithLineNumber(0)
 
   def getFileUrlWithLineNumber(lineOffset: Int): String =
-    resourceLocation.getFileUrl(Utils.minLimit(lineNumber + lineOffset, 0))
+    resourceLocation.getFileUrl(Math.max(lineNumber + lineOffset, 0))
 
   def fileUrl: String = resourceLocation.fileUrl
 
@@ -89,13 +89,13 @@ object SpecExample {
   val NULL: SpecExample = new SpecExample(
     ResourceLocation.NULL,
     0,
-    Nullable.empty,
-    "",
+    Nullable.empty[String],
+    Nullable(""),
     0,
     "",
     "",
-    Nullable.empty,
-    Nullable.empty,
+    Nullable.empty[String],
+    Nullable.empty[String],
     true
   )
 
@@ -150,7 +150,7 @@ object SpecExample {
     new SpecExample(
       location,
       traceElement.getLineNumber - 1,
-      Nullable.empty,
+      Nullable.empty[String],
       Nullable(traceElement.getMethodName),
       0,
       source,

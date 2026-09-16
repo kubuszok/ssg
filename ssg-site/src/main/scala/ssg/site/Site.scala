@@ -22,8 +22,8 @@ import ssg.commons.io.FileOps
 import ssg.commons.io.FilePath
 import ssg.data.DataView
 import ssg.liquid.TemplateParser
+import ssg.liquid.{ render, withJailRoot }
 import ssg.liquid.antlr.LocalFSNameResolver
-import ssg.liquid.tags.IncludeRelative
 import ssg.md.html.HtmlRenderer
 import ssg.md.parser.Parser
 import ssg.minify.Minifier
@@ -218,7 +218,7 @@ object Site {
             // (page-local base, Jekyll semantics — ISS-1214). The jail root
             // is set to sourceAbs (config.source) so that include_relative
             // paths cannot escape the source root (design §6).
-            val template    = liquidParser.parse(body, filePath).withJailRoot(sourceAbs)
+            val template    = liquidParser.parse(org.antlr.v4.runtime.CharStreams.fromString(body, filePath.pathString)).withJailRoot(sourceAbs)
             val afterLiquid = template.render(variables)
 
             // Step 2: If markdown file, render through Markdown.
@@ -308,6 +308,14 @@ object Site {
                 severity = Severity.Error,
                 message = jailEx.getMessage,
                 cause = Nullable(jailEx)
+              )
+            case e: RuntimeException if !e.isInstanceOf[LayoutCycleException] =>
+              diagnosticsBuilder += BuildDiagnostic(
+                file = filePath,
+                stage = BuildStage.Liquid,
+                severity = Severity.Error,
+                message = e.getMessage,
+                cause = Nullable(e)
               )
           }
         }
@@ -501,7 +509,7 @@ object Site {
       // Parse with layoutPath as sourceLocation so that any
       // include_relative in a layout resolves relative to the
       // layout file's parent dir (ISS-1214). Jail root = sourceAbs.
-      val template = liquidParser.parse(layoutBody, layoutPath).withJailRoot(sourceAbs)
+      val template = liquidParser.parse(org.antlr.v4.runtime.CharStreams.fromString(layoutBody, layoutPath.pathString)).withJailRoot(sourceAbs)
       content = template.render(variables)
 
       // Move up the chain: check if this layout declares its own layout.
@@ -574,14 +582,14 @@ object Site {
     * @return
     *   `Some(jailException)` if found, `scala.None` otherwise
     */
-  private def findIncludeRelativeJailViolation(e: Throwable): Option[IncludeRelative.JailViolationException] =
+  private def findIncludeRelativeJailViolation(e: Throwable): Option[RootJail.RootJailViolationException] =
     boundary {
       var current: Option[Throwable] = Option(e)
       // Walk at most 10 levels to avoid infinite loops in pathological cause chains.
       var depth = 0
       while (current.isDefined && depth < 10)
         current.get match {
-          case jv: IncludeRelative.JailViolationException => break(Some(jv))
+          case jv: RootJail.RootJailViolationException => break(Some(jv))
           case other =>
             current = Option(other.getCause)
             depth += 1

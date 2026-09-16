@@ -43,9 +43,9 @@ final class SpecExampleParse(
       mySource = TestUtils.trimTrailingEOL(source)
     }
 
-    val sourcePrefix = TestUtils.SOURCE_PREFIX.get(exampleOptions)
-    val sourceSuffix = TestUtils.SOURCE_SUFFIX.get(exampleOptions)
-    val sourceIndent = TestUtils.SOURCE_INDENT.get(exampleOptions)
+    val sourcePrefix = TestUtils.SOURCE_PREFIX.get(exampleOptions.get)
+    val sourceSuffix = TestUtils.SOURCE_SUFFIX.get(exampleOptions.get)
+    val sourceIndent = TestUtils.SOURCE_INDENT.get(exampleOptions.get)
 
     val input: BasedSequence = if (sourcePrefix.nonEmpty || sourceSuffix.nonEmpty) {
       val combinedSource = sourcePrefix + suffixWith(mySource, "\n") + sourceSuffix
@@ -56,12 +56,12 @@ final class SpecExampleParse(
 
     val strippedInput = TestUtils.stripIndent(input, sourceIndent)
 
-    val includedText = TestUtils.INCLUDED_DOCUMENT.get(exampleOptions)
+    val includedText = TestUtils.INCLUDED_DOCUMENT.get(exampleOptions.get)
 
     renderer.includeDocument(includedText)
 
-    myTimed = TestUtils.TIMED.get(exampleOptions)
-    myIterations = if (myTimed) TestUtils.TIMED_ITERATIONS.get(exampleOptions) else 1
+    myTimed = TestUtils.TIMED.get(exampleOptions.get)
+    myIterations = if (myTimed) TestUtils.TIMED_ITERATIONS.get(exampleOptions.get) else 1
 
     myStartTime = System.nanoTime()
 

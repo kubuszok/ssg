@@ -17,21 +17,21 @@ import scala.language.implicitConversions
 // JUnit 4: abstract test case with @Rule ExpectedException — will need adaptation to munit later
 abstract class RenderingTestCase extends SpecExampleProcessor {
 
-  val IGNORE:            DataKey[Boolean] = TestUtils.IGNORE
-  val FAIL:              DataKey[Boolean] = TestUtils.FAIL
-  val NO_FILE_EOL:       DataKey[Boolean] = TestUtils.NO_FILE_EOL
-  val TIMED_ITERATIONS:  DataKey[Int]     = TestUtils.TIMED_ITERATIONS
-  val EMBED_TIMED:       DataKey[Boolean] = TestUtils.EMBED_TIMED
-  val TIMED:             DataKey[Boolean] = TestUtils.TIMED
-  val INCLUDED_DOCUMENT: DataKey[String]  = TestUtils.INCLUDED_DOCUMENT
-  val SOURCE_PREFIX:     DataKey[String]  = TestUtils.SOURCE_PREFIX
-  val SOURCE_SUFFIX:     DataKey[String]  = TestUtils.SOURCE_SUFFIX
-  val SOURCE_INDENT:     DataKey[String]  = TestUtils.SOURCE_INDENT
+  val IGNORE:            DataKey[java.lang.Boolean] = TestUtils.IGNORE
+  val FAIL:              DataKey[java.lang.Boolean] = TestUtils.FAIL
+  val NO_FILE_EOL:       DataKey[java.lang.Boolean] = TestUtils.NO_FILE_EOL
+  val TIMED_ITERATIONS:  DataKey[java.lang.Integer] = TestUtils.TIMED_ITERATIONS
+  val EMBED_TIMED:       DataKey[java.lang.Boolean] = TestUtils.EMBED_TIMED
+  val TIMED:             DataKey[java.lang.Boolean] = TestUtils.TIMED
+  val INCLUDED_DOCUMENT: DataKey[String]            = TestUtils.INCLUDED_DOCUMENT
+  val SOURCE_PREFIX:     DataKey[String]            = TestUtils.SOURCE_PREFIX
+  val SOURCE_SUFFIX:     DataKey[String]            = TestUtils.SOURCE_SUFFIX
+  val SOURCE_INDENT:     DataKey[String]            = TestUtils.SOURCE_INDENT
 
-  val NO_FILE_EOL_FALSE: DataHolder                                    = TestUtils.NO_FILE_EOL_FALSE
-  val UNLOAD_EXTENSIONS: DataKey[ju.Collection[Class[? <: Extension]]] = TestUtils.UNLOAD_EXTENSIONS
-  val LOAD_EXTENSIONS:   DataKey[ju.Collection[Extension]]             = TestUtils.LOAD_EXTENSIONS
-  val EXTENSIONS:        DataKey[ju.Collection[Extension]]             = SharedDataKeys.EXTENSIONS
+  val NO_FILE_EOL_FALSE: DataHolder                                              = TestUtils.NO_FILE_EOL_FALSE
+  val UNLOAD_EXTENSIONS: DataKey[ju.Collection[Class[? <: Extension]]]           = TestUtils.UNLOAD_EXTENSIONS
+  val LOAD_EXTENSIONS:   DataKey[ju.Collection[Extension]]                       = TestUtils.LOAD_EXTENSIONS
+  val EXTENSIONS:        DataKey[balticporter.runtime.JavaCollection[Extension]] = SharedDataKeys.EXTENSIONS
 
   // JUnit 4: @Rule ExpectedException — stubbed, will need adaptation to munit later
   // public ExpectedException thrown = ExpectedException.none()
@@ -77,7 +77,7 @@ abstract class RenderingTestCase extends SpecExampleProcessor {
 
   /* Convenience functions for those tests that do not have an example */
   final protected def assertRendering(source: String, html: String): Unit =
-    assertRendering(SpecExample.ofCaller(1, this.getClass, source, html, Nullable.empty))
+    assertRendering(SpecExample.ofCaller(1, this.getClass, source, html, Nullable.empty[String]))
 
   final protected def assertRendering(source: String, html: String, ast: Nullable[String]): Unit =
     assertRendering(SpecExample.ofCaller(1, this.getClass, source, html, ast))
@@ -105,7 +105,7 @@ abstract class RenderingTestCase extends SpecExampleProcessor {
     }
     val render = System.nanoTime()
 
-    val ast: Nullable[String] = if (expectedAst.isEmpty) Nullable.empty else Nullable(exampleRenderer.getAst.get)
+    val ast: Nullable[String] = if (expectedAst.isEmpty) Nullable.empty[String] else exampleRenderer.getAst
     val embedTimed = TestUtils.EMBED_TIMED.get(exampleRenderer.options.get)
 
     val formattedTimingInfo = TestUtils.getFormattedTimingInfo(iterations, specExampleParse.startTime, specExampleParse.parseTime, render)

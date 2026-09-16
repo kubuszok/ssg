@@ -7,7 +7,6 @@ package ext
 package definition
 package test
 
-import ssg.md.Nullable
 import ssg.md.ext.definition.DefinitionExtension
 import ssg.md.parser.Parser
 import ssg.md.util.data.MutableDataSet
@@ -22,24 +21,24 @@ final class DefinitionParserTest extends munit.FunSuite {
 
   private def escape(input: String, parser: Parser): String = {
     val baseSeq  = BasedSequence.of(input)
-    val handlers = Parser.SPECIAL_LEAD_IN_HANDLERS.get(parser.options.get)
+    val handlers = Parser.SPECIAL_LEAD_IN_HANDLERS.get(parser.options)
     val sb       = new StringBuilder()
 
     boundary {
       for (handler <- handlers)
-        if (handler.escape(baseSeq, Nullable.empty, (cs: CharSequence) => sb.append(cs))) break(sb.toString())
+        if (handler.escape(baseSeq, null, (cs: CharSequence) => sb.append(cs))) break(sb.toString())
       input
     }
   }
 
   private def unEscape(input: String, parser: Parser): String = {
     val baseSeq  = BasedSequence.of(input)
-    val handlers = Parser.SPECIAL_LEAD_IN_HANDLERS.get(parser.options.get)
+    val handlers = Parser.SPECIAL_LEAD_IN_HANDLERS.get(parser.options)
     val sb       = new StringBuilder()
 
     boundary {
       for (handler <- handlers)
-        if (handler.unEscape(baseSeq, Nullable.empty, (cs: CharSequence) => sb.append(cs))) break(sb.toString())
+        if (handler.unEscape(baseSeq, null, (cs: CharSequence) => sb.append(cs))) break(sb.toString())
       input
     }
   }
@@ -63,7 +62,7 @@ final class DefinitionParserTest extends munit.FunSuite {
   }
 
   test("test_escapeNoColon") {
-    val parser = Parser.builder(new MutableDataSet().set(DefinitionExtension.COLON_MARKER, false)).extensions(Collections.singleton(DefinitionExtension.create())).build()
+    val parser = Parser.builder(new MutableDataSet().set(DefinitionExtension.COLON_MARKER, java.lang.Boolean.valueOf(false))).extensions(Collections.singleton(DefinitionExtension.create())).build()
 
     assertEquals(escape("abc", parser), "abc")
 
@@ -81,7 +80,7 @@ final class DefinitionParserTest extends munit.FunSuite {
   }
 
   test("test_escapeNoTilde") {
-    val parser = Parser.builder(new MutableDataSet().set(DefinitionExtension.TILDE_MARKER, false)).extensions(Collections.singleton(DefinitionExtension.create())).build()
+    val parser = Parser.builder(new MutableDataSet().set(DefinitionExtension.TILDE_MARKER, java.lang.Boolean.valueOf(false))).extensions(Collections.singleton(DefinitionExtension.create())).build()
 
     assertEquals(escape("abc", parser), "abc")
 

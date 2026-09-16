@@ -27,7 +27,7 @@ final class ExampleOption private (
   def getOptionName: String = optionName.toString
 
   def getCustomParams: Nullable[String] =
-    if (customParams.isNull) Nullable.empty
+    if (customParams.isNull()) Nullable.empty[String]
     else Nullable(customParams.toString)
 
   def isIgnore: Boolean = isBuiltIn && optionName.equals(TestUtils.IGNORE_OPTION_NAME)
@@ -84,9 +84,9 @@ object ExampleOption {
       optionText,
       optionName,
       customParams,
-      BUILT_IN_OPTIONS_SET.contains(optionName.toString) && customParams.isNull,
+      BUILT_IN_OPTIONS_SET.contains(optionName.toString) && customParams.isNull(),
       isDisabled,
-      customParams.isNotNull,
+      customParams.isNotNull(),
       !optionName.isBlank()
     )
   }

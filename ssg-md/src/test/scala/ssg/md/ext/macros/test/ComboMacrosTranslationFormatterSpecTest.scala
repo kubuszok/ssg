@@ -23,7 +23,7 @@ import scala.language.implicitConversions
 
 final class ComboMacrosTranslationFormatterSpecTest extends TranslationFormatterSpecTestSuite {
   override def specResource:         ResourceLocation                       = ComboMacrosTranslationFormatterSpecTest.RESOURCE_LOCATION
-  override def defaultOptions:       Nullable[DataHolder]                   = Nullable(ComboMacrosTranslationFormatterSpecTest.OPTIONS)
+  override def defaultOptions:       Nullable[DataHolder]                   = ComboMacrosTranslationFormatterSpecTest.OPTIONS
   override def optionsMap:           java.util.Map[String, ? <: DataHolder] = ComboMacrosTranslationFormatterSpecTest.OPTIONS_MAP
   override def knownFailurePrefixes: Set[String]                            = Set("Macros -")
 }
@@ -33,16 +33,16 @@ object ComboMacrosTranslationFormatterSpecTest {
   val RESOURCE_LOCATION: ResourceLocation = ResourceLocation.of(classOf[ComboMacrosTranslationFormatterSpecTest], SPEC_RESOURCE)
   val OPTIONS:           DataHolder       = new MutableDataSet()
     .set(Parser.EXTENSIONS, Arrays.asList(MacrosExtension.create(), GitLabExtension.create(), TablesExtension.create()))
-    .set(GitLabExtension.RENDER_BLOCK_MATH, false)
-    .set(GitLabExtension.RENDER_BLOCK_MERMAID, false)
-    .set(GitLabExtension.DEL_PARSER, false)
-    .set(GitLabExtension.INS_PARSER, false)
-    .set(GitLabExtension.RENDER_VIDEO_IMAGES, false)
-    .toImmutable
+    .set(GitLabExtension.RENDER_BLOCK_MATH, java.lang.Boolean.valueOf(false))
+    .set(GitLabExtension.RENDER_BLOCK_MERMAID, java.lang.Boolean.valueOf(false))
+    .set(GitLabExtension.DEL_PARSER, java.lang.Boolean.valueOf(false))
+    .set(GitLabExtension.INS_PARSER, java.lang.Boolean.valueOf(false))
+    .set(GitLabExtension.RENDER_VIDEO_IMAGES, java.lang.Boolean.valueOf(false))
+    .toImmutable()
 
   val OPTIONS_MAP: java.util.Map[String, DataHolder] = FormatterSpecTestSuite.placementAndSortOptions(
-    Nullable(MacrosExtension.MACRO_DEFINITIONS_KEEP),
-    Nullable(MacrosExtension.MACRO_DEFINITIONS_PLACEMENT),
-    Nullable(MacrosExtension.MACRO_DEFINITIONS_SORT)
+    MacrosExtension.MACRO_DEFINITIONS_KEEP,
+    MacrosExtension.MACRO_DEFINITIONS_PLACEMENT,
+    MacrosExtension.MACRO_DEFINITIONS_SORT
   )
 }

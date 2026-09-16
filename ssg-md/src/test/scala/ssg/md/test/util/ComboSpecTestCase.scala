@@ -25,7 +25,7 @@ abstract class ComboSpecTestCase(
 
   protected val optionsMap:       ju.Map[String, DataHolder] = new ju.HashMap[String, DataHolder]()
   protected val myDefaultOptions: Nullable[DataHolder]       = TestUtils.combineDefaultOptions(
-    if (defaultOptions.isEmpty) Nullable.empty else Nullable(defaultOptions.toArray)
+    if (defaultOptions.isEmpty) Nullable.empty[Array[DataHolder]] else Nullable(defaultOptions.toArray)
   )
 
   optionMap.foreach(m => optionsMap.putAll(m))
@@ -54,8 +54,9 @@ object ComboSpecTestCase {
   def dataHolders(other: Nullable[DataHolder], overrides: Nullable[Array[DataHolder]]): Nullable[Array[DataHolder]] =
     TestUtils.dataHolders(other, overrides)
 
+  @annotation.nowarn("msg=deprecated")
   def aggregate(other: Nullable[DataHolder], overrides: Nullable[DataHolder]): DataHolder =
-    DataSet.aggregate(other, overrides)
+    DataSet.aggregate(other.orNull, overrides.orNull)
 
   def getTestData(location: ResourceLocation): ju.List[Array[AnyRef]] =
     TestUtils.getTestData(location)

@@ -19,7 +19,7 @@ import scala.language.implicitConversions
 
 final class ComboCoreFormatterNoBlankLinesSpecTest extends FormatterSpecTestSuite {
   override def specResource:   ResourceLocation     = ComboCoreFormatterNoBlankLinesSpecTest.RESOURCE_LOCATION
-  override def defaultOptions: Nullable[DataHolder] = Nullable(ComboCoreFormatterNoBlankLinesSpecTest.OPTIONS)
+  override def defaultOptions: Nullable[DataHolder] = ComboCoreFormatterNoBlankLinesSpecTest.OPTIONS
   // Pre-existing formatter bugs
   override def knownFailurePrefixes: Set[String] = Set(
     "Block Quotes -",
@@ -37,5 +37,5 @@ final class ComboCoreFormatterNoBlankLinesSpecTest extends FormatterSpecTestSuit
 object ComboCoreFormatterNoBlankLinesSpecTest {
   val SPEC_RESOURCE:     String           = "/ssg/md/test/util/formatter/core_formatter_no_blanklines_spec.md"
   val RESOURCE_LOCATION: ResourceLocation = ResourceLocation.of(classOf[ComboCoreFormatterNoBlankLinesSpecTest], SPEC_RESOURCE)
-  val OPTIONS:           DataHolder       = new MutableDataSet().set(Parser.BLANK_LINES_IN_AST, false).toImmutable
+  val OPTIONS:           DataHolder       = new MutableDataSet().set(Parser.BLANK_LINES_IN_AST, java.lang.Boolean.valueOf(false)).toImmutable()
 }
