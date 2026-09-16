@@ -306,7 +306,7 @@ lazy val `ssg-liquid` = (projectMatrix in file("ssg-liquid"))
       "com.kubuszok"                    %% "balticporter-runtime"      % "9fb82906bd9ee9a30ebdb4fbdc39aea0f447ccd9-SNAPSHOT",
       "org.antlr"                        % "antlr4-runtime"            % "4.13.0",
       "com.fasterxml.jackson.core"       % "jackson-core"              % "2.15.0",
-      "com.fasterxml.jackson.core"       % "jackson-databind"          % "2.13.4.2",
+      "com.fasterxml.jackson.core"       % "jackson-databind"          % "2.15.0",
       "com.fasterxml.jackson.core"       % "jackson-annotations"       % "2.15.0",
       "com.fasterxml.jackson.datatype"   % "jackson-datatype-jsr310"   % "2.15.0",
       "ua.co.k"                          % "strftime4j"                % "1.0.6",
@@ -362,10 +362,10 @@ lazy val `ssg-md` = (projectMatrix in file("ssg-md"))
   .settings(
     name := "ssg-md",
     libraryDependencies ++= Seq(
-      "com.kubuszok"    %% "multiarch-resources"    % versions.multiarch,
-      "com.kubuszok"    %% "balticporter-runtime"    % "9fb82906bd9ee9a30ebdb4fbdc39aea0f447ccd9-SNAPSHOT",
-      "org.jetbrains"    % "annotations"            % "24.0.1" % Provided,
-      "org.nibor.autolink" % "autolink"             % "0.6.0",
+      "com.kubuszok"       %% "multiarch-resources"   % versions.multiarch,
+      "com.kubuszok"       %% "balticporter-runtime"  % "9fb82906bd9ee9a30ebdb4fbdc39aea0f447ccd9-SNAPSHOT",
+      "org.jetbrains"       % "annotations"           % "24.0.1" % Provided,
+      "org.nibor.autolink"  % "autolink"              % "0.6.0",
     ),
     // Baltic Porter: generated flexmark resources (entities.properties for Html5Entities).
     Compile / unmanagedResourceDirectories += {
@@ -381,14 +381,18 @@ lazy val `ssg-md` = (projectMatrix in file("ssg-md"))
       val base = (ThisBuild / baseDirectory).value
       val out  = (Compile / sourceManaged).value
       val bpRoot = base / ".." / "balticporter"
-      // Enable the artifact layer so the base port writes port-report/port-map.tsv,
-      // which the ext port needs to answer contract questions about base types.
-      val reportDir = bpRoot / "ported" / "ssg-md" / "port-report"
-      System.setProperty("balticporter.reportPathRoot", reportDir.getAbsolutePath)
+      // Enable the artifact layer so the base port writes port-map.tsv.
+      // CheckReport.enabled requires `reportDir` (not `reportPathRoot`) to be set when
+      // running under sbt, because sbt's main class is filtered out by mainClassKey.
+      // The directory is named after the module label so PortMap.discover can find it:
+      //   <reportRoot>/<module-dir>/run-latest/port-map.tsv
+      val reportRoot = bpRoot / "ported" / "ssg-md" / "port-report"
+      System.setProperty("balticporter.reportDir", (reportRoot / "ssg-md").getAbsolutePath)
       val md    = BalticPorterGen.generateFlexmark(base, out / "balticporter", log)
-      // Point ext port to the base's report.
-      if (reportDir.exists())
-        System.setProperty("balticporter.baseReports", reportDir.getAbsolutePath)
+      // Switch reportDir to the ext port's own directory (avoids overwriting the base map)
+      // and point baseReports at the root so the ext discovers the base's ssg-md map.
+      System.setProperty("balticporter.reportDir", (reportRoot / "ssg-md-ext").getAbsolutePath)
+      System.setProperty("balticporter.baseReports", reportRoot.getAbsolutePath)
       val ext   = BalticPorterGen.generateFlexmarkExt(base, out / "balticporter-ext", log)
       md ++ ext
     }.taskValue,
