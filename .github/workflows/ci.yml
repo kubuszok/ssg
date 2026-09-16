@@ -284,11 +284,7 @@ jobs:
         run: choco install llvm --yes
 
       - name: Run Scala Native tests
-        # ci-native-3 includes ssg-liquidNative, ssg-mdNative and their dependents, whose
-        # generated code uses JVM-only APIs (jackson for liquid, Class.getEnumConstants/isEnum
-        # for flexmark's BitFieldSet). Compile all, test only Native-compatible modules.
-        run: |
-          sbt "clean ; ssg-commonsNative/compile ; ssg-data-commonsNative/compile ; ssg-graphs-commonsNative/compile ; ssg-graphvizNative/compile ; ssg-highlightNative/compile ; ssg-jsNative/compile ; ssg-katexNative/compile ; ssg-liquidNative/compile ; ssg-mdNative/compile ; ssg-mermaidNative/compile ; ssg-minifyNative/compile ; ssg-sassNative/compile ; ssg-siteNative/compile ; ssgNative/compile ; ssg-commonsNative/testFull ; ssg-data-commonsNative/testFull ; ssg-graphs-commonsNative/testFull ; ssg-graphvizNative/testFull ; ssg-jsNative/testFull ; ssg-katexNative/testFull ; ssg-mermaidNative/testFull ; ssg-minifyNative/testFull ; ssg-sassNative/testFull"
+        run: sbt ci-native-3
 
   # ─── re-scale enforce gate (ratchet-blocking) ──────────────────────
   #

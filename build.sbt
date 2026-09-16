@@ -524,7 +524,17 @@ lazy val root = (project in file("."))
   .settings(
     addCommandAlias("ci-jvm-3", ciTestFull("JVM", "3")),
     addCommandAlias("ci-js-3", ciTestFull("JS", "3")),
-    addCommandAlias("ci-native-3", ciTestFull("Native", "3"))
+    // Generated ssg-md/ssg-liquid code uses JVM-only APIs (jackson, Class.getEnumConstants);
+    // compile all Native modules but testFull only the ones whose generated code is Native-compatible.
+    addCommandAlias("ci-native-3", {
+      val allModules = Seq("ssg-commons", "ssg-data-commons", "ssg-graphs-commons", "ssg-graphviz",
+        "ssg-highlight", "ssg-js", "ssg-katex", "ssg-liquid", "ssg-md", "ssg-mermaid",
+        "ssg-minify", "ssg-sass", "ssg-site")
+      val jvmOnly = Set("ssg-md", "ssg-liquid", "ssg-highlight", "ssg-site")
+      val compile = allModules.map(m => s"${m}Native/compile").mkString(" ; ")
+      val test = allModules.filterNot(jvmOnly).map(m => s"${m}Native/testFull").mkString(" ; ")
+      s"clean ; $compile ; ssgNative/compile ; $test"
+    })
   )
   .aggregate(`ssg-commons`.projectRefs *)
   .aggregate(`ssg-data-commons`.projectRefs *)
