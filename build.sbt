@@ -306,7 +306,7 @@ lazy val `ssg-liquid` = (projectMatrix in file("ssg-liquid"))
       "com.kubuszok"                    %% "balticporter-runtime"      % "9fb82906bd9ee9a30ebdb4fbdc39aea0f447ccd9-SNAPSHOT",
       "org.antlr"                        % "antlr4-runtime"            % "4.13.0",
       "com.fasterxml.jackson.core"       % "jackson-core"              % "2.15.0",
-      "com.fasterxml.jackson.core"       % "jackson-databind"          % "2.15.0",
+      "com.fasterxml.jackson.core"       % "jackson-databind"          % "2.13.4.2",
       "com.fasterxml.jackson.core"       % "jackson-annotations"       % "2.15.0",
       "com.fasterxml.jackson.datatype"   % "jackson-datatype-jsr310"   % "2.15.0",
       "ua.co.k"                          % "strftime4j"                % "1.0.6",
