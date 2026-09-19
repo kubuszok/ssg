@@ -2,7 +2,6 @@ import sbt.*
 import sbt.Keys.*
 
 import java.nio.file.{ Files, Path }
-import scala.jdk.CollectionConverters.*
 
 // sbt sourceGenerator that uses Baltic Porter to mechanically port Java and
 // non-Java sources into Scala 3. Java ports run the full engine; non-Java ports
@@ -63,107 +62,186 @@ object BalticPorterGen {
     collectScalaFiles(outPath, excludeDuplicatesOf = Some(ssgLiquidSrc))
   }
 
+  // ---------------------------------------------------------------------------
+  // Markdown: ssg-md (flexmark core + the eleven util libraries) and ssg-md-ext
+  // (the extensions, a dependent of it). Both run from the PUBLISHED artifacts
+  // alone — the port configurations and the files their policies inject are
+  // unpacked from the balticporter-corpus jar. No engine checkout is involved.
+  // ---------------------------------------------------------------------------
+
+  /** Parent of the two markdown port roots, under ssg's own `target/`. The leaf names are the configurations' own (`@ports/ssg-md`, `@ports/ssg-md-ext`); only the parent is ours to choose. */
+  private def mdPortsRoot(ssgRoot: Path): Path = ssgRoot.resolve("target/balticporter")
+
+  def mdOutDir(ssgRoot:    Path): Path = mdPortsRoot(ssgRoot).resolve("ssg-md/src_managed/main/scala")
+  def mdExtOutDir(ssgRoot: Path): Path = mdPortsRoot(ssgRoot).resolve("ssg-md-ext/src_managed/main/scala")
+
   /** Generate ssg-md Scala sources from flexmark-java originals. */
-  def generateFlexmark(buildBase: File, outDir: File, log: sbt.util.Logger): Seq[File] = {
-    val ssgRoot     = buildBase.toPath.toAbsolutePath.normalize
+  def generateFlexmark(buildBase: File, log: sbt.util.Logger): Seq[File] =
+    BalticPorterGen.synchronized {
+      val ssgRoot = buildBase.toPath.toAbsolutePath.normalize
+      markdown(ssgRoot, log)
+      collectScalaFiles(mdOutDir(ssgRoot))
+    }
+
+  /** Generate ssg-md-ext Scala sources from flexmark's extension modules. */
+  def generateFlexmarkExt(buildBase: File, log: sbt.util.Logger): Seq[File] =
+    BalticPorterGen.synchronized {
+      val ssgRoot = buildBase.toPath.toAbsolutePath.normalize
+      markdown(ssgRoot, log)
+      collectScalaFiles(mdExtOutDir(ssgRoot))
+    }
+
+  /** The markdown port's classpath resources, for a `resourceGenerators` task: the second output beside the emitted Scala, and the one a build that collects only sources drops (without it
+    * `Html5Entities` fails its class initialiser).
+    */
+  def markdownResources(buildBase: File, log: sbt.util.Logger): Seq[File] =
+    BalticPorterGen.synchronized {
+      val ssgRoot = buildBase.toPath.toAbsolutePath.normalize
+      markdown(ssgRoot, log)
+      // The BASE port's tree only. The extension port ships the admonition assets, but
+      // `ssg-md/src/main/resources` already carries byte-identical copies of every one of them —
+      // the JS row embeds THAT directory (`MultiArchResourcesPlugin`, which reads
+      // `Compile / resourceDirectory` and sees no managed tree), and putting both on the classpath
+      // makes packageBin fail with `duplicate entry: admonition.css`.
+      balticporter.sbtgen.SbtGen.resourceFiles(mdPortsRoot(ssgRoot).resolve("ssg-md"), "main").map(_.toFile)
+    }
+
+  /** Run both markdown ports, once, unless the marker already records this fingerprint.
+    *
+    * sbt evaluates the JVM/JS/Native rows' managedSources in parallel; the rows share one output tree and the two ports hand state to each other through system properties, so the rows serialise on
+    * this object and the later ones read the marker the first one wrote.
+    */
+  private def markdown(ssgRoot: Path, log: sbt.util.Logger): Unit = {
     val flexmarkSrc = ssgRoot.resolve("original-src/flexmark-java")
-    if (!hasBpSibling(ssgRoot) || !Files.isDirectory(flexmarkSrc)) {
-      log.warn("[Baltic Porter] No balticporter sibling or flexmark submodule — skipping ssg-md generation")
-      return collectScalaFiles(outDir.toPath)
-    }
-    val bp = bpRoot(ssgRoot)
+    val portsRoot   = mdPortsRoot(ssgRoot)
+    val marker      = portsRoot.resolve(".generated-marker")
 
-    val portRoot = bp.resolve("ported/ssg-md")
-    val outPath  = portRoot.resolve("src_managed/main/scala")
-    val marker   = ssgRoot.resolve("target/balticporter-ssg-md/.generated-marker")
-
+    // Cache key: everything the generated tree depends on (see `fingerprint`), readable without the
+    // submodule's files — so a checkout that RECEIVED the generated tree (a CI job restoring the
+    // `generatePort` job's output) reuses it and needs neither the submodule nor a generation run.
+    // Force a regeneration with -Dbalticporter.forceRegen=true, or delete the marker.
     val forceRegen = sys.props.getOrElse("balticporter.forceRegen", "false").toBoolean
-    val commit     = balticporter.runner.VendoredCommit.of(flexmarkSrc)
+    val expected   = fingerprint(ssgRoot)
     val cached     = !forceRegen && Files.exists(marker) &&
-      Files.exists(outPath) &&
-      Files.readString(marker).trim == commit
+      Files.isDirectory(mdOutDir(ssgRoot)) &&
+      Files.isDirectory(mdExtOutDir(ssgRoot)) &&
+      Files.readString(marker).trim == expected
 
-    if (!cached) {
-      log.info(s"[Baltic Porter] Generating ssg-md sources from flexmark-java ($commit)")
-
-      val confPath = bp.resolve("balticporter/corpus/ports/ssg-md/main.conf")
-      require(Files.exists(confPath), s"flexmark port config not found at $confPath — publish balticporter-corpus first")
-
-      System.setProperty("balticporter.root", bp.toAbsolutePath.normalize.toString)
-      try {
-        balticporter.corpus.flexmark.FlexmarkClasspath.ensure(bp)
-        val config = balticporter.runner.PortConfig.load(confPath)
-        config.execute()
-        log.info(s"[Baltic Porter] Generated ssg-md sources to $outPath")
-        postProcess(outPath, log, skipIsEmpty = true)
-      } catch {
-        case e: Exception =>
-          log.warn(s"[Baltic Porter] ssg-md generation failed (files may have been written): ${e.getMessage}")
-      }
-
-      Files.createDirectories(marker.getParent)
-      Files.writeString(marker, commit)
-    } else {
-      log.info(s"[Baltic Porter] Using cached ssg-md sources ($commit)")
+    if (cached) {
+      log.info(s"[Baltic Porter] Using cached markdown sources ($expected)")
+      return
     }
 
-    val ssgMdSrc = ssgRoot.resolve("ssg-md/src/main")
-    val result   = collectScalaFiles(outPath, excludeDuplicatesOf = Some(ssgMdSrc))
-    log.info(s"[Baltic Porter] ssg-md: collected ${result.size} files from $outPath (exists=${Files.isDirectory(outPath)})")
-    if (result.isEmpty && Files.isDirectory(portRoot)) {
-      val all = Files.walk(portRoot).iterator().asScala.filter(_.toString.endsWith(".scala")).toList
-      log.warn(s"[Baltic Porter] ssg-md: 0 files collected but ${all.size} scala files exist under portRoot=$portRoot")
-      if (all.nonEmpty) log.warn(s"[Baltic Porter] ssg-md: first 5: ${all.take(5).mkString(", ")}")
+    if (!Files.isDirectory(flexmarkSrc))
+      sys.error(
+        "[Baltic Porter] The generated ssg-md sources are missing or stale (" + marker + " does not read `" + expected + "`) and the flexmark-java submodule is not " +
+          "initialised. Run `git submodule update --init --depth=1 original-src/flexmark-java`, or place a generated tree with a matching marker under " + portsRoot + "."
+      )
+
+    // The port configurations, and the files their policies inject by path, ship inside the
+    // published corpus jar and are unpacked under target/; -Dbalticporter.root=<engine checkout>
+    // reads them from a checkout instead (engine development only).
+    val bp = sys.props.get("balticporter.root") match {
+      case Some(root) => Path.of(root).toAbsolutePath.normalize
+      case None       => balticporter.corpus.BundledCorpus.root(ssgRoot.resolve("target/balticporter-engine"))
     }
-    result
+    val confDir = bp.resolve("balticporter/corpus/ports/ssg-md")
+    require(
+      Files.isDirectory(confDir),
+      s"markdown port configurations not found at $confDir — check the balticporter-corpus pin in project/plugins.sbt"
+    )
+
+    // The three roots the configurations declare: the consumer's checkout (upstream submodule and
+    // the reference port), a scratch directory for the resolved frontend classpath, and where the
+    // generated code goes. All three under ssg's own tree.
+    val work = ssgRoot.resolve("target/balticporter-work")
+    Files.createDirectories(work)
+    balticporter.corpus.flexmark.FlexmarkClasspath.ensureIn(work)
+    val roots = Map("consumer" -> ssgRoot, "work" -> work, "ports" -> portsRoot)
+
+    // Each port reports under a shared root: PortMap.reportRoot is the PARENT of a run's report
+    // directory, so the extension (a dependent) discovers the base's published port map there.
+    // CheckReport's artifact layer is off unless `reportDir` is set explicitly — under sbt no
+    // identity can be derived from the main class.
+    val reports = portsRoot.resolve("port-report")
+
+    log.info(s"[Baltic Porter] Generating ssg-md + ssg-md-ext from flexmark-java ($expected)")
+    try {
+      System.setProperty("balticporter.reportDir", reports.resolve("ssg-md").toString)
+      balticporter.runner.PortConfig.load(confDir.resolve("main.conf"), roots = roots).execute()
+      log.info(s"[Baltic Porter] Generated ssg-md sources to ${mdOutDir(ssgRoot)}")
+
+      System.setProperty("balticporter.reportDir", reports.resolve("ssg-md-ext").toString)
+      System.setProperty("balticporter.baseReports", reports.toString)
+      balticporter.runner.PortConfig.load(confDir.resolve("ext.conf"), roots = roots).execute()
+      log.info(s"[Baltic Porter] Generated ssg-md-ext sources to ${mdExtOutDir(ssgRoot)}")
+
+      temporaryMarkdownPatches(ssgRoot, log)
+    } finally {
+      System.clearProperty("balticporter.baseReports")
+      System.clearProperty("balticporter.reportDir")
+    }
+
+    Files.createDirectories(marker.getParent)
+    Files.writeString(marker, expected)
   }
 
-  /** Generate ssg-md-ext Scala sources from flexmark extension modules. */
-  def generateFlexmarkExt(buildBase: File, outDir: File, log: sbt.util.Logger): Seq[File] = {
-    val ssgRoot     = buildBase.toPath.toAbsolutePath.normalize
-    val flexmarkSrc = ssgRoot.resolve("original-src/flexmark-java")
-    if (!hasBpSibling(ssgRoot) || !Files.isDirectory(flexmarkSrc)) {
-      log.warn("[Baltic Porter] No balticporter sibling or flexmark submodule — skipping ssg-md-ext generation")
-      return collectScalaFiles(outDir.toPath)
-    }
-    val bp = bpRoot(ssgRoot)
-
-    val portRoot = bp.resolve("ported/ssg-md-ext")
-    val outPath  = portRoot.resolve("src_managed/main/scala")
-    val marker   = ssgRoot.resolve("target/balticporter-ssg-md-ext/.generated-marker")
-
-    val forceRegen = sys.props.getOrElse("balticporter.forceRegen", "false").toBoolean
-    val commit     = balticporter.runner.VendoredCommit.of(flexmarkSrc)
-    val cached     = !forceRegen && Files.exists(marker) &&
-      Files.exists(outPath) &&
-      Files.readString(marker).trim == commit
-
-    if (!cached) {
-      log.info(s"[Baltic Porter] Generating ssg-md-ext sources from flexmark extensions ($commit)")
-
-      val confPath = bp.resolve("balticporter/corpus/ports/ssg-md/ext.conf")
-      require(Files.exists(confPath), s"flexmark-ext port config not found at $confPath — publish balticporter-corpus first")
-
-      System.setProperty("balticporter.root", bp.toAbsolutePath.normalize.toString)
-      try {
-        balticporter.corpus.flexmark.FlexmarkClasspath.ensure(bp)
-        val config = balticporter.runner.PortConfig.load(confPath)
-        config.execute()
-        log.info(s"[Baltic Porter] Generated ssg-md-ext sources to $outPath")
-        postProcess(outPath, log, skipIsEmpty = true)
-      } catch {
-        case e: Exception =>
-          log.warn(s"[Baltic Porter] ssg-md-ext generation failed (files may have been written): ${e.getMessage}")
+  // TEMPORARY — DELETE WHEN THE ENGINE EMITS THESE TWO SITES CORRECTLY.
+  //
+  // Editing generated text with a regular expression is not a port policy: it is invisible to every
+  // check the run makes and it cannot say why. These are the only two sites the markdown port does
+  // not compile without, and both are one shape — a java `Collection.isEmpty()` call emitted with
+  // its empty argument list onto a parenless Scala member:
+  //
+  //   ssg/md/util/misc/BitFieldSet.scala:1000        if (c.isEmpty())
+  //   ssg/md/util/sequence/PlaceholderReplacer.scala:18  if (spanList.isEmpty())
+  //
+  // The fix belongs in the engine's nullary-arity policy for external collection receivers; it is
+  // being moved there separately. Until then the module cannot compile at all, so the two sites are
+  // repaired here, named one by one so a third one fails loudly instead of being absorbed.
+  private def temporaryMarkdownPatches(ssgRoot: Path, log: sbt.util.Logger): Unit = {
+    val sites = List(
+      mdOutDir(ssgRoot).resolve("ssg/md/util/misc/BitFieldSet.scala") -> ("c.isEmpty()", "c.isEmpty"),
+      mdOutDir(ssgRoot).resolve("ssg/md/util/sequence/PlaceholderReplacer.scala") -> ("spanList.isEmpty()", "spanList.isEmpty")
+    )
+    for ((file, (from, to)) <- sites if Files.isRegularFile(file)) {
+      val before = Files.readString(file)
+      val after  = before.replace(from, to)
+      if (after != before) {
+        Files.writeString(file, after)
+        log.warn(s"[Baltic Porter] TEMPORARY patch applied to ${ssgRoot.relativize(file)}: `$from` -> `$to`")
       }
-
-      Files.createDirectories(marker.getParent)
-      Files.writeString(marker, commit)
-    } else {
-      log.info(s"[Baltic Porter] Using cached ssg-md-ext sources ($commit)")
     }
+  }
 
-    val ssgMdSrc = ssgRoot.resolve("ssg-md/src/main")
-    collectScalaFiles(outPath, excludeDuplicatesOf = Some(ssgMdSrc))
+  /** What the generated markdown tree depends on, as one line, readable on a shallow checkout WITHOUT the submodule's files: the engine artifact pinned in `project/plugins.sbt`, the flexmark commit
+    * (the submodule's HEAD when it is initialised, else the commit this checkout records for it), this generator (line endings normalised, so every OS agrees) and the JDK feature version.
+    */
+  def fingerprint(ssgRoot: Path): String = {
+    def git(dir: Path, args: String*): Option[String] = {
+      val pb = new ProcessBuilder(("git" +: args)*)
+      pb.directory(dir.toFile)
+      pb.redirectErrorStream(true)
+      val p   = pb.start()
+      val out = new String(p.getInputStream.readAllBytes()).trim
+      if (p.waitFor() == 0 && out.nonEmpty) Some(out) else None
+    }
+    val pin = """balticporter-corpus" % "([^"]+)"""".r
+      .findFirstMatchIn(Files.readString(ssgRoot.resolve("project/plugins.sbt")))
+      .map(_.group(1))
+      .getOrElse(sys.error("[Baltic Porter] project/plugins.sbt pins no balticporter-corpus version"))
+    val submodule = ssgRoot.resolve("original-src/flexmark-java")
+    val flexmark  = (if (Files.exists(submodule.resolve(".git"))) git(submodule, "rev-parse", "HEAD") else None)
+      .orElse(git(ssgRoot, "ls-tree", "HEAD", "original-src/flexmark-java").flatMap(_.split("\\s+").lift(2)))
+      .getOrElse(
+        sys.error(
+          "[Baltic Porter] cannot read the flexmark-java commit this checkout records (git ls-tree HEAD original-src/flexmark-java)"
+        )
+      )
+    val source    = Files.readString(ssgRoot.resolve("project/BalticPorterGen.scala")).replace("\r", "")
+    val generator = java.security.MessageDigest.getInstance("SHA-256").digest(source.getBytes("UTF-8")).take(8).map(b => f"$b%02x").mkString
+    // the JDK the generator runs on decides what a member overrides
+    s"engine=$pin flexmark=$flexmark generator=$generator jdk=${java.lang.Runtime.version().feature()}"
   }
 
   /** Fix API name mismatches in generated code (same patterns as sge). */

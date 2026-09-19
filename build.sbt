@@ -303,7 +303,7 @@ lazy val `ssg-liquid` = (projectMatrix in file("ssg-liquid"))
       "io.github.cquiroz" %% "scala-java-locales" % versions.scalaJavaLocales,
       // Baltic Porter generated code dependencies: the mechanically ported liqp code
       // uses these libraries directly (the hand-port had rewrote them away).
-      "com.kubuszok"                    %% "balticporter-runtime"      % "9fb82906bd9ee9a30ebdb4fbdc39aea0f447ccd9-SNAPSHOT",
+      "com.kubuszok"                    %% "balticporter-runtime"      % "2c735f52213d0f7d03e4e256a5666067b98657a9-SNAPSHOT",
       "org.antlr"                        % "antlr4-runtime"            % "4.13.0",
       "com.fasterxml.jackson.core"       % "jackson-core"              % "2.15.0",
       "com.fasterxml.jackson.core"       % "jackson-databind"          % "2.13.4.2",
@@ -363,40 +363,33 @@ lazy val `ssg-md` = (projectMatrix in file("ssg-md"))
     name := "ssg-md",
     libraryDependencies ++= Seq(
       "com.kubuszok"       %% "multiarch-resources"   % versions.multiarch,
-      "com.kubuszok"       %% "balticporter-runtime"  % "9fb82906bd9ee9a30ebdb4fbdc39aea0f447ccd9-SNAPSHOT",
+      "com.kubuszok"       %% "balticporter-runtime"  % "2c735f52213d0f7d03e4e256a5666067b98657a9-SNAPSHOT",
       "org.jetbrains"       % "annotations"           % "24.0.1" % Provided,
       "org.nibor.autolink"  % "autolink"              % "0.6.0",
     ),
-    // Baltic Porter: generated flexmark resources (entities.properties for Html5Entities).
-    Compile / unmanagedResourceDirectories += {
-      val bpRoot = (ThisBuild / baseDirectory).value / ".." / "balticporter"
-      val resDir = bpRoot / "ported" / "ssg-md" / "src_managed" / "main" / "resources"
-      if (resDir.exists()) resDir
-      else (Compile / resourceManaged).value / "balticporter"
-    },
-    // Baltic Porter: generate ssg-md + ssg-md-ext Scala sources from flexmark-java.
-    // ONE generator, sequential: the ext port needs the base's port-map, so base runs first.
+    // Baltic Porter: generate ssg-md + ssg-md-ext Scala sources from flexmark-java, from the
+    // published artifacts alone (no engine checkout). ONE generator, sequential: the ext port
+    // needs the base's port map, so the base runs first — BalticPorterGen serialises both.
     Compile / sourceGenerators += Def.task {
-      val log = streams.value.log
+      val log  = streams.value.log
       val base = (ThisBuild / baseDirectory).value
-      val out  = (Compile / sourceManaged).value
-      val bpRoot = base / ".." / "balticporter"
-      // Enable the artifact layer so the base port writes port-map.tsv.
-      // CheckReport.enabled requires `reportDir` (not `reportPathRoot`) to be set when
-      // running under sbt, because sbt's main class is filtered out by mainClassKey.
-      // The directory is named after the module label so PortMap.discover can find it:
-      //   <reportRoot>/<module-dir>/run-latest/port-map.tsv
-      val reportRoot = bpRoot / "ported" / "ssg-md" / "port-report"
-      System.setProperty("balticporter.reportDir", (reportRoot / "ssg-md").getAbsolutePath)
-      val md    = BalticPorterGen.generateFlexmark(base, out / "balticporter", log)
-      // Switch reportDir to the ext port's own directory (avoids overwriting the base map)
-      // and point baseReports at the root so the ext discovers the base's ssg-md map.
-      System.setProperty("balticporter.reportDir", (reportRoot / "ssg-md-ext").getAbsolutePath)
-      System.setProperty("balticporter.baseReports", reportRoot.getAbsolutePath)
-      val ext   = BalticPorterGen.generateFlexmarkExt(base, out / "balticporter-ext", log)
-      md ++ ext
+      BalticPorterGen.generateFlexmark(base, log) ++ BalticPorterGen.generateFlexmarkExt(base, log)
     }.taskValue,
-    scalacOptions += "-Wconf:src=.*/sourceManaged/.*:s,src=.*/ported/.*/src_managed/.*:s",
+    // Register the generated source roots so packageSrc uses relative paths, not bare filenames.
+    Compile / managedSourceDirectories ++= Seq(
+      (ThisBuild / baseDirectory).value / "target" / "balticporter" / "ssg-md" / "src_managed" / "main" / "scala",
+      (ThisBuild / baseDirectory).value / "target" / "balticporter" / "ssg-md-ext" / "src_managed" / "main" / "scala"
+    ),
+    // The port's classpath resources (flexmark's entities.properties) are a SECOND output, and a
+    // GENERATOR is what makes the tree exist before anything reads it. The previous wiring was a
+    // directory behind `if (resDir.exists())`, evaluated at project LOAD: false on every fresh
+    // checkout, so eight suites failed with
+    // "Could not initialize class ssg.md.util.sequence.Html5Entities$" and no compile error said why.
+    Compile / resourceGenerators += Def.task {
+      BalticPorterGen.markdownResources((ThisBuild / baseDirectory).value, streams.value.log)
+    }.taskValue,
+    Compile / managedResourceDirectories += (ThisBuild / baseDirectory).value / "target" / "balticporter" / "ssg-md" / "src_managed" / "main" / "resources",
+    scalacOptions += "-Wconf:src=.*/sourceManaged/.*:s,src=.*/target/balticporter/.*:s",
     Test / scalacOptions += "-language:implicitConversions"
   )
   .settings(publishSettings)
@@ -516,14 +509,35 @@ lazy val ssg = (projectMatrix in file("ssg"))
 def ciTestFull(platform: String, scalaBinary: String): String =
   al.ci(platform, scalaBinary).replaceAll("""/test(?=( ; )|$)""", "/testFull")
 
+// The ci aliases open with `clean`, which deletes target/balticporter — the generated markdown
+// sources — and forces a regeneration (on CI it throws away the tree the `generatePort` job
+// produced). A CI runner starts from an empty target/, so the step buys nothing there; locally
+// run `clean` yourself.
+def dropClean(command: String): String =
+  command.split(";").map(_.trim).filterNot(_ == "clean").mkString(" ; ")
+
+// Records the commit the local gate passed on (target/local-verification); the push hook of the
+// Baltic Porter Claude Code plugin reads it. A dirty tree is not a commit, so nothing is recorded.
+val markVerified = taskKey[Unit]("Record HEAD as locally verified")
+ThisBuild / markVerified := Def.uncached {
+  import scala.sys.process.*
+  val base  = (ThisBuild / baseDirectory).value
+  val log   = streams.value.log
+  val dirty = Process(Seq("git", "status", "--porcelain", "--untracked-files=no"), base).!!.trim
+  if (dirty.nonEmpty) sys.error("[verifyLocal] the working tree has uncommitted changes — commit first, then verify that commit:\n" + dirty)
+  val head = Process(Seq("git", "rev-parse", "HEAD"), base).!!.trim
+  IO.write(base / "target" / "local-verification", head)
+  log.info(s"[verifyLocal] recorded $head")
+}
+
 lazy val root = (project in file("."))
   .enablePlugins(KubuszokRootPlugin)
   .settings(
     name := "ssg-root"
   )
   .settings(
-    addCommandAlias("ci-jvm-3", ciTestFull("JVM", "3")),
-    addCommandAlias("ci-js-3", ciTestFull("JS", "3")),
+    addCommandAlias("ci-jvm-3", dropClean(ciTestFull("JVM", "3"))),
+    addCommandAlias("ci-js-3", dropClean(ciTestFull("JS", "3"))),
     // Generated ssg-md/ssg-liquid code uses JVM-only APIs (jackson, Class.getEnumConstants);
     // compile all Native modules but testFull only the ones whose generated code is Native-compatible.
     addCommandAlias("ci-native-3", {
@@ -533,8 +547,12 @@ lazy val root = (project in file("."))
       val jvmOnly = Set("ssg-md", "ssg-liquid", "ssg-highlight", "ssg-site")
       val compile = allModules.map(m => s"${m}Native/compile").mkString(" ; ")
       val test = allModules.filterNot(jvmOnly).map(m => s"${m}Native/testFull").mkString(" ; ")
-      s"clean ; $compile ; ssgNative/compile ; $test"
-    })
+      s"$compile ; ssgNative/compile ; $test"
+    }),
+    // generatePort: run the Baltic Porter markdown generation and nothing else (the CI `generate` job)
+    addCommandAlias("generatePort", "ssg-md/Compile/managedSources ; ssg-md/Compile/managedResources"),
+    // verifyLocal: the gate before a push — every platform's tests, then record the verified commit
+    addCommandAlias("verifyLocal", "ci-jvm-3 ; ci-js-3 ; ci-native-3 ; markVerified")
   )
   .aggregate(`ssg-commons`.projectRefs *)
   .aggregate(`ssg-data-commons`.projectRefs *)
