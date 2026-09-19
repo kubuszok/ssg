@@ -3368,7 +3368,7 @@ final class CompressReduceVarsSuite extends munit.FunSuite {
   // =========================================================================
   // obj_var_1
   // =========================================================================
-  test("obj_var_1".fail) {
+  test("obj_var_1") {
     assertCompresses(
       input = """var C = 1;
         var obj = {
@@ -3396,7 +3396,7 @@ final class CompressReduceVarsSuite extends munit.FunSuite {
   // =========================================================================
   // obj_var_2
   // =========================================================================
-  test("obj_var_2".fail) {
+  test("obj_var_2") {
     assertCompresses(
       input = """var C = 1;
         var obj = {

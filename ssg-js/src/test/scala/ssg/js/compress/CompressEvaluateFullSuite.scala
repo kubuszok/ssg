@@ -274,7 +274,7 @@ final class CompressEvaluateFullSuite extends munit.FunSuite {
   // =========================================================================
   // bitwise_2
   // =========================================================================
-  test("bitwise_2".fail) {
+  test("bitwise_2") {
     assertCompresses(
       input = """const any = {}
 
