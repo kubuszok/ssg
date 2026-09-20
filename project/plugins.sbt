@@ -1,3 +1,7 @@
+// sbt 2's Bazel-compatible remote cache client. Inert unless `Global / remoteCache` names an
+// endpoint — project/RemoteCacheSetup.scala (on only when a BuildBuddy API key is available).
+addRemoteCachePlugin
+
 // kubuszok plugin (bundles: sbt-scalafmt, sbt-scoverage, sbt-projectmatrix [merged into sbt 2.0], sbt-scalajs, sbt-scala-native, sbt-commandmatrix, and more)
 addSbtPlugin("com.kubuszok" % "sbt-kubuszok" % "0.2.3")
 // native library providers (auto-configures Scala Native linker from sn-provider.json) + shared multiarch resources
@@ -9,5 +13,5 @@ ThisBuild / libraryDependencySchemes += "org.scala-lang.modules" %% "scala-xml" 
 // upstream Java originals. The frontend-ts module provides the non-Java emitters
 // (ParityDerive, TerserEmitter, KaTeXEmitter, MermaidEmitter, DartSassEmitter, roughjs emitters).
 resolvers += "Central Portal Snapshots" at "https://central.sonatype.com/repository/maven-snapshots"
-libraryDependencies += "com.kubuszok" %% "balticporter-corpus" % "2c735f52213d0f7d03e4e256a5666067b98657a9-SNAPSHOT"
-libraryDependencies += "com.kubuszok" %% "balticporter-frontend-ts" % "2c735f52213d0f7d03e4e256a5666067b98657a9-SNAPSHOT"
+libraryDependencies += "com.kubuszok" %% "balticporter-corpus" % "05e187f6b583c4cb71ec6827544b91ce53fde4c9-SNAPSHOT"
+libraryDependencies += "com.kubuszok" %% "balticporter-frontend-ts" % "05e187f6b583c4cb71ec6827544b91ce53fde4c9-SNAPSHOT"

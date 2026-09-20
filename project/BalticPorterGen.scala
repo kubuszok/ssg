@@ -75,6 +75,25 @@ object BalticPorterGen {
   def mdOutDir(ssgRoot:    Path): Path = mdPortsRoot(ssgRoot).resolve("ssg-md/src_managed/main/scala")
   def mdExtOutDir(ssgRoot: Path): Path = mdPortsRoot(ssgRoot).resolve("ssg-md-ext/src_managed/main/scala")
 
+  def mdTestOutDir(ssgRoot:    Path): Path = mdPortsRoot(ssgRoot).resolve("ssg-md/src_managed/test/scala")
+  def mdExtTestOutDir(ssgRoot: Path): Path = mdPortsRoot(ssgRoot).resolve("ssg-md-ext/src_managed/test/scala")
+
+  /** flexmark's own suites (core + utilities, then the extensions), generated beside the main sources. */
+  def generateFlexmarkTests(buildBase: File, log: sbt.util.Logger): Seq[File] =
+    BalticPorterGen.synchronized {
+      val ssgRoot = buildBase.toPath.toAbsolutePath.normalize
+      markdown(ssgRoot, log)
+      collectScalaFiles(mdTestOutDir(ssgRoot)) ++ collectScalaFiles(mdExtTestOutDir(ssgRoot))
+    }
+
+  /** The test suites' classpath resources (the spec files they read). */
+  def markdownTestResources(buildBase: File, log: sbt.util.Logger): Seq[File] =
+    BalticPorterGen.synchronized {
+      val ssgRoot = buildBase.toPath.toAbsolutePath.normalize
+      markdown(ssgRoot, log)
+      List("ssg-md", "ssg-md-ext").flatMap(p => balticporter.sbtgen.SbtGen.resourceFiles(mdPortsRoot(ssgRoot).resolve(p), "test")).map(_.toFile)
+    }
+
   /** Generate ssg-md Scala sources from flexmark-java originals. */
   def generateFlexmark(buildBase: File, log: sbt.util.Logger): Seq[File] =
     BalticPorterGen.synchronized {
@@ -125,6 +144,8 @@ object BalticPorterGen {
     val cached     = !forceRegen && Files.exists(marker) &&
       Files.isDirectory(mdOutDir(ssgRoot)) &&
       Files.isDirectory(mdExtOutDir(ssgRoot)) &&
+      Files.isDirectory(mdTestOutDir(ssgRoot)) &&
+      Files.isDirectory(mdExtTestOutDir(ssgRoot)) &&
       Files.readString(marker).trim == expected
 
     if (cached) {
@@ -176,7 +197,14 @@ object BalticPorterGen {
       balticporter.runner.PortConfig.load(confDir.resolve("ext.conf"), roots = roots).execute()
       log.info(s"[Baltic Porter] Generated ssg-md-ext sources to ${mdExtOutDir(ssgRoot)}")
 
-      temporaryMarkdownPatches(ssgRoot, log)
+      // flexmark's OWN JUnit suites, ported as MUnit suites: the behavioural gate of the two ports
+      // above. Each is a dependent of its main port and writes that port root's `test` source set.
+      balticporter.corpus.flexmark.FlexmarkTestClasspath.ensureIn(work)
+      System.setProperty("balticporter.reportDir", reports.resolve("ssg-md-test").toString)
+      balticporter.runner.PortConfig.load(confDir.resolve("test.conf"), roots = roots).execute()
+      System.setProperty("balticporter.reportDir", reports.resolve("ssg-md-ext-test").toString)
+      balticporter.runner.PortConfig.load(confDir.resolve("ext-test.conf"), roots = roots).execute()
+      log.info(s"[Baltic Porter] Generated flexmark's test suites to ${mdTestOutDir(ssgRoot)} and ${mdExtTestOutDir(ssgRoot)}")
     } finally {
       System.clearProperty("balticporter.baseReports")
       System.clearProperty("balticporter.reportDir")
@@ -184,34 +212,6 @@ object BalticPorterGen {
 
     Files.createDirectories(marker.getParent)
     Files.writeString(marker, expected)
-  }
-
-  // TEMPORARY — DELETE WHEN THE ENGINE EMITS THESE TWO SITES CORRECTLY.
-  //
-  // Editing generated text with a regular expression is not a port policy: it is invisible to every
-  // check the run makes and it cannot say why. These are the only two sites the markdown port does
-  // not compile without, and both are one shape — a java `Collection.isEmpty()` call emitted with
-  // its empty argument list onto a parenless Scala member:
-  //
-  //   ssg/md/util/misc/BitFieldSet.scala:1000        if (c.isEmpty())
-  //   ssg/md/util/sequence/PlaceholderReplacer.scala:18  if (spanList.isEmpty())
-  //
-  // The fix belongs in the engine's nullary-arity policy for external collection receivers; it is
-  // being moved there separately. Until then the module cannot compile at all, so the two sites are
-  // repaired here, named one by one so a third one fails loudly instead of being absorbed.
-  private def temporaryMarkdownPatches(ssgRoot: Path, log: sbt.util.Logger): Unit = {
-    val sites = List(
-      mdOutDir(ssgRoot).resolve("ssg/md/util/misc/BitFieldSet.scala") -> ("c.isEmpty()", "c.isEmpty"),
-      mdOutDir(ssgRoot).resolve("ssg/md/util/sequence/PlaceholderReplacer.scala") -> ("spanList.isEmpty()", "spanList.isEmpty")
-    )
-    for ((file, (from, to)) <- sites if Files.isRegularFile(file)) {
-      val before = Files.readString(file)
-      val after  = before.replace(from, to)
-      if (after != before) {
-        Files.writeString(file, after)
-        log.warn(s"[Baltic Porter] TEMPORARY patch applied to ${ssgRoot.relativize(file)}: `$from` -> `$to`")
-      }
-    }
   }
 
   /** What the generated markdown tree depends on, as one line, readable on a shallow checkout WITHOUT the submodule's files: the engine artifact pinned in `project/plugins.sbt`, the flexmark commit

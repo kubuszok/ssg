@@ -40,6 +40,11 @@ lazy val al = new Aliases(
   )
 )
 
+// Remote cache (BuildBuddy): on only when an API key is available (env BUILDBUDDY_API_KEY, else
+// ~/.config/ssg/buildbuddy-api-key); with no key both settings are empty and nothing changes.
+Global / remoteCache := RemoteCacheSetup.endpoint
+Global / remoteCacheHeaders ++= RemoteCacheSetup.headers
+
 val commonSettings = Seq(
   MatrixAction.ForAll.Configure(_.settings(
     scalacOptions ++= Seq(
@@ -303,7 +308,7 @@ lazy val `ssg-liquid` = (projectMatrix in file("ssg-liquid"))
       "io.github.cquiroz" %% "scala-java-locales" % versions.scalaJavaLocales,
       // Baltic Porter generated code dependencies: the mechanically ported liqp code
       // uses these libraries directly (the hand-port had rewrote them away).
-      "com.kubuszok"                    %% "balticporter-runtime"      % "2c735f52213d0f7d03e4e256a5666067b98657a9-SNAPSHOT",
+      "com.kubuszok"                    %% "balticporter-runtime"      % "05e187f6b583c4cb71ec6827544b91ce53fde4c9-SNAPSHOT",
       "org.antlr"                        % "antlr4-runtime"            % "4.13.0",
       "com.fasterxml.jackson.core"       % "jackson-core"              % "2.15.0",
       "com.fasterxml.jackson.core"       % "jackson-databind"          % "2.13.4.2",
@@ -363,7 +368,7 @@ lazy val `ssg-md` = (projectMatrix in file("ssg-md"))
     name := "ssg-md",
     libraryDependencies ++= Seq(
       "com.kubuszok"       %% "multiarch-resources"   % versions.multiarch,
-      "com.kubuszok"       %% "balticporter-runtime"  % "2c735f52213d0f7d03e4e256a5666067b98657a9-SNAPSHOT",
+      "com.kubuszok"       %% "balticporter-runtime"  % "05e187f6b583c4cb71ec6827544b91ce53fde4c9-SNAPSHOT",
       "org.jetbrains"       % "annotations"           % "24.0.1" % Provided,
       "org.nibor.autolink"  % "autolink"              % "0.6.0",
     ),
@@ -389,6 +394,17 @@ lazy val `ssg-md` = (projectMatrix in file("ssg-md"))
       BalticPorterGen.markdownResources((ThisBuild / baseDirectory).value, streams.value.log)
     }.taskValue,
     Compile / managedResourceDirectories += (ThisBuild / baseDirectory).value / "target" / "balticporter" / "ssg-md" / "src_managed" / "main" / "resources",
+    // flexmark's own suites, generated from its java tests: what decides whether the port behaves.
+    Test / sourceGenerators += Def.task {
+      BalticPorterGen.generateFlexmarkTests((ThisBuild / baseDirectory).value, streams.value.log)
+    }.taskValue,
+    Test / managedSourceDirectories ++= Seq(
+      (ThisBuild / baseDirectory).value / "target" / "balticporter" / "ssg-md" / "src_managed" / "test" / "scala",
+      (ThisBuild / baseDirectory).value / "target" / "balticporter" / "ssg-md-ext" / "src_managed" / "test" / "scala"
+    ),
+    Test / resourceGenerators += Def.task {
+      BalticPorterGen.markdownTestResources((ThisBuild / baseDirectory).value, streams.value.log)
+    }.taskValue,
     scalacOptions += "-Wconf:src=.*/sourceManaged/.*:s,src=.*/target/balticporter/.*:s",
     Test / scalacOptions += "-language:implicitConversions"
   )
@@ -530,6 +546,14 @@ ThisBuild / markVerified := Def.uncached {
   log.info(s"[verifyLocal] recorded $head")
 }
 
+val jsShards: Map[String, Seq[String]] = Map(
+  "md"      -> Seq("ssg-md", "ssg"),
+  "engines" -> Seq("ssg-katex", "ssg-mermaid", "ssg-graphviz", "ssg-highlight"),
+  "core"    -> Seq("ssg-commons", "ssg-data-commons", "ssg-graphs-commons", "ssg-js", "ssg-sass", "ssg-minify"),
+  "site"    -> Seq("ssg-liquid", "ssg-site")
+)
+val ciModules: Seq[String] = jsShards.values.flatten.toSeq.filterNot(_ == "ssg").sorted
+
 lazy val root = (project in file("."))
   .enablePlugins(KubuszokRootPlugin)
   .settings(
@@ -549,6 +573,18 @@ lazy val root = (project in file("."))
       val test = allModules.filterNot(jvmOnly).map(m => s"${m}Native/testFull").mkString(" ; ")
       s"$compile ; ssgNative/compile ; $test"
     }),
+    // CI compiles each platform once (`testCompile-*`, which fills the remote cache); the test jobs
+    // then only link and run. Scala.js is split into four shards whose union is every module.
+    addCommandAlias("testCompile-jvm-3", (ciModules :+ "ssg").map(m => s"$m/Test/compile").mkString(" ; ")),
+    addCommandAlias("testCompile-js-3", (ciModules :+ "ssg").map(m => s"${m}JS/Test/compile").mkString(" ; ")),
+    addCommandAlias("testCompile-native-3", (ciModules :+ "ssg").map(m => s"${m}Native/Test/compile").mkString(" ; ")),
+  )
+  .settings(
+    jsShards.toSeq.flatMap { case (shard, modules) =>
+      addCommandAlias(s"ci-js-3-$shard", modules.map(m => s"${m}JS/testFull").mkString(" ; "))
+    }
+  )
+  .settings(
     // generatePort: run the Baltic Porter markdown generation and nothing else (the CI `generate` job)
     addCommandAlias("generatePort", "ssg-md/Compile/managedSources ; ssg-md/Compile/managedResources"),
     // verifyLocal: the gate before a push — every platform's tests, then record the verified commit

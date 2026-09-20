@@ -77,9 +77,21 @@ a Java→Scala 3 porting engine extended with non-Java frontends for TS/JS and D
 
 ### Java ports (ssg-liquid, ssg-md)
 
-`sourceGenerators` in `build.sbt` call `BalticPorterGen.generateLiquid` / `generateFlexmark`
-which run the full porting engine at build time. Output goes to `(Compile / sourceManaged)`.
-Requires a `../balticporter` sibling checkout and the upstream submodules checked out.
+`sourceGenerators` in `build.sbt` call `BalticPorterGen` (`project/BalticPorterGen.scala`), which
+runs the porting engine at build time from the PUBLISHED artifacts pinned in `project/plugins.sbt`
+(`balticporter-corpus`, `balticporter-frontend-ts`, resolved from Maven Central's snapshot
+repository). No engine checkout is involved: the port configurations and the hand-written files
+their policies inject are unpacked from the jar under `target/balticporter-engine`.
+
+- Output: `target/balticporter/<port>/src_managed/{main,test}/scala` (+ `resources`). For the
+  markdown ports the TEST source set is flexmark's own JUnit suites ported to MUnit — they, not a
+  compile, decide whether the port behaves.
+- Requirements: the upstream submodules (`original-src/flexmark-java`, `original-src/liqp`), JDK 25
+  for the sbt server (the generated code depends on the JDK major) and `cs` on the PATH.
+- The tree is reused while `target/balticporter/.generated-marker` matches the engine pin, the
+  submodule commits, the generator source and the JDK major. CI generates it once (the `generate`
+  job) and every other job restores it — those jobs have no submodule.
+- `sbt --client generatePort` runs the generation alone.
 
 ### Non-Java ports (ssg-graphs-commons, ssg-katex, ssg-mermaid, ssg-js, ssg-sass)
 
@@ -99,7 +111,16 @@ compiles. Output goes to `(Compile / sourceManaged)`.
 - **Never edit a generated file** — change the reference file or the RAST input, then regenerate.
 - `src/main/scala/` holds code that compiles as-is and is not derivable (platform glue, `package.scala`).
 - `reference/scala/` is hand-written and audited; `src_managed/` is a build product.
-- Regenerate with `-Dbalticporter.forceRegen=true` or by deleting `target/balticporter-*/.generated-marker`.
+- Regenerate with `-Dbalticporter.forceRegen=true` or by deleting the `.generated-marker`.
+- A defect in generated code is fixed in the engine or in the port's policy (the balticporter
+  repository), never by patching generated text in this build and never by ignoring, stubbing or
+  editing a test to fit it.
+- Before any push: commit, then `sbt --client verifyLocal` (JVM, Scala.js and Scala Native tests; it
+  records the verified commit in `target/local-verification`). A hook refuses the push otherwise.
+- The procedures — tracing a generated defect to the rule that produced it, bumping the engine pin,
+  driving sbt 2, what CI does with the generated tree — are skills of the `balticporter` Claude Code
+  plugin this repository enables (`.claude/settings.json`): `generated-code`, `root-cause-port`,
+  `consumer-ci`, `sbt2-client`, `cross-platform-port`.
 
 ## CLI Toolkit: `re-scale`
 
