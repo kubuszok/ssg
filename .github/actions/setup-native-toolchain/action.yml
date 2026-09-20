@@ -1,0 +1,20 @@
+name: Setup Scala Native toolchain
+description: >
+  What Scala Native needs to LINK on this runner: clang and libc++ on Linux, LLVM on Windows.
+  macOS runners ship everything. Compiling to NIR needs none of this — only jobs that link or run
+  native binaries use this action.
+
+runs:
+  using: composite
+  steps:
+    - name: Install clang (Linux)
+      if: runner.os == 'Linux'
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y clang libc++-dev
+
+    - name: Install LLVM (Windows)
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: choco install llvm --yes

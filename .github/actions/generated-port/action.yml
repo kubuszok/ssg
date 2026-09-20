@@ -1,0 +1,46 @@
+name: Generated port
+description: >
+  The Baltic Porter output (target/balticporter) for this commit, generated ONCE per distinct input
+  set and shared between jobs and workflows through the Actions cache — see the action this wraps.
+  `generate` needs the Scala toolchain and is the only thing in this repository's CI that
+  initialises an upstream submodule; `restore` needs neither.
+  The shared action keys on ONE submodule (flexmark-java); every further upstream the generation
+  reads is initialised by `command` and its recorded commit goes into the key through `key-extra`
+  — add the next one in those two places, nowhere else.
+  The `uses:` line below is the ONE place the shared action's version is pinned.
+
+inputs:
+  mode:
+    description: generate | restore
+    default: restore
+  key:
+    description: cache key to restore (the `key` output of the `generate` mode); required for `restore`
+    default: ""
+
+outputs:
+  key:
+    description: the cache key the generated tree is stored under
+    value: ${{ steps.port.outputs.key }}
+
+runs:
+  using: composite
+  steps:
+    - name: Read the further upstream commits this checkout records
+      id: upstreams
+      if: inputs.mode == 'generate'
+      shell: bash
+      run: |
+        set -euo pipefail
+        liqp=$(git ls-tree HEAD original-src/liqp | awk '{print $3}')
+        test -n "$liqp"
+        echo "extra=liqp-$liqp" >> "$GITHUB_OUTPUT"
+
+    - uses: kubuszok/balticporter/.github/actions/generated-port@8d0cf549f1e8a501c772975301013f3b3b0af19f
+      id: port
+      with:
+        mode: ${{ inputs.mode }}
+        key: ${{ inputs.key }}
+        path: target/balticporter
+        submodule: original-src/flexmark-java
+        command: git submodule update --init --depth=1 original-src/liqp && sbt generatePort
+        key-extra: ${{ steps.upstreams.outputs.extra }}

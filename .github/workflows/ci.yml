@@ -7,314 +7,85 @@ on:
     branches: [master]
   workflow_dispatch:
 
-# Cancel in-progress runs for the same branch/PR
+# Cancel in-progress runs for the same PR only: a force-push to a PR obsoletes the running
+# validation, but master pushes must QUEUE, not cancel — cancelling a running master validation
+# leaves that commit unverified.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+# ─── Shape of this workflow ─────────────────────────────────────────
+#
+#   wave 0   format · enforce                                 (need nothing from the generator)
+#            generate                                         (the ONLY job that initialises an
+#                                                              upstream submodule and runs Baltic Porter)
+#   wave 1   compile (jvm | js | native, in parallel)         (every module compiled ONCE, on Linux,
+#                                                              into the BuildBuddy remote cache)
+#   wave 2   tests (jvm × 6 | js × 4 shards | native × 5)     (restore the generated port, restore
+#                                                              compile outputs from the remote
+#                                                              cache, then only link and run)
+#
+# The Baltic Porter engine is the artifact pinned in project/plugins.sbt, resolved from Maven
+# Central's snapshot repository — no job checks the engine out or publishes it locally.
+#
+# Every repeated step lives in ONE composite action under .github/actions/:
+#   setup-scala · generated-port · setup-js · setup-native-toolchain · sbt-guarded
+# The build JDK and Node versions are those actions' input defaults — change them there.
+# Every sbt command is an alias defined in build.sbt — change what a job runs there.
 
 env:
-  # Zulu 25 — FFM API stable since JDK 22, all 6 desktop platforms
-  # including Windows aarch64 (which Temurin 25 lacks).
-  JAVA_VERSION: "25"
-  JAVA_DISTRIBUTION: "zulu"
-  NODE_VERSION: "22"
+  # BuildBuddy remote cache for sbt 2's Bazel-gRPC cache client. Workflow-level so EVERY sbt-running
+  # job reads/writes the shared cache. On fork PRs the secret is unavailable, the variable is empty
+  # and the build leaves the remote cache OFF. Entries are shared between jobs of the same
+  # os × arch only, so the linux-x64 rows (compile + the JS shards + one JVM and one Native row)
+  # are the main win; the other rows compile for themselves.
+  # Deliberately NO actions/cache for ~/.cache/sbt/v2 or for dependencies: the remote cache
+  # supersedes the first and the second evicts the generated port (see setup-scala).
+  BUILDBUDDY_API_KEY: ${{ secrets.BUILDBUDDY_API_KEY }}
 
 jobs:
-  # ─── Scalafmt check ────────────────────────────────────────────────
+  # ─── Scalafmt + workflow lint ──────────────────────────────────────
 
   format:
     name: Scalafmt check
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
         with:
           submodules: false
 
-      - uses: actions/setup-java@v6
-        with:
-          distribution: ${{ env.JAVA_DISTRIBUTION }}
-          java-version: ${{ env.JAVA_VERSION }}
-          cache: sbt
-
-      - uses: sbt/setup-sbt@v1
+      - uses: ./.github/actions/setup-scala
 
       - name: Check formatting
         run: sbt "scalafmtCheckAll; scalafmtSbtCheck"
 
-  # ─── JVM tests (6 desktop platforms) ───────────────────────────────
-
-  test-jvm:
-    name: JVM tests (${{ matrix.label }})
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: ubuntu-latest
-            label: linux-x86_64
-          - os: ubuntu-24.04-arm
-            label: linux-aarch64
-          - os: macos-latest
-            label: macos-x86_64
-            architecture: x64
-          - os: macos-latest
-            label: macos-aarch64
-          - os: windows-latest
-            label: windows-x86_64
-          - os: windows-11-arm
-            label: windows-aarch64
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          submodules: false
-
-
-      - uses: actions/setup-java@v6
-        with:
-          distribution: ${{ env.JAVA_DISTRIBUTION }}
-          java-version: ${{ env.JAVA_VERSION }}
-          cache: sbt
-          architecture: ${{ matrix.architecture || '' }}
-
-      - uses: sbt/setup-sbt@v1
-
-      - uses: coursier/setup-action@v3.0.2
-
-      - name: Checkout submodules for Java ports
-        run: git submodule update --init --depth=1 original-src/liqp original-src/flexmark-java
-
-      - name: Generate liqp ANTLR parser
-        run: cd original-src/liqp && chmod +x mvnw && ./mvnw -q generate-sources -pl .
-
-      - name: Setup Baltic Porter
+      - name: Lint the workflows
         run: |
-          git clone --depth=1 https://github.com/kubuszok/balticporter.git ../balticporter
-          cd ../balticporter && sbt --batch publishLocal
-
-
-
-      - name: Run JVM tests with coverage
-        run: sbt ci-jvm-3
-
-      - name: Upload coverage to Codecov
-        if: always()
-        uses: codecov/codecov-action@v7
-        with:
-          # sbt 2.0's target/out layout: `sbt ci-jvm-3` runs `coverageAggregate`,
-          # which writes the merged report to the ROOT project's crossTarget at
-          # target/out/jvm/scala-<ver>/ssg-root/scoverage-report/scoverage.xml —
-          # NOT the classic target/scala-<ver>/... path (which never existed here,
-          # so coverage silently never uploaded). The scala-* glob keeps this
-          # correct across Scala-version bumps; disable_search + fail_ci_if_error
-          # make a MISSING report hard-fail CI instead of silently passing.
-          files: target/out/jvm/scala-*/ssg-root/scoverage-report/scoverage.xml
-          disable_search: true
-          flags: ${{ matrix.label }}
-          fail_ci_if_error: true
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-
-  # ─── Scala.js tests (platform-independent, runs in Node.js) ────────
-  #
-  # Sharded into 4 parallel matrix jobs so each shard fits comfortably
-  # under the 30-minute timeout. Together the 4 shards cover all 13 JS
-  # modules (the same set as the old monolithic `sbt ci-js-3`):
-  #
-  #   md      — ssg-md (heaviest: ~5 600 tests) + ssgJS/compile (aggregator)
-  #   engines — ssg-katex, ssg-mermaid, ssg-graphviz, ssg-highlight
-  #   core    — ssg-commons, ssg-data-commons, ssg-graphs-commons, ssg-js, ssg-sass, ssg-minify
-  #   site    — ssg-liquid, ssg-site
-
-  test-js:
-    name: Scala.js tests (${{ matrix.shard }})
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          # ssg-md's generated code uses JVM-only APIs (Class.getEnumConstants,
-          # Enum.getDeclaringClass) in BitFieldSet — linker-incompatible on JS.
-          # Compile-only until the generated code is made JS-compatible.
-          - shard: md
-            sbt-tasks: >-
-              ssg-mdJS/compile ;
-              ssg-mdJS/Test/compile ;
-              ssgJS/compile
-          - shard: engines
-            sbt-tasks: >-
-              ssg-katexJS/testFull ;
-              ssg-mermaidJS/testFull ;
-              ssg-graphvizJS/testFull ;
-              ssg-highlightJS/testFull
-          - shard: core
-            sbt-tasks: >-
-              ssg-commonsJS/testFull ;
-              ssg-data-commonsJS/testFull ;
-              ssg-graphs-commonsJS/testFull ;
-              ssg-jsJS/testFull ;
-              ssg-sassJS/testFull ;
-              ssg-minifyJS/testFull
-          # ssg-liquid's generated code references jackson (JVM-only) in its main sources,
-          # so the Scala.js linker cannot resolve TypeReference/ObjectMapper at link time.
-          # Compile-only until the generated code is made JS-compatible.
-          - shard: site
-            sbt-tasks: >-
-              ssg-liquidJS/compile ;
-              ssg-siteJS/compile
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          submodules: false
-
-
-      - uses: actions/setup-java@v6
-        with:
-          distribution: ${{ env.JAVA_DISTRIBUTION }}
-          java-version: ${{ env.JAVA_VERSION }}
-          cache: sbt
-
-      - uses: sbt/setup-sbt@v1
-
-      - uses: coursier/setup-action@v3.0.2
-
-      - name: Checkout submodules for Java ports
-        run: git submodule update --init --depth=1 original-src/liqp original-src/flexmark-java
-
-      - name: Generate liqp ANTLR parser
-        run: cd original-src/liqp && chmod +x mvnw && ./mvnw -q generate-sources -pl .
-
-      - name: Setup Baltic Porter
-        run: |
-          git clone --depth=1 https://github.com/kubuszok/balticporter.git ../balticporter
-          cd ../balticporter && sbt --batch publishLocal
-
-      - uses: actions/setup-node@v7
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-
-      - name: Extract WASM and query files for tree-sitter
-        if: matrix.shard == 'engines'
-        run: |
-          sbt 'ssg-highlightJS/update'
-          WASM_JAR=$(find ~/Library/Caches/Coursier ~/.cache/coursier ~/.ivy2 \
-            -name "wasm-provider-tree-sitter-*.jar" \
-            -not -name "*-sources.jar" -not -name "*-javadoc.jar" 2>/dev/null | head -1)
-          QUERY_JAR=$(find ~/Library/Caches/Coursier ~/.cache/coursier ~/.ivy2 \
-            -name "tree-sitter-queries-*.jar" \
-            -not -name "*-sources.jar" -not -name "*-javadoc.jar" 2>/dev/null | head -1)
-          mkdir -p /tmp/ts-wasm/queries
-          if [ -n "$WASM_JAR" ]; then
-            echo "WASM JAR: $WASM_JAR"
-            cd /tmp/ts-wasm && jar xf "$WASM_JAR" wasm/ && mv wasm/* . && rmdir wasm
-            echo "Extracted $(ls grammars/*.wasm 2>/dev/null | wc -l) grammar WASM files"
-          else
-            echo "::warning::wasm-provider-tree-sitter JAR not found"
-          fi
-          if [ -n "$QUERY_JAR" ]; then
-            echo "Query JAR: $QUERY_JAR"
-            cd /tmp/ts-wasm && jar xf "$QUERY_JAR" queries/ && echo "Extracted $(find queries -name highlights.scm | wc -l) query files"
-          else
-            echo "::warning::tree-sitter-queries JAR not found"
-          fi
-
-      - name: Run Scala.js tests (${{ matrix.shard }})
-        run: sbt '${{ matrix.sbt-tasks }}'
-        env:
-          TREE_SITTER_WASM_DIR: ${{ matrix.shard == 'engines' && '/tmp/ts-wasm' || '' }}
-
-  # ─── Scala Native tests (5 desktop platforms) ─────────────────────
-
-  test-native:
-    name: Native tests (${{ matrix.label }})
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: ubuntu-latest
-            label: linux-x86_64
-          - os: ubuntu-24.04-arm
-            label: linux-aarch64
-          - os: macos-latest
-            label: macos-x86_64
-            architecture: x64
-          - os: macos-latest
-            label: macos-aarch64
-          - os: windows-latest
-            label: windows-x86_64
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          submodules: false
-
-
-      - uses: actions/setup-java@v6
-        with:
-          distribution: ${{ env.JAVA_DISTRIBUTION }}
-          java-version: ${{ env.JAVA_VERSION }}
-          cache: sbt
-          architecture: ${{ matrix.architecture || '' }}
-
-      - uses: sbt/setup-sbt@v1
-
-      - uses: coursier/setup-action@v3.0.2
-
-      - name: Checkout submodules for Java ports
-        run: git submodule update --init --depth=1 original-src/liqp original-src/flexmark-java
-
-      - name: Generate liqp ANTLR parser
-        run: cd original-src/liqp && chmod +x mvnw && ./mvnw -q generate-sources -pl .
-
-      - name: Setup Baltic Porter
-        run: |
-          git clone --depth=1 https://github.com/kubuszok/balticporter.git ../balticporter
-          cd ../balticporter && sbt --batch publishLocal
-
-
-
-      - name: Install Scala Native system dependencies (Linux)
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y clang libc++-dev
-
-      - name: Install Scala Native system dependencies (Windows)
-        if: runner.os == 'Windows'
-        run: choco install llvm --yes
-
-      - name: Run Scala Native tests
-        run: sbt ci-native-3
+          bash <(curl -sSf https://raw.githubusercontent.com/rhysd/actionlint/v1.7.7/scripts/download-actionlint.bash) 1.7.7 "$RUNNER_TEMP"
+          # workflow structure, expressions, action inputs, `needs` graphs, and shellcheck over the
+          # run scripts (the runner image ships shellcheck)
+          "$RUNNER_TEMP/actionlint" -color
 
   # ─── re-scale enforce gate (ratchet-blocking) ──────────────────────
   #
-  # BLOCKING on metric regression: the ratchet step at the end fails CI
-  # if any lower-is-better metric exceeds its committed baseline.
-  #
-  # The covenant-verify and shortcut-budget steps remain staged (non-
-  # blocking) until their absolute counts reach zero, at which point
-  # they can be promoted to blocking.
+  # BLOCKING on metric regression: the ratchet step at the end fails CI if any lower-is-better
+  # metric exceeds its committed baseline. The covenant-verify and shortcut-budget steps remain
+  # staged (non-blocking) until their absolute counts reach zero. re-scale builds itself as a
+  # Scala Native binary, hence the native toolchain.
 
   enforce:
     name: re-scale enforce
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
         with:
           submodules: false
 
-      - uses: actions/setup-java@v6
-        with:
-          distribution: ${{ env.JAVA_DISTRIBUTION }}
-          java-version: ${{ env.JAVA_VERSION }}
-          cache: sbt
+      - uses: ./.github/actions/setup-scala
 
-      - uses: sbt/setup-sbt@v1
-
-      - name: Install Scala Native deps
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y clang
+      - uses: ./.github/actions/setup-native-toolchain
 
       - name: Install re-scale
         run: |
@@ -328,18 +99,255 @@ jobs:
         run: re-scale version
 
       - name: Verify covenants on covenanted files
-        # Staged non-blocking: 98 known failures; will become blocking
-        # once the absolute count reaches zero.
+        # Staged non-blocking: becomes blocking once the absolute count reaches zero.
         continue-on-error: true
         run: |
           grep -rl 'Covenant:' --include='*.scala' . \
             | xargs -I{} re-scale enforce verify --file {}
 
       - name: Shortcut budget on covenanted files
-        # Staged non-blocking: 6 covenanted-shortcut hits remain; will
-        # become blocking once the absolute count reaches zero.
+        # Staged non-blocking: becomes blocking once the absolute count reaches zero.
         continue-on-error: true
         run: re-scale enforce shortcuts --covenanted
 
       - name: Ratchet gate (no regression vs baseline)
         run: bash .rescale/ci-ratchet.sh
+
+  # ─── Generate (Baltic Porter) ───────────────────────────────────────
+  #
+  # The ONLY job that initialises the upstream submodules and runs the generator. The generated
+  # tree is stored in the Actions cache under a key made of everything it depends on (engine pin,
+  # upstream commits, generator source, JDK major), so a push that changes none of them skips
+  # generation altogether; every other job restores that entry by the key this job outputs.
+
+  generate:
+    name: Generate port (Baltic Porter)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    outputs:
+      key: ${{ steps.port.outputs.key }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: false
+
+      - uses: ./.github/actions/setup-scala
+
+      - uses: ./.github/actions/generated-port
+        id: port
+        with:
+          mode: generate
+
+  # ─── Compile (once per platform row) ────────────────────────────────
+  #
+  # Test/compile of every module, one job per platform row, on Linux. Two purposes:
+  #   1. Fail fast: a compile error reds ONE small job instead of surfacing minutes later inside
+  #      every expensive matrix leg.
+  #   2. Fill the remote cache: the downstream jobs restore compile outputs instead of
+  #      recompiling. Compiling needs no clang/node — linking and running stay downstream.
+
+  compile:
+    name: Compile (${{ matrix.row }})
+    needs: [generate]
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        row: [jvm, js, native]
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: false
+
+      - uses: ./.github/actions/setup-scala
+
+      - uses: ./.github/actions/generated-port
+        with:
+          key: ${{ needs.generate.outputs.key }}
+
+      - name: Test/compile all modules
+        run: sbt 'testCompile-${{ matrix.row }}-3'
+
+  # ─── JVM tests (6 desktop platforms) ───────────────────────────────
+
+  test-jvm:
+    name: JVM tests (${{ matrix.label }})
+    needs: [generate, compile]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: ${{ matrix.timeout }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            label: linux-x86_64
+            timeout: 60
+          - os: ubuntu-24.04-arm
+            label: linux-aarch64
+            timeout: 60
+          - os: macos-latest
+            label: macos-x86_64
+            architecture: x64
+            timeout: 90
+          - os: macos-latest
+            label: macos-aarch64
+            timeout: 60
+          - os: windows-latest
+            label: windows-x86_64
+            timeout: 60
+          - os: windows-11-arm
+            label: windows-aarch64
+            architecture: arm64
+            timeout: 60
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: false
+
+      - uses: ./.github/actions/setup-scala
+        with:
+          architecture: ${{ matrix.architecture || '' }}
+
+      - uses: ./.github/actions/generated-port
+        with:
+          key: ${{ needs.generate.outputs.key }}
+
+      - name: Run JVM tests with coverage
+        uses: ./.github/actions/sbt-guarded
+        with:
+          command: sbt ci-jvm-3
+
+      - name: Upload coverage to Codecov
+        if: always()
+        uses: codecov/codecov-action@v7
+        with:
+          # sbt 2.0's target/out layout: `sbt ci-jvm-3` runs `coverageAggregate`, which writes the
+          # merged report to the ROOT project's crossTarget at
+          # target/out/jvm/scala-<ver>/ssg-root/scoverage-report/scoverage.xml — NOT the classic
+          # target/scala-<ver>/... path. The scala-* glob keeps this correct across Scala-version
+          # bumps; disable_search + fail_ci_if_error make a MISSING report hard-fail CI instead of
+          # silently passing.
+          files: target/out/jvm/scala-*/ssg-root/scoverage-report/scoverage.xml
+          disable_search: true
+          flags: ${{ matrix.label }}
+          fail_ci_if_error: true
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+  # ─── Scala.js tests (platform-independent, runs in Node.js) ────────
+  #
+  # Sharded into 4 parallel jobs so each fits its timeout. Each shard is an alias in build.sbt
+  # (ci-js-3-<shard>) that runs testFull for its modules; together the four cover exactly the
+  # modules of `ci-js-3`:
+  #
+  #   md      — ssg-md (heaviest) + the ssg aggregator
+  #   engines — ssg-katex, ssg-mermaid, ssg-graphviz, ssg-highlight
+  #   core    — ssg-commons, ssg-data-commons, ssg-graphs-commons, ssg-js, ssg-sass, ssg-minify
+  #   site    — ssg-liquid, ssg-site
+  #
+  # The guarded run fails a shard in which no test ran, so a shard cannot quietly become
+  # compile-only.
+
+  test-js:
+    name: Scala.js tests (${{ matrix.shard }})
+    needs: [generate, compile]
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [md, engines, core, site]
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: false
+
+      - uses: ./.github/actions/setup-scala
+
+      - uses: ./.github/actions/generated-port
+        with:
+          key: ${{ needs.generate.outputs.key }}
+
+      - uses: ./.github/actions/setup-js
+
+      # ssg-highlight's JS tests load the tree-sitter grammars (WASM) and queries from a directory;
+      # both ship as jars, unpacked here from the coursier cache the `update` filled.
+      - name: Extract WASM and query files for tree-sitter
+        if: matrix.shard == 'engines'
+        run: |
+          sbt 'ssg-highlightJS/update'
+          WASM_JAR=$(find ~/.cache/coursier ~/.ivy2 \
+            -name "wasm-provider-tree-sitter-*.jar" \
+            -not -name "*-sources.jar" -not -name "*-javadoc.jar" 2>/dev/null | head -1)
+          QUERY_JAR=$(find ~/.cache/coursier ~/.ivy2 \
+            -name "tree-sitter-queries-*.jar" \
+            -not -name "*-sources.jar" -not -name "*-javadoc.jar" 2>/dev/null | head -1)
+          mkdir -p "$RUNNER_TEMP/ts-wasm/queries"
+          cd "$RUNNER_TEMP/ts-wasm"
+          if [ -n "$WASM_JAR" ]; then
+            echo "WASM JAR: $WASM_JAR"
+            jar xf "$WASM_JAR" wasm/ && mv wasm/* . && rmdir wasm
+            echo "Extracted $(find grammars -name '*.wasm' 2>/dev/null | wc -l) grammar WASM files"
+          else
+            echo "::warning::wasm-provider-tree-sitter JAR not found"
+          fi
+          if [ -n "$QUERY_JAR" ]; then
+            echo "Query JAR: $QUERY_JAR"
+            jar xf "$QUERY_JAR" queries/ && echo "Extracted $(find queries -name highlights.scm | wc -l) query files"
+          else
+            echo "::warning::tree-sitter-queries JAR not found"
+          fi
+          echo "TREE_SITTER_WASM_DIR=$RUNNER_TEMP/ts-wasm" >> "$GITHUB_ENV"
+
+      - name: Run Scala.js tests (${{ matrix.shard }})
+        uses: ./.github/actions/sbt-guarded
+        with:
+          command: sbt ci-js-3-${{ matrix.shard }}
+
+  # ─── Scala Native tests (5 desktop platforms) ─────────────────────
+
+  test-native:
+    name: Native tests (${{ matrix.label }})
+    needs: [generate, compile]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: ${{ matrix.timeout }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            label: linux-x86_64
+            timeout: 90
+          - os: ubuntu-24.04-arm
+            label: linux-aarch64
+            timeout: 90
+          - os: macos-latest
+            label: macos-x86_64
+            architecture: x64
+            timeout: 150
+          - os: macos-latest
+            label: macos-aarch64
+            timeout: 90
+          - os: windows-latest
+            label: windows-x86_64
+            timeout: 90
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: false
+
+      - uses: ./.github/actions/setup-scala
+        with:
+          architecture: ${{ matrix.architecture || '' }}
+
+      - uses: ./.github/actions/generated-port
+        with:
+          key: ${{ needs.generate.outputs.key }}
+
+      - uses: ./.github/actions/setup-native-toolchain
+
+      - name: Run Scala Native tests
+        uses: ./.github/actions/sbt-guarded
+        with:
+          command: sbt ci-native-3

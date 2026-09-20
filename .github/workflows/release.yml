@@ -5,40 +5,48 @@ on:
     branches: [master]
     tags: ["*"]
 
-# Cancel in-progress runs for the same branch/PR
+# Cancel in-progress runs for the same branch/tag
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-env:
-  JVM_VERSION: "zulu:25"
-
 jobs:
   build-and-publish:
     # Never publish from pull requests (no secrets, and would otherwise attempt a snapshot deploy).
-    # The pull_request trigger was removed so this workflow no longer runs on PRs at all;
-    # this guard is retained as defense-in-depth.  Snapshots publish on master pushes; full
-    # releases (sonaRelease) only on tag pushes — the tag/snapshot distinction is made inside
-    # the `ci-release` command (publishSigned vs +publishSigned + sonaRelease).
+    # This workflow has no pull_request trigger; the guard is retained as defense-in-depth.
+    # Snapshots publish on master pushes; full releases (sonaRelease) only on tag pushes — the
+    # tag/snapshot distinction is made inside the `ci-release` command.
     if: github.event_name != 'pull_request'
     runs-on: macos-latest
 
     name: ${{ startsWith(github.ref, 'refs/tags/') && 'Publish Tag as Release' || 'Publish Snapshot' }}
 
+    env:
+      # Snapshots build with the BuildBuddy remote cache (unchanged modules are restored instead of
+      # recompiled); a TAGGED release always builds from source.
+      BUILDBUDDY_API_KEY: ${{ github.ref_type != 'tag' && secrets.BUILDBUDDY_API_KEY || '' }}
+
     steps:
       - uses: actions/checkout@v7
         with:
           submodules: false
-      - uses: coursier/cache-action@v8
+
       - name: Import GPG key for signing the release
         uses: crazy-max/ghaction-import-gpg@v7
         with:
           gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
           passphrase: ${{ secrets.GPG_PASSPHRASE }}
-      - uses: coursier/setup-action@v3.0.3
+
+      - uses: ./.github/actions/setup-scala
+
+      # Restores the tree ci.yml's `generate` job stored for this commit's inputs, or generates it
+      # (the only other place that may initialise the upstream submodules).
+      - uses: ./.github/actions/generated-port
         with:
-          jvm: ${{ env.JVM_VERSION }}
-          apps: sbt
+          mode: generate
+
+      # setup-scala makes every sbt call its own foreground JVM, so the credentials below reach
+      # the build even though the generation step ran sbt first.
       - name: Publish all projects
         run: sbt ci-release
         env:
