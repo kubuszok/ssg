@@ -15,6 +15,7 @@ import ssg.md.util.ast.Document
 import ssg.md.util.data.{ DataHolder, DataKey, DataSet, MutableDataSet }
 
 import java.{ util => ju }
+import scala.jdk.CollectionConverters.*
 import scala.language.implicitConversions
 
 /** munit suite for Translation Formatter spec tests.
@@ -54,15 +55,16 @@ abstract class TranslationFormatterSpecTestSuite extends FormatterSpecTestSuite 
         DataSet.aggregate(TRANSLATION_BASE_OPTIONS, subclassBase)
       )
       .toImmutable()
-    val optionSet = example.optionsSet
+    val optionSet = Nullable(example.getOptionsSet())
     if (optionSet.isDefined && optionSet.get.nonEmpty) {
       val mergedMap = new ju.HashMap[String, DataHolder](FormatterSpecTestSuite.BASE_OPTIONS_MAP)
       mergedMap.putAll(translationOptionsMap)
       mergedMap.putAll(optionsMap)
-      val optionsProvider: String => Nullable[DataHolder] = { name =>
-        TestUtils.processOption(mergedMap.asInstanceOf[ju.Map[String, DataHolder]], name)
+      val scalaMergedMap = mergedMap.asScala
+      val optionsProvider: ju.function.Function[String, DataHolder] = { name =>
+        TestUtils.processOption(scalaMergedMap, name)
       }
-      val opts = TestUtils.getOptions(example, optionSet, optionsProvider)
+      val opts = Nullable(TestUtils.getOptions(example, optionSet.get, optionsProvider))
       if (opts.isDefined) {
         DataSet.aggregate(base, opts.get).toImmutable()
       } else {

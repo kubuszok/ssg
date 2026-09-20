@@ -34,7 +34,7 @@ final class ComboParagraphFormatterSpecTest extends FormatterSpecTestSuite {
     val noFileEol     = TestUtils.NO_FILE_EOL.get(options)
     val trimmedSource = if (noFileEol) TestUtils.trimTrailingEOL(example.source) else example.source
     val input         = BasedSequence.of(trimmedSource)
-    val out           = new StringBuilder()
+    val out           = new java.lang.StringBuilder()
 
     val info     = TestUtils.extractMarkup(input)
     val sequence = BasedSequence.of(info.getFirst())
@@ -122,7 +122,7 @@ object ComboParagraphFormatterSpecTest {
       new MutableDataSet()
         .set(
           TestUtils.CUSTOM_OPTION,
-          ((option: String, params: String) => TestUtils.customIntOption(option, params, (v: Int) => firstWidthDeltaOption(v))): java.util.function.BiFunction[String, String, DataHolder]
+          ((option: String, params: String) => TestUtils.customIntOption(option, params, (v: Integer) => firstWidthDeltaOption(v.intValue))): java.util.function.BiFunction[String, String, DataHolder]
         )
         .toImmutable()
     )

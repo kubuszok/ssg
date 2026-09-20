@@ -37,11 +37,11 @@ final class ParserSuite extends munit.FunSuite {
     val parser = Parser.builder().build()
 
     val specResource = ResourceLocation.of(classOf[ComboCoreSpecTest], ComboCoreSpecTest.SPEC_RESOURCE)
-    val input1       = specResource.resourceInputStream
+    val input1       = specResource.getResourceInputStream()
     val reader       = new InputStreamReader(input1, StandardCharsets.UTF_8)
     val document1    = parser.parseReader(reader)
 
-    val spec      = specResource.resourceText
+    val spec      = specResource.getResourceText()
     val document2 = parser.parse(spec)
 
     val renderer = HtmlRenderer.builder().escapeHtml(true).build()

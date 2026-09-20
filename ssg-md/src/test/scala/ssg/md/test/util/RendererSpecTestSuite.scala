@@ -15,6 +15,7 @@ import ssg.md.util.data.{ DataHolder, DataSet, MutableDataSet }
 import ssg.md.util.sequence.BasedSequence
 
 import java.{ util => ju }
+import scala.jdk.CollectionConverters.*
 import scala.language.implicitConversions
 
 /** munit suite for HTML rendering spec tests.
@@ -30,14 +31,15 @@ abstract class RendererSpecTestSuite extends SpecTestSuite {
     val subclassBase = defaultOptions.getOrElse(new MutableDataSet())
     // Merge renderer base options (INDENT_SIZE=2) with subclass defaults
     val base      = DataSet.aggregate(RendererSpecTestSuite.RENDERER_OPTIONS, subclassBase).toImmutable()
-    val optionSet = example.optionsSet
+    val optionSet = Nullable(example.getOptionsSet())
     if (optionSet.isDefined && optionSet.get.nonEmpty) {
       val mergedMap = new ju.HashMap[String, DataHolder](RendererSpecTestSuite.BASE_OPTIONS_MAP)
       mergedMap.putAll(optionsMap)
-      val optionsProvider: String => Nullable[DataHolder] = { name =>
-        TestUtils.processOption(mergedMap.asInstanceOf[ju.Map[String, DataHolder]], name)
+      val scalaMergedMap = mergedMap.asScala
+      val optionsProvider: ju.function.Function[String, DataHolder] = { name =>
+        TestUtils.processOption(scalaMergedMap, name)
       }
-      val opts = TestUtils.getOptions(example, optionSet, optionsProvider)
+      val opts = Nullable(TestUtils.getOptions(example, optionSet.get, optionsProvider))
       if (opts.isDefined) {
         DataSet.aggregate(base, opts.get).toImmutable()
       } else {

@@ -34,15 +34,17 @@ abstract class FormatterSpecTestSuite extends SpecTestSuite {
   override protected def optionsFor(example: SpecExample): DataHolder = {
     val subclassBase = defaultOptions.getOrElse(new MutableDataSet())
     // Merge formatter base options (BLANK_LINES_IN_AST=true, HEADING_NO_ATX_SPACE=true) with subclass defaults
-    val base      = DataSet.aggregate(FormatterSpecTestSuite.BASE_OPTIONS, subclassBase).toImmutable()
-    val optionSet = example.optionsSet
+    val base = DataSet.aggregate(FormatterSpecTestSuite.BASE_OPTIONS, subclassBase).toImmutable()
+    import scala.jdk.CollectionConverters.*
+    val optionSet = Nullable(example.getOptionsSet())
     if (optionSet.isDefined && optionSet.get.nonEmpty) {
       val mergedMap = new ju.HashMap[String, DataHolder](FormatterSpecTestSuite.BASE_OPTIONS_MAP)
       mergedMap.putAll(optionsMap)
-      val optionsProvider: String => Nullable[DataHolder] = { name =>
-        TestUtils.processOption(mergedMap.asInstanceOf[ju.Map[String, DataHolder]], name)
+      val scalaMergedMap = mergedMap.asScala
+      val optionsProvider: ju.function.Function[String, DataHolder] = { name =>
+        TestUtils.processOption(scalaMergedMap, name)
       }
-      val opts = TestUtils.getOptions(example, optionSet, optionsProvider)
+      val opts = Nullable(TestUtils.getOptions(example, optionSet.get, optionsProvider))
       if (opts.isDefined) {
         DataSet.aggregate(base, opts.get).toImmutable()
       } else {
@@ -104,7 +106,7 @@ abstract class FormatterSpecTestSuite extends SpecTestSuite {
         var result = TestUtils.insertCaretMarkup(BasedSequence.of(html), finalOffsets).toSequence().toString
 
         if (FormatterSpecTestSuite.SHOW_LINE_RANGES.get(options)) {
-          val out = new StringBuilder()
+          val out = new java.lang.StringBuilder()
           out.append(result)
           if (trackedSequence eq document.getDocument().chars) {
             TestUtils.appendBanner(out, TestUtils.bannerText("Ranges"), false)
@@ -141,7 +143,7 @@ abstract class FormatterSpecTestSuite extends SpecTestSuite {
         val builder: SequenceBuilder = document.chars.getBuilder()
         formatter.render(document, builder)
         val html = builder.toString
-        val out  = new StringBuilder()
+        val out  = new java.lang.StringBuilder()
         out.append(html)
         if (trackedSequence eq document.getDocument().chars) {
           TestUtils.appendBanner(out, TestUtils.bannerText("Ranges"), false)
@@ -421,7 +423,7 @@ object FormatterSpecTestSuite {
       new MutableDataSet()
         .set(
           TestUtils.CUSTOM_OPTION,
-          ((option: String, params: String) => TestUtils.customIntOption(option, params, (v: Int) => marginOption(v))): java.util.function.BiFunction[String, String, DataHolder]
+          ((option: String, params: String) => TestUtils.customIntOption(option, params, (v: Integer) => marginOption(v.intValue))): java.util.function.BiFunction[String, String, DataHolder]
         )
         .toImmutable()
     )

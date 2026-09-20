@@ -14,7 +14,6 @@ import ssg.md.parser.Parser
 import ssg.md.test.util.spec.{ ResourceLocation, SpecExample, SpecReader }
 import ssg.md.util.data.{ DataHolder, MutableDataSet }
 
-import scala.jdk.CollectionConverters.*
 import scala.language.implicitConversions
 
 /** CommonMark spec.txt conformance test.
@@ -102,7 +101,7 @@ object CommonMarkSpecConformanceTest {
   private def loadExamples(resource: String): List[SpecExample] = {
     val location = ResourceLocation.of(classOf[CommonMarkSpecConformanceTest], resource)
     val reader   = SpecReader.createAndReadExamples(location, false)
-    reader.getExamples.iterator().asScala.toList.filter(_.isSpecExample)
+    reader.getExamples().toList.filter(_.isSpecExample())
   }
 
   /** Run a single example: parse source, render HTML, compare to expected. */
@@ -118,7 +117,7 @@ object CommonMarkSpecConformanceTest {
     val examples = loadExamples(resource)
     val results  = examples.map { example =>
       ExampleResult(
-        section = example.section.getOrElse("Unknown"),
+        section = Option(example.getSection()).getOrElse("Unknown"),
         exampleNumber = example.exampleNumber,
         lineNumber = example.lineNumber,
         passed = runExample(example)

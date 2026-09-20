@@ -46,12 +46,13 @@ abstract class SpecTestSuite extends munit.FunSuite {
     */
   protected def optionsFor(example: SpecExample): DataHolder = {
     val base      = defaultOptions.getOrElse(new MutableDataSet())
-    val optionSet = example.optionsSet
+    val optionSet = Nullable(example.getOptionsSet())
     if (optionSet.isDefined && optionSet.get.nonEmpty) {
-      val optionsProvider: String => Nullable[DataHolder] = { name =>
-        TestUtils.processOption(optionsMap.asInstanceOf[ju.Map[String, DataHolder]], name)
+      val scalaOptionsMap = optionsMap.asInstanceOf[ju.Map[String, DataHolder]].asScala
+      val optionsProvider: ju.function.Function[String, DataHolder] = { name =>
+        TestUtils.processOption(scalaOptionsMap, name)
       }
-      val opts = TestUtils.getOptions(example, optionSet, optionsProvider)
+      val opts = Nullable(TestUtils.getOptions(example, optionSet.get, optionsProvider))
       if (opts.isDefined) {
         val combined = new MutableDataSet(base)
         combined.setAll(opts.get)
@@ -76,12 +77,12 @@ abstract class SpecTestSuite extends munit.FunSuite {
     reader
   }
 
-  private lazy val examples: List[SpecExample] = specReader.getExamples.iterator().asScala.toList
+  private lazy val examples: List[SpecExample] = specReader.getExamples().toList
 
   // Register all spec examples as individual tests
   examples.foreach { example =>
-    if (example.isSpecExample) {
-      val testName = s"${example.section.getOrElse("?")} - ${example.exampleNumber}"
+    if (example.isSpecExample()) {
+      val testName = s"${Nullable(example.getSection()).getOrElse("?")} - ${example.getExampleNumber()}"
       test(testName) {
         // IGNORE option throws RuntimeException (originally AssumptionViolatedException).
         // Catch it to skip the test rather than fail.
@@ -113,7 +114,7 @@ abstract class SpecTestSuite extends munit.FunSuite {
               // Exception in known failure - pass (expected)
               ()
             case Some(actualHtml) =>
-              val expectedHtml = example.html
+              val expectedHtml = example.getHtml()
 
               if (expectFail) {
                 // For FAIL-marked tests, pass if they fail (expected), also pass if they succeed (bug fixed)
@@ -126,19 +127,19 @@ abstract class SpecTestSuite extends munit.FunSuite {
                 assertEquals(
                   actualHtml,
                   expectedHtml,
-                  s"HTML mismatch at ${example.fileUrlWithLineNumber}"
+                  s"HTML mismatch at ${example.getFileUrlWithLineNumber()}"
                 )
               }
 
               // Check AST if expected and not expected to fail
               if (!expectFail) {
-                example.ast.foreach { expectedAst =>
+                Nullable(example.getAst()).foreach { expectedAst =>
                   val actualAst = renderAst(example, options)
                   actualAst.foreach { ast =>
                     assertEquals(
                       ast,
                       expectedAst,
-                      s"AST mismatch at ${example.fileUrlWithLineNumber}"
+                      s"AST mismatch at ${example.getFileUrlWithLineNumber()}"
                     )
                   }
                 }
