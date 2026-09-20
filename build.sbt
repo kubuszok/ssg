@@ -78,6 +78,10 @@ val commonSettings = Seq(
     // used by NativeMathPlatform to call the native C pow() for exact
     // floating-point parity with dart-sass / JavaScript Math.pow.
     javaOptions += "--enable-native-access=ALL-UNNAMED",
+    // The test JVM's locale is pinned: flexmark's own suites (generated from its java tests) format
+    // and parse numbers with the DEFAULT locale, as the java does, and expect `50.000` — a machine
+    // set to a comma-decimal locale read 8 failures that say nothing about the port.
+    Test / javaOptions ++= Seq("-Duser.language=en", "-Duser.country=US"),
     // scoverage's runtime Invoker (forked test JVM) appends measurement files to
     // crossTarget/scoverage-data, but under sbt-2.0's target/out layout scoverage
     // does not create that dir at instrumentation time, so the first write throws
