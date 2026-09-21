@@ -22,14 +22,13 @@ object CharSources {
   def fromString(input: String, sourceName: String): CharSource =
     new CharSources.StringCharSource(input, sourceName)
 
-  /** Reads the file at `path`. There is no cross-platform filesystem: Scala.js has no
-    * `java.nio.file`, so this — like liqp's own `LocalFSNameResolver` and `include` tag — is a
-    * counted portability residue of the library rather than of this file.
+  /** Reads the file at `path`, as UTF-8. The path is ssg.commons.io's — this port's stand-in for
+    * `java.nio.file.Path`, which Scala.js does not have — and so is the read.
     */
-  def fromPath(path: java.nio.file.Path): CharSource =
+  def fromPath(path: ssg.commons.io.FilePath): CharSource =
     new CharSources.StringCharSource(
-      new String(java.nio.file.Files.readAllBytes(path), java.nio.charset.StandardCharsets.UTF_8),
-      path.toString
+      ssg.commons.io.FileOps.readString(path, java.nio.charset.StandardCharsets.UTF_8),
+      path.pathString
     )
 
   def fromStream(input: java.io.InputStream): CharSource =

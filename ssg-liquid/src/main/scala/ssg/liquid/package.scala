@@ -17,15 +17,18 @@ package object liquid {
   extension (t: Template.type) def parse(input: String): Template = TemplateParser.DEFAULT.parse(input)
 
   extension (tp: TemplateParser) {
-    def parse(input: String, sourcePath: java.nio.file.Path): Template =
-      tp.parse(ssg.liquid.antlr.CharSources.fromString(input, sourcePath.toString))
     def parse(input: String, sourcePath: ssg.commons.io.FilePath): Template =
       tp.parse(ssg.liquid.antlr.CharSources.fromString(input, sourcePath.pathString))
   }
 
   extension (t: Template) {
-    def withJailRoot(root: ssg.commons.io.FilePath): Template = t
-    def render(vars: java.util.Map[String, ?]):      String   =
+
+    /** ISS-1214: every `include_relative` rendered under this template must resolve under `root`, or the render raises [[IncludeJail.JailViolationException]] before the file is read. */
+    def withJailRoot(root: ssg.commons.io.FilePath): Template = {
+      t.jailRoot = Some(root)
+      t
+    }
+    def render(vars: java.util.Map[String, ?]): String =
       t.render(unwrapDataViewMap(vars))
     def renderToObject(vars: java.util.Map[String, ?]): Object =
       t.renderToObject(unwrapDataViewMap(vars))

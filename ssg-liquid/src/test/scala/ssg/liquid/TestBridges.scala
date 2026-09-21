@@ -10,10 +10,16 @@ package liquid
 
 import ssg.liquid.antlr.{ CharStreamWithLocation, NameResolver }
 
-import java.nio.file.Paths
+import ssg.commons.io.FilePath
 
 /** Extensions on generated classes to restore hand-ported API surface used by tests. */
 object TestBridges {
+
+  /** The hand port's `ResolvedSource` accessors, over what the generated resolver answers. */
+  extension (source: CharStreamWithLocation) {
+    def content:    String = source.text()
+    def sourceName: String = source.getSourceName()
+  }
 
   /** In-memory NameResolver for testing — replaces the hand-ported NameResolver.InMemory. The generated NameResolver trait returns CharStreamWithLocation (ANTLR-based).
     */
@@ -32,7 +38,7 @@ object TestBridges {
         throw new RuntimeException(s"Template not found: $name")
       new CharStreamWithLocation(
         ssg.liquid.antlr.CharSources.fromString(content, stripped),
-        Paths.get(stripped)
+        FilePath.of(stripped)
       )
     }
   }
