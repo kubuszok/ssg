@@ -8,10 +8,9 @@ addSbtPlugin("com.kubuszok" % "sbt-kubuszok" % "0.2.3")
 addSbtPlugin("com.kubuszok" % "sbt-multiarch-scala" % "0.4.0")
 ThisBuild / libraryDependencySchemes += "org.scala-lang.modules" %% "scala-xml" % VersionScheme.Always
 
-// Baltic Porter: the corpus module provides the migrators (LiqpMigrate, FlexmarkMigrate)
-// that the sourceGenerator calls to produce ssg-liquid and ssg-md Scala sources from the
-// upstream Java originals. The frontend-ts module provides the non-Java emitters
-// (ParityDerive, TerserEmitter, KaTeXEmitter, MermaidEmitter, DartSassEmitter, roughjs emitters).
+// Baltic Porter: the generic porting ENGINE only. How liqp and flexmark are ported is ssg's own —
+// the configurations and injected sources under `ssg-liquid/port` and `ssg-md/port`, run by
+// project/BalticPorterGen.scala. The frontend-ts module provides the non-Java emitters.
 resolvers += "Central Portal Snapshots" at "https://central.sonatype.com/repository/maven-snapshots"
-libraryDependencies += "com.kubuszok" %% "balticporter-corpus" % "05e187f6b583c4cb71ec6827544b91ce53fde4c9-SNAPSHOT"
-libraryDependencies += "com.kubuszok" %% "balticporter-frontend-ts" % "05e187f6b583c4cb71ec6827544b91ce53fde4c9-SNAPSHOT"
+libraryDependencies += "com.kubuszok" %% "balticporter-engine" % "1b4a7b57a9b4a5e7c0f64e07a17b312ffd6d957a-SNAPSHOT"
+libraryDependencies += "com.kubuszok" %% "balticporter-frontend-ts" % "1b4a7b57a9b4a5e7c0f64e07a17b312ffd6d957a-SNAPSHOT"

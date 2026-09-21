@@ -1,17 +1,20 @@
 /*
- * Copyright (c) 2026 SSG contributors
- * SPDX-License-Identifier: Apache-2.0
+ * Ported from Liqp - https://github.com/bkiers/Liqp
+ * Original source: src/main/antlr4/liquid/parser/v4/LiquidLexer.g4 (the grammar the ANTLR
+ *   lexer liqp imports as liquid.parser.v4.LiquidLexer is generated from)
+ * Original license: MIT, Copyright (c) 2010-2013 by Bart Kiers
+ * Adapted from the hand-written Scala port in ssg (Apache-2.0, SSG contributors)
  *
- * Hand-written lexer for the Liquid template language.
- * Replaces ANTLR-generated LiquidLexer.
+ * Migration notes:
+ *   Origin: the generated ANTLR lexer, which needs the ANTLR runtime and is therefore
+ *     JVM-only; this reads the same grammar by hand.
+ *   Convention: java's own constructor parameters, in java's order, so `Template` ports
+ *     mechanically on top of it.
  *
  * The lexer operates in 3 modes:
  *   DEFAULT: Scans for {{ and {% delimiters, collecting plain text
  *   IN_TAG: Inside {{ }} or {% %}, tokenizes operators/identifiers/literals
  *   IN_RAW: Inside {% raw %}...{% endraw %}, collects raw text
- *
- * Covenant: full-port
- * Covenant-verified: 2026-06-14
  */
 package ssg
 package liquid
@@ -24,15 +27,16 @@ import java.util.{ ArrayList, Set => JSet }
 import scala.util.boundary
 import scala.util.boundary.break
 
-/** Hand-written lexer for Liquid templates. */
+/** Reads a Liquid template's characters into the token list [[LiquidParser]] consumes. */
 final class LiquidLexer(
-  private val input:                 String,
+  private val source:                ssg.liquid.antlr.CharSource,
+  private val liquidStyleInclude:    Boolean,
   private val stripSpacesAroundTags: Boolean,
   private val stripSingleLine:       Boolean,
-  private val liquidStyleInclude:    Boolean,
   private val blockNames:            JSet[String],
   private val tagNames:              JSet[String]
 ) {
+  private val input: String = source.text()
   private var pos:    Int              = 0
   private var line:   Int              = 1
   private var col:    Int              = 0

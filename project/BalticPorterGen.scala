@@ -8,66 +8,35 @@ import java.nio.file.{ Files, Path }
 // interleave RAST bodies into reference files via ParityDerive.
 object BalticPorterGen {
 
-  private def bpRoot(ssgRoot: Path): Path =
-    Path.of(sys.props.getOrElse("balticporter.root", ssgRoot.resolve("../balticporter").toString)).toAbsolutePath.normalize
+  // ---------------------------------------------------------------------------
+  // The Java ports: ssg-liquid (liqp), ssg-md (flexmark core + the eleven util
+  // libraries) and ssg-md-ext (the extensions, a dependent of ssg-md). The published
+  // engine is generic; every port is described by ssg's own files (`<module>/port/`).
+  // All run in ONE pass under ONE marker, so CI carries one generated tree.
+  // ---------------------------------------------------------------------------
 
-  private def hasBpSibling(ssgRoot: Path): Boolean =
-    Files.isDirectory(bpRoot(ssgRoot).resolve("balticporter/corpus"))
+  /** The liquid port's root: the shared sources, and one directory per platform row for the few answers that differ by platform (reading an object's fields by reflection exists on the JVM only). */
+  def liquidPortRoot(ssgRoot: Path): Path = mdPortsRoot(ssgRoot).resolve("ssg-liquid")
 
-  /** Generate ssg-liquid Scala sources from liqp Java originals. */
-  def generateLiquid(buildBase: File, outDir: File, log: sbt.util.Logger): Seq[File] = {
-    val ssgRoot = buildBase.toPath.toAbsolutePath.normalize
-    val liqpSrc = ssgRoot.resolve("original-src/liqp/src/main/java")
-    if (!hasBpSibling(ssgRoot) || !Files.isDirectory(liqpSrc)) {
-      log.warn("[Baltic Porter] No balticporter sibling or liqp submodule — skipping ssg-liquid generation")
-      return collectScalaFiles(outDir.toPath)
-    }
-    val bp = bpRoot(ssgRoot)
+  def liquidOutDir(ssgRoot: Path): Path = liquidPortRoot(ssgRoot).resolve("src_managed/main/scala")
 
-    val portRoot = bp.resolve("ported/ssg-liquid")
-    val outPath  = portRoot.resolve("src_managed/main/scala")
-    val marker   = ssgRoot.resolve("target/balticporter-ssg-liquid/.generated-marker")
+  /** `row` is `jvm`, `js` or `native`. */
+  def liquidRowDir(ssgRoot: Path, row: String): Path = liquidPortRoot(ssgRoot).resolve(s"src_managed/$row/scala")
 
-    val forceRegen = sys.props.getOrElse("balticporter.forceRegen", "false").toBoolean
-    val commit     = balticporter.runner.VendoredCommit.of(ssgRoot.resolve("original-src/liqp"))
-    val cached     = !forceRegen && Files.exists(marker) &&
-      Files.exists(outPath) &&
-      Files.readString(marker).trim == commit
-
-    if (!cached) {
-      log.info(s"[Baltic Porter] Generating ssg-liquid sources from liqp ($commit)")
-
-      val confPath = bp.resolve("balticporter/corpus/ports/liqp/main.conf")
-      require(Files.exists(confPath), s"liqp port config not found at $confPath — publish balticporter-corpus first")
-
-      System.setProperty("balticporter.root", bp.toAbsolutePath.normalize.toString)
-      try {
-        balticporter.corpus.liqp.LiqpClasspath.ensure(bp)
-        val config = balticporter.runner.PortConfig.load(confPath)
-        config.execute()
-        log.info(s"[Baltic Porter] Generated ssg-liquid sources to $outPath")
-        postProcess(outPath, log)
-      } catch {
-        case e: Exception =>
-          log.warn(s"[Baltic Porter] ssg-liquid generation failed (files may have been written): ${e.getMessage}")
-      }
-
-      Files.createDirectories(marker.getParent)
-      Files.writeString(marker, commit)
-    } else {
-      log.info(s"[Baltic Porter] Using cached ssg-liquid sources ($commit)")
+  /** Generate ssg-liquid Scala sources from liqp: the shared tree plus this platform row's. */
+  def generateLiquid(buildBase: File, row: String, log: sbt.util.Logger): Seq[File] =
+    BalticPorterGen.synchronized {
+      val ssgRoot = buildBase.toPath.toAbsolutePath.normalize
+      markdown(ssgRoot, log)
+      collectScalaFiles(liquidOutDir(ssgRoot)) ++ collectScalaFiles(liquidRowDir(ssgRoot, row))
     }
 
-    val ssgLiquidSrc = ssgRoot.resolve("ssg-liquid/src/main")
-    collectScalaFiles(outPath, excludeDuplicatesOf = Some(ssgLiquidSrc))
-  }
-
-  // ---------------------------------------------------------------------------
-  // Markdown: ssg-md (flexmark core + the eleven util libraries) and ssg-md-ext
-  // (the extensions, a dependent of it). Both run from the PUBLISHED artifacts
-  // alone — the port configurations and the files their policies inject are
-  // unpacked from the balticporter-corpus jar. No engine checkout is involved.
-  // ---------------------------------------------------------------------------
+  def liquidResources(buildBase: File, log: sbt.util.Logger): Seq[File] =
+    BalticPorterGen.synchronized {
+      val ssgRoot = buildBase.toPath.toAbsolutePath.normalize
+      markdown(ssgRoot, log)
+      balticporter.sbtgen.SbtGen.resourceFiles(liquidPortRoot(ssgRoot), "main").map(_.toFile)
+    }
 
   /** Parent of the two markdown port roots, under ssg's own `target/`. The leaf names are the configurations' own (`@ports/ssg-md`, `@ports/ssg-md-ext`); only the parent is ours to choose. */
   private def mdPortsRoot(ssgRoot: Path): Path = ssgRoot.resolve("target/balticporter")
@@ -142,6 +111,7 @@ object BalticPorterGen {
     val forceRegen = sys.props.getOrElse("balticporter.forceRegen", "false").toBoolean
     val expected   = fingerprint(ssgRoot)
     val cached     = !forceRegen && Files.exists(marker) &&
+      Files.isDirectory(liquidOutDir(ssgRoot)) &&
       Files.isDirectory(mdOutDir(ssgRoot)) &&
       Files.isDirectory(mdExtOutDir(ssgRoot)) &&
       Files.isDirectory(mdTestOutDir(ssgRoot)) &&
@@ -153,32 +123,21 @@ object BalticPorterGen {
       return
     }
 
-    if (!Files.isDirectory(flexmarkSrc))
+    val liqpSrc = ssgRoot.resolve("original-src/liqp")
+    if (!Files.isDirectory(flexmarkSrc.resolve("flexmark")) || !Files.isDirectory(liqpSrc.resolve("src/main/java")))
       sys.error(
-        "[Baltic Porter] The generated ssg-md sources are missing or stale (" + marker + " does not read `" + expected + "`) and the flexmark-java submodule is not " +
-          "initialised. Run `git submodule update --init --depth=1 original-src/flexmark-java`, or place a generated tree with a matching marker under " + portsRoot + "."
+        "[Baltic Porter] The generated sources are missing or stale (" + marker + " does not read `" + expected + "`) and the upstream submodules are not " +
+          "initialised. Run `git submodule update --init --depth=1 original-src/flexmark-java original-src/liqp`, or place a generated tree with a matching marker under " + portsRoot + "."
       )
 
-    // The port configurations, and the files their policies inject by path, ship inside the
-    // published corpus jar and are unpacked under target/; -Dbalticporter.root=<engine checkout>
-    // reads them from a checkout instead (engine development only).
-    val bp = sys.props.get("balticporter.root") match {
-      case Some(root) => Path.of(root).toAbsolutePath.normalize
-      case None       => balticporter.corpus.BundledCorpus.root(ssgRoot.resolve("target/balticporter-engine"))
-    }
-    val confDir = bp.resolve("balticporter/corpus/ports/ssg-md")
-    require(
-      Files.isDirectory(confDir),
-      s"markdown port configurations not found at $confDir — check the balticporter-corpus pin in project/plugins.sbt"
-    )
-
-    // The three roots the configurations declare: the consumer's checkout (upstream submodule and
-    // the reference port), a scratch directory for the resolved frontend classpath, and where the
-    // generated code goes. All three under ssg's own tree.
-    val work = ssgRoot.resolve("target/balticporter-work")
+    // Every port is described by ssg's OWN files — `ssg-liquid/port/` and `ssg-md/port/` hold the
+    // configurations and the hand-written sources their policies inject. The engine artifact pinned
+    // in project/plugins.sbt knows nothing about liqp or flexmark, so changing how a library is
+    // ported is an edit to those files and a regeneration; no engine release is involved.
+    val liquidPort = ssgRoot.resolve("ssg-liquid/port")
+    val mdPort     = ssgRoot.resolve("ssg-md/port")
+    val work       = ssgRoot.resolve("target/balticporter-work")
     Files.createDirectories(work)
-    balticporter.corpus.flexmark.FlexmarkClasspath.ensureIn(work)
-    val roots = Map("consumer" -> ssgRoot, "work" -> work, "ports" -> portsRoot)
 
     // Each port reports under a shared root: PortMap.reportRoot is the PARENT of a run's report
     // directory, so the extension (a dependent) discovers the base's published port map there.
@@ -186,24 +145,31 @@ object BalticPorterGen {
     // identity can be derived from the main class.
     val reports = portsRoot.resolve("port-report")
 
-    log.info(s"[Baltic Porter] Generating ssg-md + ssg-md-ext from flexmark-java ($expected)")
+    log.info(s"[Baltic Porter] Generating ssg-liquid, ssg-md and ssg-md-ext ($expected)")
     try {
+      // liquid first: a base port of its own. Its frontend also reads liqp's ANTLR-generated parser
+      // (`./mvnw generate-sources` in the submodule produces it; a missing one is refused by path),
+      // which `LiqpClasspath` (project/LiqpParserClasspath.scala) compiles under `work`.
+      LiqpClasspath.ensureIn(work, liqpSrc, liquidPort)
+      System.setProperty("balticporter.reportDir", reports.resolve("ssg-liquid").toString)
+      balticporter.runner.PortConfig.load(liquidPort.resolve("main.conf")).execute()
+      log.info(s"[Baltic Porter] Generated ssg-liquid sources to ${liquidOutDir(ssgRoot)}")
+
       System.setProperty("balticporter.reportDir", reports.resolve("ssg-md").toString)
-      balticporter.runner.PortConfig.load(confDir.resolve("main.conf"), roots = roots).execute()
+      balticporter.runner.PortConfig.load(mdPort.resolve("main.conf")).execute()
       log.info(s"[Baltic Porter] Generated ssg-md sources to ${mdOutDir(ssgRoot)}")
 
       System.setProperty("balticporter.reportDir", reports.resolve("ssg-md-ext").toString)
       System.setProperty("balticporter.baseReports", reports.toString)
-      balticporter.runner.PortConfig.load(confDir.resolve("ext.conf"), roots = roots).execute()
+      balticporter.runner.PortConfig.load(mdPort.resolve("ext.conf")).execute()
       log.info(s"[Baltic Porter] Generated ssg-md-ext sources to ${mdExtOutDir(ssgRoot)}")
 
       // flexmark's OWN JUnit suites, ported as MUnit suites: the behavioural gate of the two ports
       // above. Each is a dependent of its main port and writes that port root's `test` source set.
-      balticporter.corpus.flexmark.FlexmarkTestClasspath.ensureIn(work)
       System.setProperty("balticporter.reportDir", reports.resolve("ssg-md-test").toString)
-      balticporter.runner.PortConfig.load(confDir.resolve("test.conf"), roots = roots).execute()
+      balticporter.runner.PortConfig.load(mdPort.resolve("test.conf")).execute()
       System.setProperty("balticporter.reportDir", reports.resolve("ssg-md-ext-test").toString)
-      balticporter.runner.PortConfig.load(confDir.resolve("ext-test.conf"), roots = roots).execute()
+      balticporter.runner.PortConfig.load(mdPort.resolve("ext-test.conf")).execute()
       log.info(s"[Baltic Porter] Generated flexmark's test suites to ${mdTestOutDir(ssgRoot)} and ${mdExtTestOutDir(ssgRoot)}")
     } finally {
       System.clearProperty("balticporter.baseReports")
@@ -226,75 +192,36 @@ object BalticPorterGen {
       val out = new String(p.getInputStream.readAllBytes()).trim
       if (p.waitFor() == 0 && out.nonEmpty) Some(out) else None
     }
-    val pin = """balticporter-corpus" % "([^"]+)"""".r
+    val pin = """balticporter-engine" % "([^"]+)"""".r
       .findFirstMatchIn(Files.readString(ssgRoot.resolve("project/plugins.sbt")))
       .map(_.group(1))
-      .getOrElse(sys.error("[Baltic Porter] project/plugins.sbt pins no balticporter-corpus version"))
-    val submodule = ssgRoot.resolve("original-src/flexmark-java")
-    val flexmark  = (if (Files.exists(submodule.resolve(".git"))) git(submodule, "rev-parse", "HEAD") else None)
-      .orElse(git(ssgRoot, "ls-tree", "HEAD", "original-src/flexmark-java").flatMap(_.split("\\s+").lift(2)))
-      .getOrElse(
-        sys.error(
-          "[Baltic Porter] cannot read the flexmark-java commit this checkout records (git ls-tree HEAD original-src/flexmark-java)"
-        )
-      )
+      .getOrElse(sys.error("[Baltic Porter] project/plugins.sbt pins no balticporter-engine version"))
+    def upstreamCommit(path: String): String = {
+      val submodule = ssgRoot.resolve(path)
+      (if (Files.exists(submodule.resolve(".git"))) git(submodule, "rev-parse", "HEAD") else None)
+        .orElse(git(ssgRoot, "ls-tree", "HEAD", path).flatMap(_.split("\\s+").lift(2)))
+        .getOrElse(sys.error(s"[Baltic Porter] cannot read the commit this checkout records for $path (git ls-tree HEAD $path)"))
+    }
+    val flexmark = upstreamCommit("original-src/flexmark-java")
+    val liqp     = upstreamCommit("original-src/liqp")
     val source    = Files.readString(ssgRoot.resolve("project/BalticPorterGen.scala")).replace("\r", "")
     val generator = java.security.MessageDigest.getInstance("SHA-256").digest(source.getBytes("UTF-8")).take(8).map(b => f"$b%02x").mkString
     // the JDK the generator runs on decides what a member overrides
-    s"engine=$pin flexmark=$flexmark generator=$generator jdk=${java.lang.Runtime.version().feature()}"
-  }
-
-  /** Fix API name mismatches in generated code (same patterns as sge). */
-  private def postProcess(outDir: Path, log: sbt.util.Logger, skipIsEmpty: Boolean = false): Unit = {
-    if (!Files.isDirectory(outDir)) return
-    val replacements: List[(String, String)] = List(
-      ("\\.first\\(\\)", ".head"),
-      ("\\.first\\b", ".head"),
-      ("\\.isEmpty\\(\\)", ".isEmpty"),
-      ("\\.head\\(\\)", ".head"),
-      ("\\.scheduled\\b", ".isScheduled")
-    )
-    val perFileReplacements: Map[String, List[(String, String)]] = Map(
-      "FilterNode.scala" -> List(
-        ("class FilterNode private \\(", "class FilterNode(")
-      ),
-      "BitFieldSet.scala" -> List(("c\\.isEmpty\\(\\)", "c.isEmpty")),
-      "PlaceholderReplacer.scala" -> List(("spanList\\.isEmpty\\(\\)", "spanList.isEmpty")),
-      "Split.scala" -> List(
-        (java.util.regex.Pattern.quote("""original.split("(?<!^)" + java.util.regex.Pattern.quote(delimiter))"""),
-         """{ val _p = original.split(java.util.regex.Pattern.quote(delimiter), -1); if (_p.length > 0 && _p(0).isEmpty()) _p.drop(1) else _p }"""
-        )
-      )
-    )
-    var count  = 0
-    val stream = Files.walk(outDir)
-    try
-      stream.forEach { p =>
-        if (p.toString.endsWith(".scala")) {
-          var content = Files.readString(p)
-          var changed = false
-          for ((pattern, replacement) <- replacements) {
-            val skipFirst = pattern.contains("first") && content.contains("var first:")
-            val skipEmpty = skipIsEmpty && pattern.contains("isEmpty")
-            val skip      = skipFirst || skipEmpty
-            if (!skip) {
-              val updated = content.replaceAll(pattern, replacement)
-              if (updated != content) { content = updated; changed = true }
-            }
+    // the ports' own files: their configurations and the hand-written sources they inject
+    val ports = {
+      val md = java.security.MessageDigest.getInstance("SHA-256")
+      for (dir <- List("ssg-liquid/port", "ssg-md/port", "project/LiqpParserClasspath.scala").map(ssgRoot.resolve(_))) {
+        val s = Files.walk(dir)
+        try
+          s.filter(Files.isRegularFile(_)).sorted().forEach { p =>
+            md.update(ssgRoot.relativize(p).toString.replace('\\', '/').getBytes("UTF-8"))
+            md.update(Files.readString(p).replace("\r", "").getBytes("UTF-8"))
           }
-          val fileName = p.getFileName.toString
-          for {
-            extras <- perFileReplacements.get(fileName)
-            (pat, rep) <- extras
-          } {
-            val updated = content.replaceAll(pat, rep)
-            if (updated != content) { content = updated; changed = true }
-          }
-          if (changed) { Files.writeString(p, content); count += 1 }
-        }
+        finally s.close()
       }
-    finally stream.close()
-    if (count > 0) log.info(s"[Baltic Porter] Post-processed $count files (API name fixes)")
+      md.digest().take(8).map(b => f"$b%02x").mkString
+    }
+    s"engine=$pin flexmark=$flexmark liqp=$liqp ports=$ports generator=$generator jdk=${java.lang.Runtime.version().feature()}"
   }
 
   /** Collect .scala files, excluding paths that exist in the hand-written source tree. */

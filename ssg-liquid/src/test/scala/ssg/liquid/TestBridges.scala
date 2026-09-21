@@ -31,7 +31,7 @@ object TestBridges {
       if (content == null)
         throw new RuntimeException(s"Template not found: $name")
       new CharStreamWithLocation(
-        org.antlr.v4.runtime.CharStreams.fromString(content, stripped),
+        ssg.liquid.antlr.CharSources.fromString(content, stripped),
         Paths.get(stripped)
       )
     }

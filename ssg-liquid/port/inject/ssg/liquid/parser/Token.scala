@@ -1,12 +1,13 @@
 /*
- * Copyright (c) 2026 SSG contributors
- * SPDX-License-Identifier: Apache-2.0
+ * Ported from Liqp - https://github.com/bkiers/Liqp
+ * Original source: src/main/antlr4/liquid/parser/v4/LiquidLexer.g4 (the token vocabulary
+ *   the ANTLR lexer is generated from)
+ * Original license: MIT, Copyright (c) 2010-2013 by Bart Kiers
+ * Adapted from the hand-written Scala port in ssg (Apache-2.0, SSG contributors)
  *
- * Hand-written token types for the Liquid template language.
- * Replaces ANTLR-generated token vocabulary.
- *
- * Covenant: full-port
- * Covenant-verified: 2026-06-14
+ * Migration notes:
+ *   Origin: the generated ANTLR lexer's integer token types, which need the ANTLR runtime.
+ *   Convention: one enum case per grammar token, named as the grammar names it.
  */
 package ssg
 package liquid

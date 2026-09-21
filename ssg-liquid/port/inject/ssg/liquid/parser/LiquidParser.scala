@@ -1,33 +1,25 @@
 /*
- * Copyright (c) 2026 SSG contributors
- * SPDX-License-Identifier: Apache-2.0
- *
- * Hand-written recursive descent parser for the Liquid template language.
- * Replaces ANTLR-generated LiquidParser + NodeVisitor.
- *
- * Builds LNode AST directly during parsing (no intermediate parse tree).
- * Grammar specification: original-src/liqp/src/main/antlr4/liquid/parser/v4/LiquidParser.g4
+ * Ported from Liqp - https://github.com/bkiers/Liqp
+ * Original source: src/main/antlr4/liquid/parser/v4/LiquidParser.g4 (the grammar the ANTLR
+ *   parser is generated from) and src/main/java/liqp/parser/v4/NodeVisitor.java (the walk that
+ *   turns its parse tree into the LNode AST)
+ * Original license: MIT, Copyright (c) 2010-2013 by Bart Kiers
+ * Adapted from the hand-written Scala port in ssg (Apache-2.0, SSG contributors)
  *
  * Migration notes:
- *   Renames: liqp.parser.v4.NodeVisitor (AST-build) + liquid.parser.v4.LiquidParser (ANTLR grammar)
- *            merged into ssg.liquid.parser.LiquidParser (recursive descent)
- *   Divergence: unknown-filter error timing — liqp defers AST construction to render time
- *     (NodeVisitor.visitFilter, NodeVisitor.java:571, runs inside Template.renderToObjectUnguarded,
- *     Template.java:355-357), so FilterNode's null-filter check (FilterNode.java:24-25) throws
- *     IllegalArgumentException at render. SSG's recursive descent parser builds the AST eagerly
- *     during parse (LiquidParser.parseFilter calls FilterNode.apply which checks for null
- *     at FilterNode.scala:61-63), so unknown filters error at parse time instead.
- *     Pinned in .fail tests: FilterMiscExtraSuite "flavored filters: normalize_whitespace ...",
- *     ReadmeSamplesSuite "readme: render tree ...".
- *
- * Covenant: full-port
- * Covenant-verified: 2026-06-14
+ *   Origin: the generated ANTLR parser, which needs the ANTLR runtime and is therefore
+ *     JVM-only; this reads the same grammar by hand.
+ *   Convention: the grammar and the visitor are one recursive-descent pass, so the AST is
+ *     built while parsing and there is no parse tree to walk afterwards.
+ *   Divergence: unknown-filter error timing. Java builds the AST at RENDER time
+ *     (NodeVisitor.visitFilter, called from Template.renderToObjectUnguarded), so
+ *     FilterNode's null-filter check raises IllegalArgumentException from the first render;
+ *     this parser builds it eagerly, so an unknown filter raises at parse.
  */
 package ssg
 package liquid
 package parser
 
-import ssg.data.DataView
 import ssg.liquid.exceptions.LiquidException
 import ssg.liquid.nodes._
 
@@ -77,8 +69,21 @@ final class LiquidParser(
     * The errorMode flags (`isStrict()`/`isWarn()`/`isLax()`, LiquidLexer.g4:25-33) gate ONLY the output-tag/expression rule (LiquidLexer.g4:231-232), never invalid-TAG structure. We therefore throw
     * unconditionally here, faithful to liqp's always-throwing parser listener.
     */
-  private def reportTokenError(message: String, token: Token): Nothing = {
-    val ex = new LiquidException(s"$message: '${token.value}'", token.line, token.col, null)
+  private def reportTokenError(message: String, token: Token): Nothing =
+    raiseParserError(s"$message: '${token.value}'", token)
+
+  /** Raises what java's parser error listener raised. Java's grammar notifies its listeners and the
+    * listener installed in `Template.parse` formats every notification the same way — `parser error
+    * "<msg>" on line <line>, index <charPositionInLine>` — which one test asserts verbatim and
+    * another matches on. The listener is gone with the ANTLR parser, so the text is stated here.
+    */
+  private def raiseParserError(message: String, token: Token): Nothing = {
+    val ex = new LiquidException(
+      String.format("parser error \"%s\" on line %s, index %s", message, java.lang.Integer.valueOf(token.line), java.lang.Integer.valueOf(token.col)),
+      token.line,
+      token.col,
+      null
+    )
     parseErrors.add(ex)
     throw ex
   }
@@ -86,11 +91,23 @@ final class LiquidParser(
   /** Reports a token error without an offending token, matching liqp's `reportTokenError(String)` (LiquidParser.g4:47-49). Throws unconditionally in all error modes, matching liqp's always-throwing
     * parser error listener (Template.java:91-98); errorMode never gates invalid-tag structure (LiquidParser.g4:98-110 `error_other_tag` has no errorMode predicate).
     */
-  private def reportTokenError(message: String): Nothing = {
-    val t  = peek()
-    val ex = new LiquidException(message, t.line, t.col, null)
-    parseErrors.add(ex)
-    throw ex
+  private def reportTokenError(message: String): Nothing =
+    raiseParserError(message, peek())
+
+  /** The text of the tokens in `[from, until)`, which is what java's parse tree answers for
+    * `getText()`: every token's own text run together, with the whitespace between them dropped.
+    * A quoted string reaches here already stripped of its quotes, because that is what the lexer
+    * puts in the token — the one place this text is read (a for-loop's `forloop.name`) never
+    * names a quoted lookup.
+    */
+  private def sourceTextOf(from: Int, until: Int): String = {
+    val sb = new StringBuilder()
+    var i  = from
+    while (i < until && i < tokens.size()) {
+      sb.append(tokens.get(i).value)
+      i += 1
+    }
+    sb.toString()
   }
 
   /** Parses the token stream and returns the root BlockNode. */
@@ -180,7 +197,7 @@ final class LiquidParser(
   /** Parses plain text into an AtomNode. */
   private def parseTextNode(): LNode = {
     val t = consume(TokenType.TEXT)
-    new AtomNode(DataView.from(t.value))
+    new AtomNode(t.value)
   }
 
   // --- Output parsing ---
@@ -202,6 +219,12 @@ final class LiquidParser(
     var unparsedPos  = -1
     if (!check(TokenType.OUT_END)) {
       val startToken = peek()
+      // Only WARN and LAX have an alternative that tolerates trailing content in an output tag
+      // (LiquidParser.g4:232); STRICT's (g4:231) ends at OutEnd, so there is no alternative for
+      // `{{ 98 > 97 }}` and java's parser raises through its error listener.
+      if (!evaluateInOutputTag && (errorMode eq TemplateParser.ErrorMode.STRICT)) {
+        raiseParserError(s"extraneous input '${startToken.value}' expecting OutEnd", startToken)
+      }
       unparsedLine = startToken.line
       unparsedPos = startToken.col
       val sb = new StringBuilder()
@@ -223,25 +246,59 @@ final class LiquidParser(
     outputNode
   }
 
-  /** filter: | Id params? */
+  /** filter: | Id params?
+    *
+    * Java's node carries the position of the `|` and the WHOLE clause as written — `ctx.start` and
+    * `ctx.getText()` — which is what its "no filter available named: |normalize_whitespace"
+    * message quotes, so the node is built once the clause has been read, not at the filter name.
+    */
   private def parseFilter(): FilterNode = {
-    consume(TokenType.PIPE)
-    val filterToken = consume(TokenType.ID)
-    val filter      = filtersRegistry.get(filterToken.value)
-    val filterNode  = FilterNode(filterToken.line, filterToken.col, filterToken.value, filter)
+    val start     = pos
+    val pipeToken = consume(TokenType.PIPE)
+    val nameToken = consume(TokenType.ID)
 
     // params: : param_expr (, param_expr)*
+    val params = new ArrayList[LNode]()
     if (check(TokenType.COLON)) {
       advance() // consume :
-      filterNode.add(parseParamExpr())
+      params.add(parseParamExpr())
       while (check(TokenType.COMMA)) {
         advance() // consume ,
-        filterNode.add(parseParamExpr())
+        params.add(parseParamExpr())
       }
     }
 
+    val text       = sourceTextOf(start, pos)
+    val filter     = filtersRegistry.get(nameToken.value)
+    val filterNode =
+      if (filter != null) new FilterNode(pipeToken.line, pipeToken.col, text, filter)
+      else unknownFilterNode(pipeToken.line, pipeToken.col, text)
+    var i = 0
+    while (i < params.size()) {
+      filterNode.add(params.get(i))
+      i += 1
+    }
     filterNode
   }
+
+  /** A filter this template's registry does not know.
+    *
+    * Java resolves a filter while BUILDING the AST, and it builds the AST inside each render
+    * (`Template.renderToObjectUnguarded` constructs the visitor every time), so an unknown filter
+    * leaves PARSING alone and raises `IllegalArgumentException` from `render` — which two tests
+    * read, one of them by parsing a README sample full of filters it never registered. This parser
+    * builds the AST once, while parsing, so the refusal is carried on the node and raised where the
+    * filter would have been applied.
+    *
+    * The remaining difference is COUNTED, not closed: java raises before the output expression is
+    * evaluated and this raises after, so where the expression itself throws, java reports the
+    * missing filter and this reports the expression.
+    */
+  private def unknownFilterNode(atLine: Int, atCol: Int, clause: String): FilterNode =
+    new FilterNode(atLine, atCol, clause, LiquidParser.Unresolved) {
+      override def apply(value: Object, context: TemplateContext): Object =
+        throw new IllegalArgumentException("error on line " + atLine + ", index " + atCol + ": no filter available named: " + clause)
+    }
 
   /** param_expr: id2 : expr | expr */
   private def parseParamExpr(): LNode =
@@ -284,7 +341,7 @@ final class LiquidParser(
         // comment pops the lexer's IN_TAG_ID mode so the close is a real TagEnd.
         // This is the valid empty_tag rule (LiquidParser.g4:117-119): a no-op.
         advance() // consume TAG_END
-        new AtomNode(DataView.from(""))
+        new AtomNode("")
       case TokenType.INVALID_END_TAG =>
         // A tag with no id and no inline comment: {%%}, {% %}, {%}} . liqp's lexer
         // emits InvalidEndTag (LiquidLexer.g4:196-206) and error_other_tag
@@ -311,7 +368,7 @@ final class LiquidParser(
     val expr = parseExpr()
 
     val nodes = new ArrayList[LNode]()
-    nodes.add(new AtomNode(DataView.from(id)))
+    nodes.add(new AtomNode(id))
     nodes.add(expr)
 
     while (check(TokenType.PIPE))
@@ -345,7 +402,7 @@ final class LiquidParser(
       consume(TokenType.TAG_START)
       advance() // consume ELSE
       consume(TokenType.TAG_END)
-      nodes.add(new AtomNode(DataView.from(true))) // always-true condition for else
+      nodes.add(new AtomNode(java.lang.Boolean.TRUE)) // always-true condition for else
       nodes.add(parseBlock())
     }
 
@@ -374,7 +431,7 @@ final class LiquidParser(
       consume(TokenType.TAG_START)
       advance() // consume ELSE
       consume(TokenType.TAG_END)
-      nodes.add(new AtomNode(DataView.from(false)))
+      nodes.add(new AtomNode(java.lang.Boolean.FALSE))
       nodes.add(parseBlock())
     }
 
@@ -438,13 +495,16 @@ final class LiquidParser(
     // Check for range: (from..to)
     if (check(TokenType.OPAR)) {
       // Range: for i in (1..10)
-      nodes.add(new AtomNode(DataView.from(false))) // isArray = false
-      nodes.add(new AtomNode(DataView.from(id)))
+      nodes.add(new AtomNode(java.lang.Boolean.FALSE)) // isArray = false
+      nodes.add(new AtomNode(id))
+      val rangeStart = pos
       advance() // consume (
       val from = parseExpr()
       consume(TokenType.DOTDOT)
       val to = parseExpr()
       consume(TokenType.CPAR)
+      // what java's visitor puts at index 5: "(" + from + ".." + to + ")"
+      val rangeText = sourceTextOf(rangeStart, pos)
       nodes.add(from)
       nodes.add(to)
 
@@ -459,14 +519,19 @@ final class LiquidParser(
       val block = parseBlock()
 
       nodes.add(block) // index 4 for range
-      nodes.add(new AtomNode(DataView.from(id))) // index 5: lookup text
-      nodes.add(new AtomNode(DataView.from(reversed))) // index 6
+      nodes.add(new AtomNode(rangeText)) // index 5: the range as written
+      nodes.add(new AtomNode(java.lang.Boolean.valueOf(reversed))) // index 6
       for (attr <- attrs) nodes.add(attr)
     } else {
       // Array: for item in collection
-      val lookup = parseLookup()
-      nodes.add(new AtomNode(DataView.from(true))) // isArray = true
-      nodes.add(new AtomNode(DataView.from(id)))
+      val lookupStart = pos
+      val lookup      = parseLookup()
+      // what java's visitor puts at index 5: the LOOKUP as written, which is what
+      // `forloop.name` reads — `string` for `{% for val in string %}`, `X[0].Y` for
+      // `{% for x in X[0].Y %}`. The loop VARIABLE is a different thing and lives at index 1.
+      val lookupText = sourceTextOf(lookupStart, pos)
+      nodes.add(new AtomNode(java.lang.Boolean.TRUE)) // isArray = true
+      nodes.add(new AtomNode(id))
       nodes.add(lookup)
 
       // Check for reversed
@@ -490,10 +555,8 @@ final class LiquidParser(
 
       nodes.add(block) // index 3
       nodes.add(elseBlock) // index 4 (may be null)
-      nodes.add(new AtomNode(DataView.from(peek().value))) // index 5: lookup text (approximate)
-      nodes.add(new AtomNode(DataView.from(reversed))) // index 6
-      // Re-insert at index 5 the lookup text
-      nodes.set(5, new AtomNode(DataView.from(id)))
+      nodes.add(new AtomNode(lookupText)) // index 5
+      nodes.add(new AtomNode(java.lang.Boolean.valueOf(reversed))) // index 6
       for (attr <- attrs) nodes.add(attr)
     }
 
@@ -516,16 +579,16 @@ final class LiquidParser(
         consume(TokenType.COLON)
         if (key == "offset" && check(TokenType.CONTINUE)) {
           advance() // consume continue
-          attrs.addOne(new AttributeNode(new AtomNode(DataView.from(key)), new AtomNode(DataView.CONTINUE)))
+          attrs.addOne(new AttributeNode(new AtomNode(key), new AtomNode(ssg.liquid.LValue.CONTINUE)))
         } else {
-          attrs.addOne(new AttributeNode(new AtomNode(DataView.from(key)), parseExpr()))
+          attrs.addOne(new AttributeNode(new AtomNode(key), parseExpr()))
         }
       } else {
         // Unknown attribute
         val attrKey = peek().value
         advance()
         consume(TokenType.COLON)
-        attrs.addOne(new AttributeNode(new AtomNode(DataView.from(attrKey)), parseExpr()))
+        attrs.addOne(new AttributeNode(new AtomNode(attrKey), parseExpr()))
       }
     }
     attrs
@@ -539,7 +602,7 @@ final class LiquidParser(
     val lookup = parseLookup()
 
     val nodes = new ArrayList[LNode]()
-    nodes.add(new AtomNode(DataView.from(id)))
+    nodes.add(new AtomNode(id))
     nodes.add(lookup)
 
     // Attributes (cols, limit, offset)
@@ -547,7 +610,7 @@ final class LiquidParser(
       val key = peek().value
       advance()
       consume(TokenType.COLON)
-      nodes.add(new AttributeNode(new AtomNode(DataView.from(key)), parseExpr()))
+      nodes.add(new AttributeNode(new AtomNode(key), parseExpr()))
     }
 
     consume(TokenType.TAG_END)
@@ -580,7 +643,7 @@ final class LiquidParser(
     advance()
     consume(TokenType.TAG_END)
 
-    new InsertionNode(insertions.get("capture"), Array[LNode](new AtomNode(DataView.from(id)), block))
+    new InsertionNode(insertions.get("capture"), Array[LNode](new AtomNode(id), block))
   }
 
   /** comment_tag: {% comment %} ... {% endcomment %} */
@@ -618,14 +681,14 @@ final class LiquidParser(
           consume(TokenType.TAG_START)
           advance() // consume RAW (endraw)
           consume(TokenType.TAG_END)
-          break(new InsertionNode(insertions.get("raw"), Array[LNode](new AtomNode(DataView.from(sb.toString())))))
+          break(new InsertionNode(insertions.get("raw"), Array[LNode](new AtomNode(sb.toString()))))
         }
       }
       sb.append(t.value)
       advance()
     }
 
-    new InsertionNode(insertions.get("raw"), Array[LNode](new AtomNode(DataView.from(sb.toString()))))
+    new InsertionNode(insertions.get("raw"), Array[LNode](new AtomNode(sb.toString())))
   }
 
   /** cycle_tag: {% cycle group: expr, expr, ... %} */
@@ -692,7 +755,7 @@ final class LiquidParser(
           // (e.g. `dir/sub/file.html`) up to the params/TagEnd boundary.
           parseJekyllIncludeFileName()
         }
-        nodes.add(new AtomNode(DataView.from(fileName)))
+        nodes.add(new AtomNode(fileName))
       }
 
       // jekyll_include_params (LiquidParser.g4:224-227): `id '=' expr`
@@ -817,7 +880,7 @@ final class LiquidParser(
     } else {
       parseJekyllIncludeFileName()
     }
-    nodes.add(new AtomNode(DataView.from(fileName)))
+    nodes.add(new AtomNode(fileName))
 
     // key=value params
     while (isIdLike(peek().tokenType) && !check(TokenType.TAG_END)) {
@@ -933,7 +996,7 @@ final class LiquidParser(
     if (insertion != null) {
       new InsertionNode(insertion, params.asScala.toArray)
     } else {
-      new AtomNode(DataView.from("")) // unknown tag, produce empty
+      new AtomNode("") // unknown tag, produce empty
     }
   }
 
@@ -945,9 +1008,9 @@ final class LiquidParser(
     consume(TokenType.TAG_END)
 
     if (insertion != null) {
-      new InsertionNode(insertion, Array[LNode](new AtomNode(DataView.from(varName))))
+      new InsertionNode(insertion, Array[LNode](new AtomNode(varName)))
     } else {
-      new AtomNode(DataView.from(""))
+      new AtomNode("")
     }
   }
 
@@ -997,28 +1060,24 @@ final class LiquidParser(
 
   /** expr: term ((and|or|==|!=|<|>|<=|>=|contains) term)* */
   def parseExpr(): LNode =
-    parseOrExpr()
+    parseLogicExpr()
 
-  /** or_expr: and_expr (or and_expr)* */
-  private def parseOrExpr(): LNode = {
-    var left = parseAndExpr()
-    while (check(TokenType.OR)) {
+  /** `and` and `or` are ONE precedence level and they associate to the RIGHT
+    * (`<assoc=right> lhs=expr op=(And | Or) rhs=expr`, LiquidParser.g4:273) — liquid's own rule,
+    * and the reason `true and false and false or true` is `true and (false and (false or true))`,
+    * which is FALSE. Two levels with `or` loosest, or either level left-associative, answers TRUE.
+    */
+  private def parseLogicExpr(): LNode = {
+    val left = parseComparison()
+    if (check(TokenType.AND)) {
       advance()
-      val right = parseAndExpr()
-      left = new OrNode(left, right)
-    }
-    left
-  }
-
-  /** and_expr: comparison (and comparison)* */
-  private def parseAndExpr(): LNode = {
-    var left = parseComparison()
-    while (check(TokenType.AND)) {
+      new AndNode(left, parseLogicExpr())
+    } else if (check(TokenType.OR)) {
       advance()
-      val right = parseComparison()
-      left = new AndNode(left, right)
+      new OrNode(left, parseLogicExpr())
+    } else {
+      left
     }
-    left
   }
 
   /** comparison: contains_expr ((== | != | < | > | <= | >=) contains_expr)? */
@@ -1061,22 +1120,22 @@ final class LiquidParser(
     t.tokenType match {
       case TokenType.DOUBLE_NUM =>
         advance()
-        new AtomNode(DataView.from(java.lang.Double.parseDouble(t.value)))
+        new AtomNode(java.lang.Double.valueOf(t.value))
       case TokenType.LONG_NUM =>
         advance()
-        new AtomNode(DataView.from(java.lang.Long.parseLong(t.value)))
+        new AtomNode(java.lang.Long.valueOf(t.value))
       case TokenType.STR =>
         advance()
-        new AtomNode(DataView.from(t.value))
+        new AtomNode(t.value)
       case TokenType.TRUE =>
         advance()
-        new AtomNode(DataView.from(true))
+        new AtomNode(java.lang.Boolean.TRUE)
       case TokenType.FALSE =>
         advance()
-        new AtomNode(DataView.from(false))
+        new AtomNode(java.lang.Boolean.FALSE)
       case TokenType.NIL =>
         advance()
-        new AtomNode(DataView.nil)
+        new AtomNode(null)
       case TokenType.EMPTY =>
         // Could be a lookup or the empty sentinel
         if (pos + 1 < tokens.size() && (tokens.get(pos + 1).tokenType == TokenType.DOT || tokens.get(pos + 1).tokenType == TokenType.OBR)) {
@@ -1093,13 +1152,18 @@ final class LiquidParser(
         val expr = parseExpr()
         consume(TokenType.CPAR) // consume )
         expr
+      // `["foo"]` and `[bar]` are lookups in their own right (LiquidParser.g4:293-294), which is
+      // how liquid reads a variable whose NAME is held in another variable. Left to the
+      // error-recovery arm below, `{{ [exp] }}` rendered the single character `[`.
+      case TokenType.OBR =>
+        parseLookup()
       case _ =>
         if (isIdLike(t.tokenType)) {
           parseLookup()
         } else {
           // Error recovery: return empty atom
           advance()
-          new AtomNode(DataView.from(t.value))
+          new AtomNode(t.value)
         }
     }
   }
@@ -1109,13 +1173,17 @@ final class LiquidParser(
     val t = peek()
 
     if (t.tokenType == TokenType.OBR) {
-      // [str] or [id] lookup
+      // [str] or [id] lookup (LiquidParser.g4:293-294), and the two mean DIFFERENT things:
+      // `["foo"]` names the variable foo, while `[bar]` names the variable whose name is the
+      // VALUE of bar. Java marks the second with a leading `@` (NodeVisitor.visitLookup_Id),
+      // which LookupNode.render reads as "resolve this id first, then look the result up".
       advance() // consume [
-      val inner = peek().value
+      val innerIsString = check(TokenType.STR)
+      val inner         = peek().value
       advance() // consume str or id
       consume(TokenType.CBR) // consume ]
       if (check(TokenType.QMARK)) advance()
-      new LookupNode(inner)
+      new LookupNode(if (innerIsString) inner else "@" + inner)
     } else {
       val id     = consumeId()
       val lookup = new LookupNode(id)
@@ -1335,4 +1403,17 @@ final class LiquidParser(
       tt == TokenType.ASSIGN ||
       tt == TokenType.INCLUDE ||
       tt == TokenType.INCLUDE_RELATIVE
+}
+
+object LiquidParser {
+
+  /** Stands where a filter the registry does not know would be. `FilterNode` refuses a null filter
+    * in its constructor, so the refusal is carried by the node's own `apply` and this is never
+    * reached; a call would be a defect in that node, which is what the message says.
+    */
+  private[parser] val Unresolved: filters.Filter = new filters.Filter("") {
+
+    override def apply(value: Object, context: TemplateContext, params: Array[Object]): Object =
+      throw new IllegalArgumentException("no filter available")
+  }
 }

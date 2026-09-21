@@ -18,9 +18,9 @@ package object liquid {
 
   extension (tp: TemplateParser) {
     def parse(input: String, sourcePath: java.nio.file.Path): Template =
-      tp.parse(org.antlr.v4.runtime.CharStreams.fromString(input, sourcePath.toString))
+      tp.parse(ssg.liquid.antlr.CharSources.fromString(input, sourcePath.toString))
     def parse(input: String, sourcePath: ssg.commons.io.FilePath): Template =
-      tp.parse(org.antlr.v4.runtime.CharStreams.fromString(input, sourcePath.pathString))
+      tp.parse(ssg.liquid.antlr.CharSources.fromString(input, sourcePath.pathString))
   }
 
   extension (t: Template) {

@@ -295,13 +295,30 @@ lazy val `ssg-katex` = (projectMatrix in file("ssg-katex"))
 
 // --- Liquid template engine (liqp port) ---
 
+def liquidGenerated(row: String): Seq[Setting[?]] = Seq(
+  Compile / sourceGenerators += Def.task {
+    BalticPorterGen.generateLiquid((ThisBuild / baseDirectory).value, row, streams.value.log)
+  }.taskValue,
+  // registered so packageSrc uses relative paths, not bare filenames
+  Compile / managedSourceDirectories ++= Seq(
+    (ThisBuild / baseDirectory).value / "target" / "balticporter" / "ssg-liquid" / "src_managed" / "main" / "scala",
+    (ThisBuild / baseDirectory).value / "target" / "balticporter" / "ssg-liquid" / "src_managed" / row / "scala"
+  )
+)
+
 lazy val `ssg-liquid` = (projectMatrix in file("ssg-liquid"))
   .defaultAxes(VirtualAxis.jvm, VirtualAxis.scalaABIVersion(versions.scala3))
   .someVariations(versions.scalas, versions.platforms)((commonSettings ++ dev.only1VersionInIDE ++ Seq(
+    // Baltic Porter: ssg-liquid is generated from liqp. Each platform row compiles the shared tree
+    // plus its OWN row directory — the few answers that differ by platform (reading an object's
+    // fields by reflection exists on the JVM only) ship once per row at the same names.
+    MatrixAction.ForPlatforms(VirtualAxis.jvm).Configure(_.settings(liquidGenerated("jvm"))),
     MatrixAction.ForPlatforms(VirtualAxis.js).Configure(_.settings(
+      liquidGenerated("js"),
       libraryDependencies += "io.github.cquiroz" %% "scala-java-time-tzdb" % versions.scalaJavaTime
     )),
     MatrixAction.ForPlatforms(VirtualAxis.native).Configure(_.settings(
+      liquidGenerated("native"),
       libraryDependencies += "io.github.cquiroz" %% "scala-java-time-tzdb" % versions.scalaJavaTime
     ))
   )) *)
@@ -310,42 +327,17 @@ lazy val `ssg-liquid` = (projectMatrix in file("ssg-liquid"))
     libraryDependencies ++= Seq(
       "io.github.cquiroz" %% "scala-java-time"    % versions.scalaJavaTime,
       "io.github.cquiroz" %% "scala-java-locales" % versions.scalaJavaLocales,
-      // Baltic Porter generated code dependencies: the mechanically ported liqp code
-      // uses these libraries directly (the hand-port had rewrote them away).
-      "com.kubuszok"                    %% "balticporter-runtime"      % "05e187f6b583c4cb71ec6827544b91ce53fde4c9-SNAPSHOT",
-      "org.antlr"                        % "antlr4-runtime"            % "4.13.0",
-      "com.fasterxml.jackson.core"       % "jackson-core"              % "2.15.0",
-      "com.fasterxml.jackson.core"       % "jackson-databind"          % "2.13.4.2",
-      "com.fasterxml.jackson.core"       % "jackson-annotations"       % "2.15.0",
-      "com.fasterxml.jackson.datatype"   % "jackson-datatype-jsr310"   % "2.15.0",
-      "ua.co.k"                          % "strftime4j"                % "1.0.6",
+      // what the generated code is written against: the engine's cross-platform runtime, and the
+      // service loader the port's own providers are found through. No JVM-only library: the ANTLR
+      // runtime, jackson and strftime4j are replaced inside the port by hand-written Scala.
+      "com.kubuszok"                    %% "balticporter-runtime"      % "1b4a7b57a9b4a5e7c0f64e07a17b312ffd6d957a-SNAPSHOT",
       "com.kubuszok"                    %% "multiarch-serviceloader"   % "0.4.0-12-gc168b2f-SNAPSHOT",
     ),
     resolvers += "Central Portal Snapshots" at "https://central.sonatype.com/repository/maven-snapshots",
-    // ANTLR-generated parser class directory: the generated liqp code imports liquid.parser.v4.*
-    // which is compiled from the grammar by LiqpClasspath in balticporter.
-    // LiqpClasspath.ensure compiles the parser; call it here (not in the sourceGenerator)
-    // so the classes exist before sbt evaluates the compile classpath.
-    Compile / unmanagedClasspath ++= {
-      val bpRoot = (ThisBuild / baseDirectory).value / ".." / "balticporter"
-      val parserDir = bpRoot / "out" / "liqp-parser-classes"
-      if (java.nio.file.Files.isDirectory(bpRoot.toPath.resolve("balticporter/corpus"))) {
-        try { balticporter.corpus.liqp.LiqpClasspath.ensure(bpRoot.toPath) } catch { case _: Exception => () }
-      }
-      if (parserDir.exists()) {
-        val fc = fileConverter.value
-        Seq(Attributed.blank(fc.toVirtualFile(parserDir.toPath)))
-      } else Nil
-    },
-    Test / unmanagedClasspath ++= (Compile / unmanagedClasspath).value,
-    // Baltic Porter: generate ssg-liquid Scala sources from liqp Java originals.
-    Compile / sourceGenerators += Def.task {
-      BalticPorterGen.generateLiquid(
-        (ThisBuild / baseDirectory).value,
-        (Compile / sourceManaged).value / "balticporter",
-        streams.value.log)
+    Compile / resourceGenerators += Def.task {
+      BalticPorterGen.liquidResources((ThisBuild / baseDirectory).value, streams.value.log)
     }.taskValue,
-    scalacOptions += "-Wconf:src=.*/sourceManaged/.*:s,src=.*/ported/.*/src_managed/.*:s"
+    scalacOptions += "-Wconf:src=.*/sourceManaged/.*:s,src=.*/target/balticporter/.*:s"
   )
   .settings(publishSettings)
   .settings(mimaSettings)
@@ -372,7 +364,7 @@ lazy val `ssg-md` = (projectMatrix in file("ssg-md"))
     name := "ssg-md",
     libraryDependencies ++= Seq(
       "com.kubuszok"       %% "multiarch-resources"   % versions.multiarch,
-      "com.kubuszok"       %% "balticporter-runtime"  % "05e187f6b583c4cb71ec6827544b91ce53fde4c9-SNAPSHOT",
+      "com.kubuszok"       %% "balticporter-runtime"  % "1b4a7b57a9b4a5e7c0f64e07a17b312ffd6d957a-SNAPSHOT",
       "org.jetbrains"       % "annotations"           % "24.0.1" % Provided,
       "org.nibor.autolink"  % "autolink"              % "0.6.0",
     ),
@@ -492,16 +484,7 @@ lazy val `ssg-site` = (projectMatrix in file("ssg-site"))
     // ISS-1353: the SiteBuildPhase suites each run a full site build (SASS compile + file writes);
     // run them serially so concurrent filesystem access can't race — intermittent IOException on
     // Native-Windows only, where file locking is strict (POSIX tolerates it). Mirrors ssg-js/ssg-katex.
-    Test / parallelExecution := false,
-    // ANTLR parser classes from ssg-liquid's generated code (unmanagedClasspath is not transitive).
-    Test / unmanagedClasspath ++= {
-      val bpRoot = (ThisBuild / baseDirectory).value / ".." / "balticporter"
-      val parserDir = bpRoot / "out" / "liqp-parser-classes"
-      if (parserDir.exists()) {
-        val fc = fileConverter.value
-        Seq(Attributed.blank(fc.toVirtualFile(parserDir.toPath)))
-      } else Nil
-    }
+    Test / parallelExecution := false
   )
   .settings(publishSettings)
   .settings(mimaSettings)
