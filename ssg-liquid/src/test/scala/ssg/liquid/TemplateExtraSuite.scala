@@ -52,7 +52,6 @@ final class TemplateExtraSuite extends munit.FunSuite {
   }
 
   test("template: with custom filter (sum)") {
-    assume(PlatformCompat.isJVM, "Double.toString formatting differs on JS/Native")
     val parser = new TemplateParser.Builder()
       .withFilter(
         new filters.Filter("sum") {

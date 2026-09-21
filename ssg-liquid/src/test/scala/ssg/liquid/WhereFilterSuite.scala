@@ -79,8 +79,6 @@ final class WhereFilterSuite extends munit.FunSuite {
     // JVM-only: JavaScript's number.toString() behavior differs from Java's Double.toString()
     // On JVM: Double(42.0).toString = "42.0", which != "42" (string target), so no match
     // On JS:  Number(42).toString() = "42", which == "42", so it matches
-    assume(PlatformCompat.isJVM, "Numeric coercion behavior differs on JS/Native")
-
     // Jekyll's where uses parseSortInput, which parses numeric strings to Double
     val items = makeList(
       makeItem("score" -> "42", "name" -> "high"),

@@ -61,14 +61,8 @@ final class ReadmeSamplesSuite extends munit.FunSuite {
     assertEquals(rendered, "hi tobi")
   }
 
-  // SSG: EAGER mode object access differs
-  test("readme: eager mode".fail) { // ISS-1267 (ISS-1024 umbrella)
-    assume(PlatformCompat.isJVM, "EAGER mode requires reflection (JVM-only)")
-    val data   = TestHelper.mapOf("a" -> new ReadmeSamplesSuite.ValHolder())
-    val parser = new TemplateParser.Builder().withEvaluateMode(TemplateParser.EvaluateMode.EAGER).build()
-    val res    = parser.parse("hi {{a.val}}").render(data)
-    assertEquals(res, "hi tobi")
-  }
+  // "readme: eager mode" reads an object's properties by reflection, which only the JVM can do:
+  // it is in src/test/scalajvm, ReadmeSamplesJvmSuite.
 
   test("readme: filter registration") {
     val parser = new TemplateParser.Builder()
@@ -111,7 +105,6 @@ final class ReadmeSamplesSuite extends munit.FunSuite {
   }
 
   test("readme: filter can be anything (sum)") {
-    assume(PlatformCompat.isJVM, "Double.toString formatting differs on JS/Native")
     val parser = new TemplateParser.Builder()
       .withFilter(
         new filters.Filter("sum") {
@@ -184,10 +177,5 @@ object ReadmeSamplesSuite {
   // MyLazy was a LiquidSupport — converted to produce DataView maps directly.
   class MyLazy {
     def toDataViewMap: JHashMap[String, DataView] = TestHelper.mapOf("name" -> "tobi")
-  }
-
-  class ValHolder {
-    @SuppressWarnings(Array("unused"))
-    val `val`: String = "tobi"
   }
 }

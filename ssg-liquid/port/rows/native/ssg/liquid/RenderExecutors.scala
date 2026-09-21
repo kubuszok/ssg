@@ -5,7 +5,8 @@
  * Original license: MIT, Copyright (c) 2010-2013 by Bart Kiers
  *
  * Migration notes:
- *   Origin: the Scala.js and Scala Native rows, which have no second thread to render on.
+ *   Origin: the Scala Native row. The JDK executor types exist there, but ssg builds Native
+ *     without threads, so there is no second thread to render on.
  *   Difference: the render runs on the CALLING thread, when the caller asks for the result, and
  *     the limit is checked once it has finished. A render that overruns is still refused with
  *     java's TimeoutException, so Template raises java's own message; it is not interrupted.
