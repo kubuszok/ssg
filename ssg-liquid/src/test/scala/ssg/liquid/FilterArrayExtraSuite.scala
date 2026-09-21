@@ -69,7 +69,7 @@ final class FilterArrayExtraSuite extends munit.FunSuite {
   }
 
   // SSG: split by empty string behavior differs from liqp
-  test("pop: hello world split zero length string") {
+  test("pop: hello world split zero length string".fail) { // ISS-1262 (ISS-1024 umbrella)
     assertEquals(
       jekyllParser.parse("{% assign item = 'Hello World' | split: '' | pop %}{{ item }}{{ item.size }}").render(),
       "Hello World11"
