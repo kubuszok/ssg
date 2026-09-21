@@ -147,7 +147,7 @@ final class RenderSettingsSuite extends munit.FunSuite {
     assertEquals(rendered, "FOO")
   }
 
-  test("environment map configurator".ignore) { // generated code wraps env map values in Option
+  test("environment map configurator") {
     val secretKey         = getClass.getName + ".secretKey"
     val gotEnvironmentMap = new AtomicBoolean(false)
 
@@ -155,7 +155,7 @@ final class RenderSettingsSuite extends munit.FunSuite {
       .withFilter(
         new filters.Filter("secret") {
           override def apply(value: java.lang.Object, context: TemplateContext, params: Array[java.lang.Object]): java.lang.Object =
-            DataView.from(super.asString(value, context) + " " + context.getEnvironmentMap().get(secretKey))
+            DataView.from(super.asString(value, context) + " " + context.getEnvironmentMap().getOrElse(secretKey, null))
         }
       )
       .withEnvironmentMapConfigurator { env =>

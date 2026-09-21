@@ -51,7 +51,7 @@ final class FilterMathExtraSuite extends munit.FunSuite {
     assertEquals(res2, "!2007-11-01 15:25:00 +0900")
   }
 
-  test("append: append to date type eager".ignore) { // generated code renders dates as epoch numbers
+  test("append: append to date type eager") {
     val data   = Collections.singletonMap[String, DataView]("a", TestHelper.dv(testTime))
     val parser = new TemplateParser.Builder().withEvaluateMode(TemplateParser.EvaluateMode.EAGER).build()
     val res    = parser.parse("{{ '!' | append: a }}").render(data)
@@ -62,7 +62,7 @@ final class FilterMathExtraSuite extends munit.FunSuite {
   }
 
   // SSG: LocalDateTime formatting with timezone offset differs
-  test("append: append to date type with default timezone set".ignore) { // generated code renders dates differently
+  test("append: append to date type with default timezone set") {
     val time   = LocalDateTime.of(2020, 1, 1, 12, 59, 59, 999)
     val data   = Collections.singletonMap[String, DataView]("a", TestHelper.dv(time))
     val tz     = ZoneId.ofOffset("UTC", ZoneOffset.ofHours(-5))

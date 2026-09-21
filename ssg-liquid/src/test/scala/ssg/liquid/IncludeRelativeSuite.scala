@@ -93,7 +93,7 @@ final class IncludeRelativeSuite extends munit.FunSuite {
 
   // SSG DIVERGENCE (ISS-1259): include_relative falls back to the NameResolver when
   // the source-relative file is unavailable, so nested in-memory includes resolve.
-  test("include_relative: nested relative include".ignore) { // ISS-1259 — generated code doesn't carry source location for nested in-memory includes
+  test("include_relative: nested relative include") {
     val map = new JHashMap[String, String]()
     map.put("nested_include.liquid", "Hello {% include_relative 'inner.liquid' %}!")
     map.put("inner.liquid", "Nested and {% include_relative 'deepest.liquid' %}")

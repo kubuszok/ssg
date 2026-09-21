@@ -105,7 +105,7 @@ final class IncludeNamesIss1010Suite extends munit.FunSuite {
   // finds a space, and throws — it is NOT name `foo` + param `bar`.
   // ---------------------------------------------------------------------------
 
-  test("ISS-1010: whitespace-separated unquoted include name {% include foo bar %} throws at parse time".ignore) { // ANTLR parser accepts this without error
+  test("ISS-1010: whitespace-separated unquoted include name {% include foo bar %} throws at parse time") {
     val parser = parserWith("foo bar" -> "WRONG", "foobar" -> "WRONG", "foo" -> "WRONG")
     val ex     = intercept[LiquidException] {
       parser.parse("before {% include foo bar %} after")

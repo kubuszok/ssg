@@ -69,7 +69,7 @@ final class FilterArrayExtraSuite extends munit.FunSuite {
   }
 
   // SSG: split by empty string behavior differs from liqp
-  test("pop: hello world split zero length string".ignore) { // ISS-1262 — split-by-empty semantics differ in generated code
+  test("pop: hello world split zero length string") {
     assertEquals(
       jekyllParser.parse("{% assign item = 'Hello World' | split: '' | pop %}{{ item }}{{ item.size }}").render(),
       "Hello World11"
@@ -148,7 +148,7 @@ final class FilterArrayExtraSuite extends munit.FunSuite {
   }
 
   // SSG: split by empty string behavior differs from liqp
-  test("shift: hello world split zero length string".ignore) { // ISS-1262 — split-by-empty semantics differ in generated code
+  test("shift: hello world split zero length string") {
     assertEquals(
       jekyllParser.parse("{% assign item = 'Hello World' | split: '' | shift %}{{ item }}{{ item.size }}").render(),
       "ello World10"
@@ -261,7 +261,7 @@ final class FilterArrayExtraSuite extends munit.FunSuite {
     }
   }
 
-  test("sort: sort map entries".ignore) { // generated Sort.ComparableMapEntry not compatible with Tuple2
+  test("sort: sort map entries") {
     val map = new LinkedHashMap[String, DataView]()
     map.put("World", TestHelper.dv(java.lang.Integer.valueOf(2)))
     map.put("Hello", TestHelper.dv(java.lang.Integer.valueOf(1)))

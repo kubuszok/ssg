@@ -51,7 +51,7 @@ final class DateStrftimeIss1303Suite extends munit.FunSuite {
   // ---------------------------------------------------------------------------
 
   // ruby: Time.new(2026,1,5,13,7,9,"+00:00").strftime("%C") => "20"
-  test("ISS-1303: %C century = year/100, zero-padded (2026 -> 20)".ignore) { // strftime4j doesn't support %C
+  test("ISS-1303: %C century = year/100, zero-padded (2026 -> 20)") {
     assertEquals(fmt(mondayEpoch, "%C"), "20")
   }
 
@@ -91,7 +91,7 @@ final class DateStrftimeIss1303Suite extends munit.FunSuite {
   }
 
   // ruby: => " 5" (space + 5)
-  test("ISS-1303: %e day space-padded width 2 (5 -> ' 5')".ignore) { // strftime4j drops leading space
+  test("ISS-1303: %e day space-padded width 2 (5 -> ' 5')") {
     assertEquals(fmt(mondayEpoch, "%e"), " 5")
   }
 
@@ -116,12 +116,12 @@ final class DateStrftimeIss1303Suite extends munit.FunSuite {
   }
 
   // ruby: => " 5-JAN-2026"
-  test("ISS-1303: %v composite space-pad day + uppercase month (-> ' 5-JAN-2026')".ignore) { // strftime4j %v drops space
+  test("ISS-1303: %v composite space-pad day + uppercase month (-> ' 5-JAN-2026')") {
     assertEquals(fmt(mondayEpoch, "%v"), " 5-JAN-2026")
   }
 
   // ruby: => "Mon Jan  5 13:07:09 2026"
-  test("ISS-1303: %c composite date/time with space-padded day".ignore) { // strftime4j %c format differs
+  test("ISS-1303: %c composite date/time with space-padded day") {
     assertEquals(fmt(mondayEpoch, "%c"), "Mon Jan  5 13:07:09 2026")
   }
 
@@ -180,17 +180,17 @@ final class DateStrftimeIss1303Suite extends munit.FunSuite {
 
   // ruby: Time.new(2025,12,31,23,59,59,"+00:00").strftime("%V") => "01"
   // (2025-12-31 belongs to ISO week 1 of 2026)
-  test("ISS-1303: %V on 2025-12-31 = 01 (rolls to next ISO year)".ignore) { // strftime4j cross-year ISO week differs
+  test("ISS-1303: %V on 2025-12-31 = 01 (rolls to next ISO year)") {
     assertEquals(fmt(wedEndOfYear, "%V"), "01")
   }
 
   // ruby: => "2026"
-  test("ISS-1303: %G on 2025-12-31 = 2026 (ISO week-based year rolls forward)".ignore) { // strftime4j cross-year ISO week
+  test("ISS-1303: %G on 2025-12-31 = 2026 (ISO week-based year rolls forward)") {
     assertEquals(fmt(wedEndOfYear, "%G"), "2026")
   }
 
   // ruby: => "26"
-  test("ISS-1303: %g on 2025-12-31 = 26".ignore) { // strftime4j cross-year ISO week
+  test("ISS-1303: %g on 2025-12-31 = 26") {
     assertEquals(fmt(wedEndOfYear, "%g"), "26")
   }
 
@@ -214,7 +214,7 @@ final class DateStrftimeIss1303Suite extends munit.FunSuite {
   }
 
   // ruby: => "05"
-  test("ISS-1303: %0e zero-pad day (normally space-padded, forced zero -> '05')".ignore) { // strftime4j no pad-modifier support
+  test("ISS-1303: %0e zero-pad day (normally space-padded, forced zero -> '05')") {
     assertEquals(fmt(mondayEpoch, "%0e"), "05")
   }
 
@@ -239,12 +239,12 @@ final class DateStrftimeIss1303Suite extends munit.FunSuite {
   }
 
   // ruby: => "09"
-  test("ISS-1303: %0k zero-pad hour-24 (normally space, forced zero -> '09')".ignore) { // strftime4j no pad-modifier support
+  test("ISS-1303: %0k zero-pad hour-24 (normally space, forced zero -> '09')") {
     assertEquals(fmt(sundayEpoch, "%0k"), "09")
   }
 
   // ruby: => "9"
-  test("ISS-1303: %-k no-pad hour-24 (9 -> '9')".ignore) { // strftime4j no pad-modifier support for %k
+  test("ISS-1303: %-k no-pad hour-24 (9 -> '9')") {
     assertEquals(fmt(sundayEpoch, "%-k"), "9")
   }
 

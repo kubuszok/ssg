@@ -106,7 +106,7 @@ final class RawWhitespaceMatrixIss1019Suite extends munit.FunSuite {
   // identifier reads as "-endraw" (or "-" if whitespace follows). Either way
   // the id is not "endraw", so the raw block continues -- matching liqp.
 
-  test("ISS-1019 B1: {% raw %} + {%- endraw %} -- endraw not recognized, raw unterminated".ignore) { // ANTLR parser doesn't support whitespace-stripped endraw
+  test("ISS-1019 B1: {% raw %} + {%- endraw %} -- endraw not recognized, raw unterminated") {
     // `{%- endraw %}` is NOT recognized by RawEnd (`{%-` != `{%` in g4:284).
     // Raw body = everything after `{% raw %}` to EOF, including the literal
     // `{%- endraw %}` characters.
@@ -116,7 +116,7 @@ final class RawWhitespaceMatrixIss1019Suite extends munit.FunSuite {
     )
   }
 
-  test("ISS-1019 B2: {% raw %} + {%- endraw -%} -- endraw not recognized, raw unterminated".ignore) { // ANTLR parser doesn't support whitespace-stripped endraw
+  test("ISS-1019 B2: {% raw %} + {%- endraw -%} -- endraw not recognized, raw unterminated") {
     // Same as B1 but with `-%}`. Still not recognized by RawEnd.
     assertEquals(
       Template.parse("{% raw %}  BODY  {%- endraw -%}  Z").render(),
@@ -124,7 +124,7 @@ final class RawWhitespaceMatrixIss1019Suite extends munit.FunSuite {
     )
   }
 
-  test("ISS-1019 B3: {%- raw %} + {%- endraw %} -- leading strip + endraw not recognized".ignore) { // ANTLR parser doesn't support whitespace-stripped endraw
+  test("ISS-1019 B3: {%- raw %} + {%- endraw %} -- leading strip + endraw not recognized") {
     // `{%-` on raw-open strips WS before tag: "A  " -> "A".
     // `{%- endraw %}` not recognized inside raw -> literal raw body text.
     assertEquals(
@@ -133,7 +133,7 @@ final class RawWhitespaceMatrixIss1019Suite extends munit.FunSuite {
     )
   }
 
-  test("ISS-1019 B4: {%- raw %} + {%- endraw -%} -- leading strip + endraw not recognized".ignore) { // ANTLR parser doesn't support whitespace-stripped endraw
+  test("ISS-1019 B4: {%- raw %} + {%- endraw -%} -- leading strip + endraw not recognized") {
     // `{%-` on raw-open strips WS before tag: "A  " -> "A".
     // `{%- endraw -%}` not recognized inside raw -> literal raw body text.
     assertEquals(
