@@ -582,14 +582,16 @@ object Site {
     * @return
     *   `Some(jailException)` if found, `scala.None` otherwise
     */
-  private def findIncludeRelativeJailViolation(e: Throwable): Option[RootJail.RootJailViolationException] =
+  private def findIncludeRelativeJailViolation(e: Throwable): Option[RuntimeException] =
     boundary {
       var current: Option[Throwable] = Option(e)
       // Walk at most 10 levels to avoid infinite loops in pathological cause chains.
       var depth = 0
       while (current.isDefined && depth < 10)
         current.get match {
-          case jv: RootJail.RootJailViolationException => break(Some(jv))
+          // the liquid jail's own exception (ISS-1214), which is what include_relative raises
+          case jv: ssg.liquid.IncludeJail.JailViolationException => break(Some(jv))
+          case jv: RootJail.RootJailViolationException           => break(Some(jv))
           case other =>
             current = Option(other.getCause)
             depth += 1
