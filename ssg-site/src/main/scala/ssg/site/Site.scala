@@ -22,7 +22,7 @@ import ssg.commons.io.FileOps
 import ssg.commons.io.FilePath
 import ssg.data.DataView
 import ssg.liquid.TemplateParser
-import ssg.liquid.{ render, withJailRoot }
+import ssg.liquid.{ parse, render, withJailRoot }
 import ssg.liquid.antlr.LocalFSNameResolver
 import ssg.md.html.HtmlRenderer
 import ssg.md.parser.Parser
@@ -218,7 +218,7 @@ object Site {
             // (page-local base, Jekyll semantics — ISS-1214). The jail root
             // is set to sourceAbs (config.source) so that include_relative
             // paths cannot escape the source root (design §6).
-            val template    = liquidParser.parse(org.antlr.v4.runtime.CharStreams.fromString(body, filePath.pathString)).withJailRoot(sourceAbs)
+            val template    = liquidParser.parse(body, filePath).withJailRoot(sourceAbs)
             val afterLiquid = template.render(variables)
 
             // Step 2: If markdown file, render through Markdown.
@@ -509,7 +509,7 @@ object Site {
       // Parse with layoutPath as sourceLocation so that any
       // include_relative in a layout resolves relative to the
       // layout file's parent dir (ISS-1214). Jail root = sourceAbs.
-      val template = liquidParser.parse(org.antlr.v4.runtime.CharStreams.fromString(layoutBody, layoutPath.pathString)).withJailRoot(sourceAbs)
+      val template = liquidParser.parse(layoutBody, layoutPath).withJailRoot(sourceAbs)
       content = template.render(variables)
 
       // Move up the chain: check if this layout declares its own layout.
