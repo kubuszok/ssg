@@ -204,7 +204,8 @@ final class LiquidParser(
 
   /** output: {{ expr filter* }} */
   private def parseOutput(): LNode = {
-    consume(TokenType.OUT_START)
+    val outStart  = consume(TokenType.OUT_START)
+    val bodyStart = pos
     val expr =
       if (evaluateInOutputTag) parseExpr()
       else parseTerm()
@@ -221,9 +222,18 @@ final class LiquidParser(
       val startToken = peek()
       // Only WARN and LAX have an alternative that tolerates trailing content in an output tag
       // (LiquidParser.g4:232); STRICT's (g4:231) ends at OutEnd, so there is no alternative for
-      // `{{ 98 > 97 }}` and java's parser raises through its error listener.
+      // `{{ 98 > 97 }}` and java's parser raises through its error listener. WHICH message depends
+      // on how java's prediction fails. Where the tag also reads as `expr filter* OutEnd` (g4:230),
+      // two alternatives whose predicates are both false stay alive to the end, prediction falls
+      // back to STRICT's and the parser stops right after the term: "mismatched input". Anywhere
+      // else the tolerant alternative is the only one left, its predicate is false and nothing is
+      // viable at the tag's first token.
       if (!evaluateInOutputTag && (errorMode eq TemplateParser.ErrorMode.STRICT)) {
-        raiseParserError(s"extraneous input '${startToken.value}' expecting OutEnd", startToken)
+        if (readsAsEvaluatedOutput(bodyStart)) {
+          raiseParserError(s"mismatched input '${startToken.value}' expecting {OutEnd, '|'}", startToken)
+        } else {
+          raiseParserError(s"no viable alternative at input '${outStart.value}'", outStart)
+        }
       }
       unparsedLine = startToken.line
       unparsedPos = startToken.col
@@ -244,6 +254,28 @@ final class LiquidParser(
       i += 1
     }
     outputNode
+  }
+
+  /** Whether the output tag whose body starts at `from` reads as `expr filter* OutEnd`
+    * (LiquidParser.g4:230). A trial read: the position and the recorded errors are put back.
+    */
+  private def readsAsEvaluatedOutput(from: Int): Boolean = {
+    val savedPos    = pos
+    val savedErrors = parseErrors.size()
+    pos = from
+    val reads =
+      try {
+        parseExpr()
+        while (check(TokenType.PIPE))
+          parseFilter()
+        check(TokenType.OUT_END)
+      } catch {
+        case _: RuntimeException => false
+      }
+    pos = savedPos
+    while (parseErrors.size() > savedErrors)
+      parseErrors.remove(parseErrors.size() - 1)
+    reads
   }
 
   /** filter: | Id params?

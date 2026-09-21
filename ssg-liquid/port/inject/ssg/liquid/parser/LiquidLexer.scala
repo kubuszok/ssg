@@ -413,7 +413,10 @@ final class LiquidLexer(
         emitToken(TokenType.PATH_SEP, c.toString, 1)
       case _ =>
         if (isDigit(c)) {
-          scanNumber()
+          // `Id` may start with a digit too (LiquidLexer.g4:186), and the grammar's lexer takes the
+          // LONGEST match: `3ubar` is one Id, `123` ties and goes to the rule written first, LongNum.
+          if (idEndFrom(pos) > numberEndFrom(pos)) scanIdentifierOrKeyword()
+          else scanNumber()
         } else if (isIdStart(c)) {
           scanIdentifierOrKeyword()
         } else {
@@ -439,6 +442,27 @@ final class LiquidLexer(
     }
 
     tokens.add(Token(TokenType.STR, content, startLine, startCol))
+  }
+
+  /** Where an `Id` starting at `from` would end (LiquidLexer.g4:186). */
+  private def idEndFrom(from: Int): Int = {
+    var i = from
+    while (i < input.length() && isIdContinue(input.charAt(i)))
+      i += 1
+    i
+  }
+
+  /** Where the unsigned number `scanNumber` reads from `from` would end (LiquidLexer.g4:159-164). */
+  private def numberEndFrom(from: Int): Int = {
+    var i = from
+    while (i < input.length() && isDigit(input.charAt(i)))
+      i += 1
+    if (i + 1 < input.length() && input.charAt(i) == '.' && input.charAt(i + 1) != '.') {
+      i += 1
+      while (i < input.length() && isDigit(input.charAt(i)))
+        i += 1
+    }
+    i
   }
 
   /** Scans a number (integer or double). */
