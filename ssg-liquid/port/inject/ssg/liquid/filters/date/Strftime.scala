@@ -8,7 +8,10 @@
  * Migration notes:
  *   Origin: strftime4j is a JVM-only artifact, so the strftime pattern is evaluated here.
  *   Convention: Ruby/C strftime, which is what strftime4j implements and what liquid's own
- *     date filter documents.
+ *     date filter documents. Follows Ruby per ISS-1303 where strftime4j differs: `%C`, `%e`,
+ *     `%v`, `%c`, the ISO week-year at a year boundary (`%V` `%G` `%g`) and the pad flags
+ *     (`%0e`, `%0k`, `%-k`) — strftime4j answers `21`, an unpadded day, week 53 of the old
+ *     year, and ignores the flags.
  *   Idiom: the directives java.time can spell go through one DateTimeFormatter pattern, built
  *     up as the scan runs and flushed whenever a directive has to be computed by hand.
  */
@@ -247,10 +250,10 @@ object Strftime {
           0
 
         // %e: day of month, space-padded to width 2
-        // strftime4j writes the day UNPADDED here — liqp's own test compares `%e` against
-        // `SimpleDateFormat("d")`, while it does wrap `%k` and `%l` in a space pad to width 2.
+        // ISS-1303: strftime4j writes the day UNPADDED (liqp's own test compares `%e` against
+        // `SimpleDateFormat("d")`); ssg follows Ruby, which pads it with a space.
         case 'e' =>
-          emitPadded(queryField(ChronoField.DAY_OF_MONTH, 1), '-', 2, padFlag)
+          emitPadded(queryField(ChronoField.DAY_OF_MONTH, 1), '_', 2, padFlag)
           0
 
         // %k: hour (24h), space-padded to width 2
@@ -308,9 +311,9 @@ object Strftime {
           val day       = queryField(ChronoField.DAY_OF_MONTH, 1)
           val time      = DateTimeFormatter.ofPattern("HH:mm:ss", locale).format(temporal)
           val year      = queryField(ChronoField.YEAR, 0)
-          // the day is NOT padded: strftime4j's `%c` is `EEE MMM d HH:mm:ss yyyy`, which is what
-          // liqp's own test compares against, and `d` writes `1` where a space pad writes ` 1`
-          out.append(dayName).append(" ").append(monthName).append(" ").append(day.toString).append(" ").append(time).append(" ").append(zeroPad(year, 4))
+          // ISS-1303: strftime4j's `%c` is `EEE MMM d HH:mm:ss yyyy`, the day unpadded; ssg follows
+          // Ruby, whose `%c` holds `%e` — the day space-padded to width 2
+          out.append(dayName).append(" ").append(monthName).append(" ").append(spacePad(day, 2)).append(" ").append(time).append(" ").append(zeroPad(year, 4))
           0
 
         // Timezone with colons: %:z, %::z, %:::z
