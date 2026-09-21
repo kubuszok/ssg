@@ -585,7 +585,10 @@ final class LiquidLexer(
         advanceChar()
       }
 
-    // Unterminated raw block — emit everything as text
+    // Unterminated raw block — emit everything as text.
+    // ISS-1019 (cells B1-B4 of its raw x whitespace matrix): liqp's parser refuses this
+    // ("mismatched input '<EOF>' expecting {RawEnd, OtherRaw}"); ssg renders the rest of the
+    // input verbatim, `{%- endraw %}` included.
     if (pos > bodyStart) {
       tokens.add(Token(TokenType.TEXT, input.substring(bodyStart, pos), startLine, startCol))
     }
