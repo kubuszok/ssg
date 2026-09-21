@@ -104,34 +104,8 @@ final class ReadmeSamplesSuite extends munit.FunSuite {
     assertEquals(template.render(), "a\nbbbbb")
   }
 
-  test("readme: filter can be anything (sum)") {
-    val parser = new TemplateParser.Builder()
-      .withFilter(
-        new filters.Filter("sum") {
-          override def apply(value: java.lang.Object, context: TemplateContext, params: Array[java.lang.Object]): java.lang.Object = {
-            val numbers = super.asArray(value, context)
-            var sum     = 0.0
-            numbers.foreach { obj =>
-              sum += super.asNumber(obj).doubleValue()
-            }
-            DataView.from(sum)
-          }
-        }
-      )
-      .build()
-
-    val template = parser.parse("{{ numbers | sum }}")
-    val vars     = TestHelper.mapOf(
-      "numbers" -> TestHelper.listOf(
-        java.lang.Integer.valueOf(1),
-        java.lang.Integer.valueOf(2),
-        java.lang.Integer.valueOf(3),
-        java.lang.Integer.valueOf(4),
-        java.lang.Integer.valueOf(5)
-      )
-    )
-    assertEquals(template.render(vars), "15.0")
-  }
+  // "readme: filter can be anything (sum)" is in src/test/scala-jvm-native,
+  // ReadmeSamplesJvmNativeSuite: on Scala.js a whole-number Double cannot be told from an integer.
 
   test("readme: block sample (loop)") {
     val parser = new TemplateParser.Builder()

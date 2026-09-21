@@ -78,12 +78,8 @@ final class FilterMathExtraSuite extends munit.FunSuite {
   // Divided_ByTest.java — 3 missing
   // ---------------------------------------------------------------------------
 
-  test("divided_by: float division") {
-    assertNumEquals("{{ 8 | divided_by: 3. }}", String.valueOf(8 / 3.0))
-    assertNumEquals("{{ 8 | divided_by: 3.0 }}", String.valueOf(8 / 3.0))
-    assertNumEquals("{{ 8 | divided_by: 2.0 }}", "4.0")
-    assertNumEquals("{{ 0 | divided_by: 2.0 }}", "0.0")
-  }
+  // "divided_by: float division" is in src/test/scala-jvm-native,
+  // FilterMathExtraJvmNativeSuite: on Scala.js a whole-number Double cannot be told from an integer.
 
   test("divided_by: original test 12/3, 14/3, 15/3") {
     assertNumEquals("{{ 12 | divided_by:3 }}", "4")

@@ -51,33 +51,8 @@ final class TemplateExtraSuite extends munit.FunSuite {
     )
   }
 
-  test("template: with custom filter (sum)") {
-    val parser = new TemplateParser.Builder()
-      .withFilter(
-        new filters.Filter("sum") {
-          override def apply(value: java.lang.Object, context: TemplateContext, params: Array[java.lang.Object]): java.lang.Object = {
-            val numbers = super.asArray(value, context)
-            var sum     = 0.0
-            numbers.foreach { obj =>
-              sum += super.asNumber(obj).doubleValue()
-            }
-            DataView.from(sum)
-          }
-        }
-      )
-      .build()
-
-    val vars = TestHelper.mapOf(
-      "numbers" -> TestHelper.listOf(
-        java.lang.Integer.valueOf(1),
-        java.lang.Integer.valueOf(2),
-        java.lang.Integer.valueOf(3),
-        java.lang.Integer.valueOf(4),
-        java.lang.Integer.valueOf(5)
-      )
-    )
-    assertEquals(parser.parse("{{ numbers | sum }}").render(vars), "15.0")
-  }
+  // "template: with custom filter (sum)" is in src/test/scala-jvm-native,
+  // TemplateExtraJvmNativeSuite: on Scala.js a whole-number Double cannot be told from an integer.
 
   test("template: inline comment") {
     val source =

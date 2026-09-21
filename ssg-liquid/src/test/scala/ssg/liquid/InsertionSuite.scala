@@ -75,36 +75,8 @@ final class InsertionSuite extends munit.FunSuite {
     assertEquals(parser.parse(templateString).render(), "blk[a(sim)bblk[c]d]")
   }
 
-  test("insertion: custom tag") {
-    val parser = new TemplateParser.Builder()
-      .withTag(
-        new tags.Tag("twice") {
-          override def render(context: TemplateContext, ns: Array[nodes.LNode]): DataView = {
-            val number = super.asNumber(ns(0).render(context)).doubleValue()
-            DataView.from(number * 2)
-          }
-        }
-      )
-      .build()
-
-    assertEquals(parser.parse("{% twice 10 %}").render(), "20.0")
-  }
-
-  test("insertion: custom tag parameters") {
-    val parser = new TemplateParser.Builder()
-      .withTag(
-        new tags.Tag("multiply") {
-          override def render(context: TemplateContext, ns: Array[nodes.LNode]): DataView = {
-            val n1 = super.asNumber(ns(0).render(context)).doubleValue()
-            val n2 = super.asNumber(ns(1).render(context)).doubleValue()
-            DataView.from(n1 * n2)
-          }
-        }
-      )
-      .build()
-
-    assertEquals(parser.parse("{% multiply 2 4 %}").render(), "8.0")
-  }
+  // "insertion: custom tag" and "insertion: custom tag parameters" are in src/test/scala-jvm-native,
+  // InsertionJvmNativeSuite: on Scala.js a whole-number Double cannot be told from an integer.
 
   test("insertion: custom tag block") {
     val parser = new TemplateParser.Builder()
