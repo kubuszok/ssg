@@ -306,19 +306,27 @@ def liquidGenerated(row: String): Seq[Setting[?]] = Seq(
   )
 )
 
+// Tests that hold on the JVM and on Scala Native but not on Scala.js, where a whole-number Double
+// cannot be told from an integer (`20.0` prints as `20`), so liqp's number formatting and its
+// integer-or-float branch answer differently there.
+val liquidJvmNativeTests: Seq[Setting[?]] = Seq(
+  Test / unmanagedSourceDirectories += (ThisBuild / baseDirectory).value / "ssg-liquid" / "src" / "test" / "scala-jvm-native"
+)
+
 lazy val `ssg-liquid` = (projectMatrix in file("ssg-liquid"))
   .defaultAxes(VirtualAxis.jvm, VirtualAxis.scalaABIVersion(versions.scala3))
   .someVariations(versions.scalas, versions.platforms)((commonSettings ++ dev.only1VersionInIDE ++ Seq(
     // Baltic Porter: ssg-liquid is generated from liqp. Each platform row compiles the shared tree
     // plus its OWN row directory — the few answers that differ by platform (reading an object's
     // fields by reflection exists on the JVM only) ship once per row at the same names.
-    MatrixAction.ForPlatforms(VirtualAxis.jvm).Configure(_.settings(liquidGenerated("jvm"))),
+    MatrixAction.ForPlatforms(VirtualAxis.jvm).Configure(_.settings(liquidGenerated("jvm"), liquidJvmNativeTests)),
     MatrixAction.ForPlatforms(VirtualAxis.js).Configure(_.settings(
       liquidGenerated("js"),
       libraryDependencies += "io.github.cquiroz" %% "scala-java-time-tzdb" % versions.scalaJavaTime
     )),
     MatrixAction.ForPlatforms(VirtualAxis.native).Configure(_.settings(
       liquidGenerated("native"),
+      liquidJvmNativeTests,
       libraryDependencies += "io.github.cquiroz" %% "scala-java-time-tzdb" % versions.scalaJavaTime
     ))
   )) *)
@@ -555,7 +563,7 @@ lazy val root = (project in file("."))
       val allModules = Seq("ssg-commons", "ssg-data-commons", "ssg-graphs-commons", "ssg-graphviz",
         "ssg-highlight", "ssg-js", "ssg-katex", "ssg-liquid", "ssg-md", "ssg-mermaid",
         "ssg-minify", "ssg-sass", "ssg-site")
-      val jvmOnly = Set("ssg-md", "ssg-liquid", "ssg-highlight", "ssg-site")
+      val jvmOnly = Set("ssg-md", "ssg-highlight", "ssg-site")
       val compile = allModules.map(m => s"${m}Native/compile").mkString(" ; ")
       val test = allModules.filterNot(jvmOnly).map(m => s"${m}Native/testFull").mkString(" ; ")
       s"$compile ; ssgNative/compile ; $test"
