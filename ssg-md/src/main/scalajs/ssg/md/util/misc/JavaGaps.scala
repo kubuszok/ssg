@@ -38,6 +38,14 @@ object JavaGaps {
     sb
   }
 
+  /** Java's contract for `StringBuilder.append(CharSequence)`: the sequence's characters one by one (a `String` copied whole); a `toString` written as `sb.append(this)` recurses through Scala.js's, which reads `toString`. */
+  def append(sb: java.lang.StringBuilder, s: CharSequence): java.lang.StringBuilder =
+    s match {
+      case null      => sb.append("null") // java interop boundary: java's own null rule for this call
+      case str: String => sb.append(str)
+      case cs          => append(sb, cs, 0, cs.length)
+    }
+
   /** A Scala.js matcher's bounds are always opaque, which is what `false` asks for (flexmark never asks for anything else); transparent bounds are refused rather than ignored. */
   def useTransparentBounds(matcher: Matcher, transparent: Boolean): Matcher = {
     if (transparent) {
@@ -45,4 +53,6 @@ object JavaGaps {
     }
     matcher
   }
+
+  def isInstance(cls: Class[?], o: Object): Boolean = cls.isInstance(o)
 }

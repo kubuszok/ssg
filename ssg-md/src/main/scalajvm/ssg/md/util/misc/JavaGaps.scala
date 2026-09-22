@@ -17,4 +17,8 @@ object JavaGaps {
   def useTransparentBounds(matcher: Matcher, transparent: Boolean): Matcher = matcher.useTransparentBounds(transparent)
 
   def append(sb: java.lang.StringBuilder, s: CharSequence, start: Int, end: Int): java.lang.StringBuilder = sb.append(s, start, end)
+
+  def append(sb: java.lang.StringBuilder, s: CharSequence): java.lang.StringBuilder = sb.append(s)
+
+  def isInstance(cls: Class[?], o: Object): Boolean = cls.isInstance(o)
 }

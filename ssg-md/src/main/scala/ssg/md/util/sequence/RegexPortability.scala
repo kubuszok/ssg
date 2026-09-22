@@ -13,7 +13,9 @@ package sequence
 
 object RegexPortability {
 
-  /** Unicode general categories as BMP ranges, read off JDK 25's `Character.getType` — the categories flexmark names. A supplementary code point is never a single `char`, which is all flexmark asks of these. */
+  /** Unicode general categories as BMP ranges, read off JDK 25's `Character.getType` — the categories flexmark names. A supplementary code point is never a single `char`, which is all flexmark asks
+    * of these.
+    */
   private val categories: Map[String, String] = Map(
     "Pc" -> "\\u005F\\u203F-\\u2040\\u2054\\uFE33-\\uFE34\\uFE4D-\\uFE4F\\uFF3F",
     "Pd" -> "\\u002D\\u058A\\u05BE\\u1400\\u1806\\u2010-\\u2015\\u2E17\\u2E1A\\u2E3A-\\u2E3B\\u2E40\\u2E5D\\u301C\\u3030\\u30A0\\uFE31-\\uFE32\\uFE58\\uFE63\\uFF0D",
@@ -38,11 +40,18 @@ object RegexPortability {
       "\\u27C5\\u27E6\\u27E8\\u27EA\\u27EC\\u27EE\\u2983\\u2985\\u2987\\u2989\\u298B\\u298D\\u298F\\u2991\\u2993\\u2995\\u2997\\u29D8\\u29DA\\u29FC\\u2E22\\u2E24" +
       "\\u2E26\\u2E28\\u2E42\\u2E55\\u2E57\\u2E59\\u2E5B\\u3008\\u300A\\u300C\\u300E\\u3010\\u3014\\u3016\\u3018\\u301A\\u301D\\uFD3F\\uFE17\\uFE35\\uFE37\\uFE39" +
       "\\uFE3B\\uFE3D\\uFE3F\\uFE41\\uFE43\\uFE47\\uFE59\\uFE5B\\uFE5D\\uFF08\\uFF3B\\uFF5B\\uFF5F\\uFF62"),
-    "Zs" -> "\\u0020\\u00A0\\u1680\\u2000-\\u200A\\u202F\\u205F\\u3000"
+    "Zs" -> "\\u0020\\u00A0\\u1680\\u2000-\\u200A\\u202F\\u205F\\u3000",
+    "IsAlphabetic" -> UnicodeAlphabetic.ranges
   )
 
-  /** `\p{Xx}` for a known category becomes its ranges: spliced into a surrounding class, or a class of its own. Other `\p` forms are left as written. */
-  def expandUnicodeCategories(regex: String): String = {
+  /** the `\uXXXX` spelling above, for an engine that reads it (Scala.js) */
+  val JavaEscapes: String => String = identity
+
+  /** the `\x{XXXX}` spelling RE2 reads (Scala Native), which has no `\uXXXX` */
+  val Re2Escapes: String => String = ranges => ranges.replace("\\u", "\\x{").replaceAll("\\{([0-9A-F]{4})", "{$1}")
+
+  /** `\p{Xx}` for a known category becomes its ranges, spelled by `escapes`: spliced into a surrounding class, or a class of its own. Other `\p` forms are left as written. */
+  def expandUnicodeCategories(regex: String, escapes: String => String = JavaEscapes): String = {
     val out    = new java.lang.StringBuilder(regex.length + 64)
     var i      = 0
     var quoted = false
@@ -69,7 +78,8 @@ object RegexPortability {
           val name  = if (close < 0) "" else regex.substring(i + 3, close)
           categories.get(name) match {
             case Some(ranges) =>
-              if (depth > 0) out.append(ranges) else out.append('[').append(ranges).append(']')
+              val spelled = escapes(ranges)
+              if (depth > 0) out.append(spelled) else out.append('[').append(spelled).append(']')
               i = close + 1
             case None =>
               out.append(c).append(next)
@@ -89,7 +99,9 @@ object RegexPortability {
     out.toString
   }
 
-  /** `(?i:…)` becomes `(?:…)` with each ASCII letter in it folded — `a` to `[aA]`, and a class gaining the other case of its ASCII letters and letter ranges — which is what java's flag does without UNICODE_CASE. */
+  /** `(?i:…)` becomes `(?:…)` with each ASCII letter in it folded — `a` to `[aA]`, and a class gaining the other case of its ASCII letters and letter ranges — which is what java's flag does without
+    * UNICODE_CASE.
+    */
   def foldScopedCaseInsensitive(regex: String): String = {
     val marker = "(?i:"
     var start  = indexOfUnescaped(regex, marker, 0)
@@ -129,8 +141,37 @@ object RegexPortability {
     found
   }
 
+  /** the top-level alternatives of a group body, split at `|` outside any group, class or quoting */
+  def splitAlternatives(body: String): List[String] = {
+    val out    = List.newBuilder[String]
+    var i      = 0
+    var from   = 0
+    var quoted = false
+    var depth  = 0
+    var level  = 0
+    while (i < body.length) {
+      val c = body.charAt(i)
+      if (quoted) {
+        if (c == '\\' && body.startsWith("\\E", i)) { quoted = false; i += 1 }
+      } else if (c == '\\') {
+        if (i + 1 < body.length && body.charAt(i + 1) == 'Q') quoted = true
+        i += 1
+      } else if (c == '[') depth += 1
+      else if (c == ']' && depth > 0) depth -= 1
+      else if (depth == 0 && c == '(') level += 1
+      else if (depth == 0 && c == ')') level -= 1
+      else if (depth == 0 && level == 0 && c == '|') {
+        out += body.substring(from, i)
+        from = i + 1
+      }
+      i += 1
+    }
+    out += body.substring(from)
+    out.result()
+  }
+
   /** the index of the `)` closing the group opened at `open`, over escapes, quoting and classes */
-  private def closingParen(regex: String, open: Int): Int = {
+  def closingParen(regex: String, open: Int): Int = {
     var i      = open + 1
     var quoted = false
     var depth  = 0
@@ -190,7 +231,7 @@ object RegexPortability {
   }
 
   /** the index of the `]` closing the class opened at `open`; a class may nest in java */
-  private def classEnd(body: String, open: Int): Int = {
+  def classEnd(body: String, open: Int): Int = {
     var i     = open + 1
     var depth = 1
     var found = -1
