@@ -202,8 +202,8 @@ object BalticPorterGen {
         .orElse(git(ssgRoot, "ls-tree", "HEAD", path).flatMap(_.split("\\s+").lift(2)))
         .getOrElse(sys.error(s"[Baltic Porter] cannot read the commit this checkout records for $path (git ls-tree HEAD $path)"))
     }
-    val flexmark = upstreamCommit("original-src/flexmark-java")
-    val liqp     = upstreamCommit("original-src/liqp")
+    val flexmark  = upstreamCommit("original-src/flexmark-java")
+    val liqp      = upstreamCommit("original-src/liqp")
     val source    = Files.readString(ssgRoot.resolve("project/BalticPorterGen.scala")).replace("\r", "")
     val generator = java.security.MessageDigest.getInstance("SHA-256").digest(source.getBytes("UTF-8")).take(8).map(b => f"$b%02x").mkString
     // the JDK the generator runs on decides what a member overrides
@@ -211,13 +211,16 @@ object BalticPorterGen {
     val ports = {
       val md = java.security.MessageDigest.getInstance("SHA-256")
       for (dir <- List("ssg-liquid/port", "ssg-md/port", "project/LiqpParserClasspath.scala").map(ssgRoot.resolve(_))) {
-        val s = Files.walk(dir)
-        try
-          s.filter(Files.isRegularFile(_)).sorted().forEach { p =>
-            md.update(ssgRoot.relativize(p).toString.replace('\\', '/').getBytes("UTF-8"))
-            md.update(Files.readString(p).replace("\r", "").getBytes("UTF-8"))
-          }
-        finally s.close()
+        // Sorted by the normalised relative path, never by `Path`: Windows orders paths without
+        // regard to case, so the Linux-generated tree's marker would never match there.
+        val s     = Files.walk(dir)
+        val files =
+          try scala.jdk.CollectionConverters.IteratorHasAsScala(s.filter(Files.isRegularFile(_)).iterator()).asScala.toList
+          finally s.close()
+        files.map(p => ssgRoot.relativize(p).toString.replace('\\', '/') -> p).sortBy(_._1).foreach { case (rel, p) =>
+          md.update(rel.getBytes("UTF-8"))
+          md.update(Files.readString(p).replace("\r", "").getBytes("UTF-8"))
+        }
       }
       md.digest().take(8).map(b => f"$b%02x").mkString
     }

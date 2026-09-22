@@ -19,7 +19,7 @@ object ListMarkers {
   def find(parsing: ssg.md.ast.util.Parsing, rest: CharSequence): Matcher = {
     // java quotes the prefix characters with `\Q…\E` inside the class, which RE2 does not accept there
     val prefix = ssg.md.util.sequence.RegexCompat.charClassEscape(parsing.itemPrefixChars)
-    val regex =
+    val regex  =
       if (parsing.listsOrderedItemDotOnly) "^([" + prefix + "])|^(\\d{1,9})([.])"
       else "^([" + prefix + "])|^(\\d{1,9})([.)])"
     var pattern = patterns.get(regex)

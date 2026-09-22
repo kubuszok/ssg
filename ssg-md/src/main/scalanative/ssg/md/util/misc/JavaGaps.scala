@@ -23,12 +23,14 @@ object JavaGaps {
 
   def append(sb: java.lang.StringBuilder, s: CharSequence, start: Int, end: Int): java.lang.StringBuilder = sb.append(s, start, end)
 
-  /** Java's contract for `StringBuilder.append(CharSequence)`: the sequence's characters one by one (a `String` copied whole); a `toString` written as `sb.append(this)` recurses through Scala Native's, which reads `toString`, until the stack is gone. */
+  /** Java's contract for `StringBuilder.append(CharSequence)`: the sequence's characters one by one (a `String` copied whole); a `toString` written as `sb.append(this)` recurses through Scala
+    * Native's, which reads `toString`, until the stack is gone.
+    */
   def append(sb: java.lang.StringBuilder, s: CharSequence): java.lang.StringBuilder =
     s match {
-      case null        => sb.append("null") // java interop boundary: java's own null rule for this call
+      case null => sb.append("null") // java interop boundary: java's own null rule for this call
       case str: String => sb.append(str)
-      case cs          =>
+      case cs =>
         var i = 0
         while (i < cs.length) {
           sb.append(cs.charAt(i))

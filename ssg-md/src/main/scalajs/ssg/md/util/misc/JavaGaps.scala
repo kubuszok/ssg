@@ -24,7 +24,9 @@ object JavaGaps {
     }
   }
 
-  /** Java's contract for `StringBuilder.append(CharSequence, int, int)`: the characters `start` until `end`, read one by one — Scala.js reads them through the sequence's `toString`, which a `toString` written over this call recurses into. */
+  /** Java's contract for `StringBuilder.append(CharSequence, int, int)`: the characters `start` until `end`, read one by one — Scala.js reads them through the sequence's `toString`, which a
+    * `toString` written over this call recurses into.
+    */
   def append(sb: java.lang.StringBuilder, s: CharSequence, start: Int, end: Int): java.lang.StringBuilder = {
     val cs = if (s == null) "null" else s // java interop boundary: java's own null rule for this call
     if (start < 0 || start > end || end > cs.length) {
@@ -38,12 +40,14 @@ object JavaGaps {
     sb
   }
 
-  /** Java's contract for `StringBuilder.append(CharSequence)`: the sequence's characters one by one (a `String` copied whole); a `toString` written as `sb.append(this)` recurses through Scala.js's, which reads `toString`. */
+  /** Java's contract for `StringBuilder.append(CharSequence)`: the sequence's characters one by one (a `String` copied whole); a `toString` written as `sb.append(this)` recurses through Scala.js's,
+    * which reads `toString`.
+    */
   def append(sb: java.lang.StringBuilder, s: CharSequence): java.lang.StringBuilder =
     s match {
-      case null      => sb.append("null") // java interop boundary: java's own null rule for this call
+      case null => sb.append("null") // java interop boundary: java's own null rule for this call
       case str: String => sb.append(str)
-      case cs          => append(sb, cs, 0, cs.length)
+      case cs => append(sb, cs, 0, cs.length)
     }
 
   /** A Scala.js matcher's bounds are always opaque, which is what `false` asks for (flexmark never asks for anything else); transparent bounds are refused rather than ignored. */

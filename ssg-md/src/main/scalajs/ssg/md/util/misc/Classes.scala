@@ -61,15 +61,13 @@ object Classes {
     val absolute =
       if (name.startsWith("/")) name
       else "/" + packageOf(cls).getName().replace('.', '/') + "/" + name
-    val found = _root_.multiarch.resources.PlatformResources
-      .getResourceAsStream(cls, absolute)
-      .orElse {
-        if (absolute.startsWith(UpstreamRoot)) {
-          _root_.multiarch.resources.PlatformResources.getResourceAsStream(cls, PortedRoot + absolute.substring(UpstreamRoot.length))
-        } else {
-          None
-        }
+    val found = _root_.multiarch.resources.PlatformResources.getResourceAsStream(cls, absolute).orElse {
+      if (absolute.startsWith(UpstreamRoot)) {
+        _root_.multiarch.resources.PlatformResources.getResourceAsStream(cls, PortedRoot + absolute.substring(UpstreamRoot.length))
+      } else {
+        None
       }
+    }
     found.getOrElse(null.asInstanceOf[InputStream]) // java interop boundary: `Class.getResourceAsStream` answers null for a missing resource
   }
 }

@@ -232,12 +232,12 @@ object Json {
     private def readString(): String = {
       expect('"')
       val sb = new StringBuilder()
-      var done = false
-      while (!done) {
+      scala.util.boundary {
+      while (true) {
         if (pos >= text.length()) fail("unterminated string")
         val c = text.charAt(pos)
         pos += 1
-        if (c == '"') done = true
+        if (c == '"') scala.util.boundary.break()
         else if (c == '\\') {
           if (pos >= text.length()) fail("unterminated escape")
           val e = text.charAt(pos)
@@ -259,6 +259,7 @@ object Json {
             case other => fail("unknown escape '\\" + other + "'")
           }
         } else sb.append(c)
+      }
       }
       sb.toString()
     }

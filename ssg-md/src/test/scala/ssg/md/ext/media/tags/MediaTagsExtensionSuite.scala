@@ -12,7 +12,8 @@ import munit.FunSuite
   * Spec resources: ext/media/tags/ext_media_tags_audio_link_spec.md ext/media/tags/ext_media_tags_embed_link_spec.md ext/media/tags/ext_media_tags_picture_link_spec.md
   * ext/media/tags/ext_media_tags_video_link_spec.md
   *
-  * TODO: Implement spec-based rendering tests once the test harness (FlexmarkSpecExampleRenderer) is ported from flexmark-test-util.
+  * flexmark's own spec-file tests for these four files (`ComboMediaTags*SpecTest`) run on JUnit's `Parameterized` runner, which the port refuses (see ssg-md/port/ext-test.conf); the rendering they
+  * cover is exercised end to end below (ISS-075).
   */
 class MediaTagsExtensionSuite extends FunSuite {
 

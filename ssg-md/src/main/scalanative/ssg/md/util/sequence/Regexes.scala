@@ -86,15 +86,17 @@ object Regexes {
     stack.reverse.foreach(open += _)
     val groups = open.result().reverse // innermost first
     // the innermost group followed by a quantifier is the loop
-    val loopStart = groups.find { s =>
-      val close = RegexPortability.closingParen(regex, s)
-      close + 1 < regex.length && (regex.charAt(close + 1) == '*' || regex.charAt(close + 1) == '+')
-    }.getOrElse(throw new java.util.regex.PatternSyntaxException("the space lookahead is not inside a loop", regex, at))
-    val loopClose   = RegexPortability.closingParen(regex, loopStart)
-    val quantifier  = regex.charAt(loopClose + 1)
-    val capturing   = !regex.startsWith("(?", loopStart)
-    val bodyStart   = if (capturing) loopStart + 1 else loopStart + 3
-    val body        = regex.substring(bodyStart, loopClose)
+    val loopStart = groups
+      .find { s =>
+        val close = RegexPortability.closingParen(regex, s)
+        close + 1 < regex.length && (regex.charAt(close + 1) == '*' || regex.charAt(close + 1) == '+')
+      }
+      .getOrElse(throw new java.util.regex.PatternSyntaxException("the space lookahead is not inside a loop", regex, at))
+    val loopClose  = RegexPortability.closingParen(regex, loopStart)
+    val quantifier = regex.charAt(loopClose + 1)
+    val capturing  = !regex.startsWith("(?", loopStart)
+    val bodyStart  = if (capturing) loopStart + 1 else loopStart + 3
+    val body       = regex.substring(bodyStart, loopClose)
     // the loop's alternatives, with a `(?:…)` alternative holding the lookahead flattened into them
     val alternatives = RegexPortability.splitAlternatives(body).flatMap { alt =>
       if (!alt.contains(SpaceNotBeforeQuote)) List(alt)

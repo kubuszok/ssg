@@ -178,3 +178,15 @@ ssg-katex/src/main/scala/ssg/katex/tree/DomTree.scala	shortcuts	(no reason)	2026
 ssg-katex/src/main/scala/ssg/katex/tree/VirtualNode.scala	shortcuts	(no reason)	2026-05-09	dev
 ssg-katex/src/test/scala/ssg/katex/KaTeXSpecSuite.scala	shortcuts	(no reason)	2026-05-09	dev
 original-src/roughjs/src/canvas.ts	roughjs	(no reason)	2026-06-30	dev
+ssg-liquid/port/inject/ssg/liquid/filters/date/Strftime.scala	shortcuts	False positive: XXX and XXXXX are java DateTimeFormatter pattern letters for the ISO zone offset (%:z, %::z, %:::z), not a marker	2026-09-22	dev
+ssg-liquid/port/inject/ssg/liquid/json/SimpleModule.scala	shortcuts	Refusal by name: liqp writes a flat JSON object or hands over a whole value; a nested object is refused rather than silently flattened	2026-09-22	dev
+ssg-liquid/port/rows/no-reflection/ssg/liquid/json/Beans.scala	shortcuts	Platform refusal by name: Scala.js and Scala Native cannot read an object's fields (jackson bean reflection); raised instead of an empty map that renders nothing	2026-09-22	dev
+ssg-md/src/main/scalajs/ssg/md/util/misc/Classes.scala	shortcuts	Java interop boundary: Class.getCanonicalName and Class.getResourceAsStream answer null by java's contract, which the generated (java-shaped) code reads	2026-09-22	dev
+ssg-md/src/main/scalajs/ssg/md/util/misc/Enums.scala	shortcuts	Java interop boundary: Class.getEnumConstants answers null for a non-enum class by java's contract, which the generated code reads	2026-09-22	dev
+ssg-md/src/main/scalajs/ssg/md/util/misc/Numbers.scala	shortcuts	Java interop boundary: NumberFormat.parse answers null when nothing parses by java's contract, which the generated code reads	2026-09-22	dev
+ssg-md/src/main/scalajs/ssg/md/util/misc/JavaGaps.scala	shortcuts	Platform refusal by name: Matcher.useTransparentBounds(true) has no implementation on this platform; the generated code only ever passes false	2026-09-22	dev
+ssg-md/src/main/scalanative/ssg/md/util/misc/Classes.scala	shortcuts	Java interop boundary: Class.getCanonicalName and Class.getResourceAsStream answer null by java's contract, which the generated (java-shaped) code reads	2026-09-22	dev
+ssg-md/src/main/scalanative/ssg/md/util/misc/Enums.scala	shortcuts	Java interop boundary: Class.getEnumConstants answers null for a non-enum class by java's contract, which the generated code reads	2026-09-22	dev
+ssg-md/src/main/scalanative/ssg/md/util/misc/Numbers.scala	shortcuts	Java interop boundary: NumberFormat.parse answers null when nothing parses by java's contract, which the generated code reads	2026-09-22	dev
+ssg-md/src/main/scalanative/ssg/md/util/misc/JavaGaps.scala	shortcuts	Platform refusal by name: Matcher.useTransparentBounds(true) has no implementation on this platform; the generated code only ever passes false	2026-09-22	dev
+ssg-md/src/main/scalanative/ssg/md/util/sequence/Regexes.scala	shortcuts	Java interop boundary: a null Pattern is the refusal token for a regex RE2 cannot compile (lookaround, backreference), counted by refusedPatterns	2026-09-22	dev

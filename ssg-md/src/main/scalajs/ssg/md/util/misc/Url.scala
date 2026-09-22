@@ -13,9 +13,9 @@ package misc
 final class Url(spec: String) {
 
   private val uri: java.net.URI =
-    try {
+    try
       new java.net.URI(spec)
-    } catch {
+    catch {
       case e: java.net.URISyntaxException => throw new java.net.MalformedURLException(e.getMessage)
     }
 
