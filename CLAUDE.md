@@ -79,18 +79,21 @@ a Java→Scala 3 porting engine extended with non-Java frontends for TS/JS and D
 
 `sourceGenerators` in `build.sbt` call `BalticPorterGen` (`project/BalticPorterGen.scala`), which
 runs the porting engine at build time from the PUBLISHED artifacts pinned in `project/plugins.sbt`
-(`balticporter-corpus`, `balticporter-frontend-ts`, resolved from Maven Central's snapshot
-repository). No engine checkout is involved: the port configurations and the hand-written files
-their policies inject are unpacked from the jar under `target/balticporter-engine`.
+(`balticporter-engine`, `balticporter-frontend-ts`, resolved from Maven Central's snapshot
+repository). The engine is generic; HOW liqp and flexmark are ported is this repository's own:
+the port configurations, the hand-written files they inject and the per-platform rows live in
+`ssg-liquid/port/` and `ssg-md/port/`, and `project/LiqpParserClasspath.scala` prepares liqp's
+ANTLR parser as a classpath input. A change to any of them regenerates; no engine release is needed.
 
 - Output: `target/balticporter/<port>/src_managed/{main,test}/scala` (+ `resources`). For the
   markdown ports the TEST source set is flexmark's own JUnit suites ported to MUnit — they, not a
   compile, decide whether the port behaves.
-- Requirements: the upstream submodules (`original-src/flexmark-java`, `original-src/liqp`), JDK 25
-  for the sbt server (the generated code depends on the JDK major) and `cs` on the PATH.
+- Requirements: the upstream submodules (`original-src/flexmark-java`, `original-src/liqp`), liqp's
+  ANTLR output (`cd original-src/liqp && ./mvnw -q generate-sources -pl .`, untracked upstream) and
+  JDK 25 for the sbt server (the generated code depends on the JDK major).
 - The tree is reused while `target/balticporter/.generated-marker` matches the engine pin, the
-  submodule commits, the generator source and the JDK major. CI generates it once (the `generate`
-  job) and every other job restores it — those jobs have no submodule.
+  submodule commits, the port directories, the generator source and the JDK major. CI generates it
+  once (the `generate` job) and every other job restores it — those jobs have no submodule.
 - `sbt --client generatePort` runs the generation alone.
 
 ### Non-Java ports (ssg-graphs-commons, ssg-katex, ssg-mermaid, ssg-js, ssg-sass)

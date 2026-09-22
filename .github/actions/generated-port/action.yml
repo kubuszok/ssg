@@ -6,7 +6,11 @@ description: >
   initialises an upstream submodule; `restore` needs neither.
   The shared action keys on ONE submodule (flexmark-java); every further upstream the generation
   reads is initialised by `command` and its recorded commit goes into the key through `key-extra`
-  — add the next one in those two places, nowhere else.
+  — add the next one in those two places, nowhere else. The port's own inputs (the configurations
+  and injected sources under `ssg-liquid/port` and `ssg-md/port`, and the liqp parser step) are in
+  the key too: a change to any of them must regenerate, and no other job can (it has no submodule).
+  liqp's parser is ANTLR output the upstream does not track, so `command` generates it with liqp's
+  own maven wrapper before the generator runs.
   The `uses:` line below is the ONE place the shared action's version is pinned.
 
 inputs:
@@ -32,15 +36,21 @@ runs:
       run: |
         set -euo pipefail
         liqp=$(git ls-tree HEAD original-src/liqp | awk '{print $3}')
-        test -n "$liqp"
-        echo "extra=liqp-$liqp" >> "$GITHUB_OUTPUT"
+        liquid=$(git rev-parse "HEAD:ssg-liquid/port")
+        md=$(git rev-parse "HEAD:ssg-md/port")
+        parser=$(git hash-object project/LiqpParserClasspath.scala)
+        test -n "$liqp" && test -n "$liquid" && test -n "$md" && test -n "$parser"
+        echo "extra=liqp-$liqp-ports-$liquid-$md-$parser" >> "$GITHUB_OUTPUT"
 
-    - uses: kubuszok/balticporter/.github/actions/generated-port@8d0cf549f1e8a501c772975301013f3b3b0af19f
+    - uses: kubuszok/balticporter/.github/actions/generated-port@55be328a2265f34c8d41d30634569229539cf562
       id: port
       with:
         mode: ${{ inputs.mode }}
         key: ${{ inputs.key }}
         path: target/balticporter
         submodule: original-src/flexmark-java
-        command: git submodule update --init --depth=1 original-src/liqp && sbt generatePort
+        command: >-
+          git submodule update --init --depth=1 original-src/liqp
+          && (cd original-src/liqp && chmod +x mvnw && ./mvnw -q generate-sources -pl .)
+          && sbt generatePort
         key-extra: ${{ steps.upstreams.outputs.extra }}
