@@ -1,0 +1,5 @@
+# Runner labels actionlint does not know: GitHub's Arm-based Windows runner, used by the Native
+# test matrix (`windows-11-arm`), is a hosted runner label actionlint's list does not carry yet.
+self-hosted-runner:
+  labels:
+    - windows-11-arm
