@@ -22,9 +22,9 @@ enum LinkType extends java.lang.Enum[LinkType] {
 }
 
 trait LinkSpan {
-  def getType(): LinkType
+  def getType():       LinkType
   def getBeginIndex(): Int
-  def getEndIndex(): Int
+  def getEndIndex():   Int
 }
 
 abstract class LinkExtractor {
@@ -56,7 +56,7 @@ final class LinkExtractorBuilder {
 final class RegexLinkExtractor(types: java.util.Set[LinkType]) extends LinkExtractor {
   import RegexLinkExtractor.*
 
-  private final class Span(linkType: LinkType, beginIndex: Int, endIndex: Int) extends LinkSpan {
+  final private class Span(linkType: LinkType, beginIndex: Int, endIndex: Int) extends LinkSpan {
     def getType():       LinkType = linkType
     def getBeginIndex(): Int      = beginIndex
     def getEndIndex():   Int      = endIndex

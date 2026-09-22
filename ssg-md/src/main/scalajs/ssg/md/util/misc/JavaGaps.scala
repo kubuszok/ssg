@@ -24,6 +24,20 @@ object JavaGaps {
     }
   }
 
+  /** Java's contract for `StringBuilder.append(CharSequence, int, int)`: the characters `start` until `end`, read one by one — Scala.js reads them through the sequence's `toString`, which a `toString` written over this call recurses into. */
+  def append(sb: java.lang.StringBuilder, s: CharSequence, start: Int, end: Int): java.lang.StringBuilder = {
+    val cs = if (s == null) "null" else s // java interop boundary: java's own null rule for this call
+    if (start < 0 || start > end || end > cs.length) {
+      throw new IndexOutOfBoundsException("start " + start + ", end " + end + ", length " + cs.length)
+    }
+    var i = start
+    while (i < end) {
+      sb.append(cs.charAt(i))
+      i += 1
+    }
+    sb
+  }
+
   /** A Scala.js matcher's bounds are always opaque, which is what `false` asks for (flexmark never asks for anything else); transparent bounds are refused rather than ignored. */
   def useTransparentBounds(matcher: Matcher, transparent: Boolean): Matcher = {
     if (transparent) {

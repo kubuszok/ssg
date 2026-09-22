@@ -10,7 +10,7 @@ package internal
 
 object PlatformLinkExtractor {
 
-  private final class Span(span: org.nibor.autolink.LinkSpan) extends LinkSpan {
+  final private class Span(span: org.nibor.autolink.LinkSpan) extends LinkSpan {
     def getType(): LinkType =
       span.getType() match {
         case org.nibor.autolink.LinkType.URL   => LinkType.URL
