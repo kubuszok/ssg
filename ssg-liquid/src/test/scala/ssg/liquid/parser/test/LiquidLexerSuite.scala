@@ -1106,10 +1106,9 @@ final class LiquidLexerSuite extends munit.FunSuite {
     assertEquals(Template.parse("{{fubar}}").render(vars), "ok")
   }
 
-  // NOTE: SSG lexer does not support identifiers starting with digits.
-  // In the original ANTLR grammar, ruby-style identifiers like "3ubar" are valid.
-  // SSG lexes "3" as a number and "ubar" as a separate identifier.
-  test("Id: identifier starting with digit — ANTLR grammar accepts ruby-style identifiers") { // ISS-1264 — generated ANTLR parser handles this
+  // In the original ANTLR grammar, ruby-style identifiers like "3ubar" are valid: the Id rule wins
+  // by longest match over the number rule. The lexer the port injects applies the same rule.
+  test("Id: identifier starting with digit — ANTLR grammar accepts ruby-style identifiers") { // ISS-1264 — resolved by the injected lexer's longest match
     // Ruby liquid identifiers can start with a number
     val vars = new JHashMap[String, DataView]()
     vars.put("3ubar", TestHelper.dv("ok"))
