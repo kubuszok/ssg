@@ -369,6 +369,8 @@ lazy val `ssg-md` = (projectMatrix in file("ssg-md"))
   .someVariations(versions.scalas, versions.platforms)((commonSettings ++ dev.only1VersionInIDE ++ Seq(
     MatrixAction.ForPlatforms(VirtualAxis.js).Configure(_.settings(
       mdOffJvmLocales,
+      // flexmark's own suites expect java's NullPointerException where the code dereferences null
+      scalaJSLinkerConfig ~= (_.withSemantics(_.withNullPointers(org.scalajs.linker.interface.CheckedBehavior.Compliant))),
       _root_.multiarch.sbt.MultiArchResourcesPlugin.embeddedResourcesSettings(
         objectName = "ssg.md.util.misc.GeneratedEmbeddedResources"
       )
@@ -405,6 +407,8 @@ lazy val `ssg-md` = (projectMatrix in file("ssg-md"))
       BalticPorterGen.markdownResources((ThisBuild / baseDirectory).value, streams.value.log)
     }.taskValue,
     Compile / managedResourceDirectories += (ThisBuild / baseDirectory).value / "target" / "balticporter" / "ssg-md" / "src_managed" / "main" / "resources",
+    // the spec files flexmark's own suites read; Scala Native embeds only what a resource DIRECTORY holds
+    Test / managedResourceDirectories += (ThisBuild / baseDirectory).value / "target" / "balticporter" / "ssg-md" / "src_managed" / "test" / "resources",
     // flexmark's own suites, generated from its java tests: what decides whether the port behaves.
     Test / sourceGenerators += Def.task {
       BalticPorterGen.generateFlexmarkTests((ThisBuild / baseDirectory).value, streams.value.log)
