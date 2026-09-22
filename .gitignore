@@ -7,8 +7,10 @@
 project/*
 !project/plugins.sbt
 !project/build.properties
-!project/SsgSettings.scala
 !project/Versions.scala
+!project/BalticPorterGen.scala
+!project/LiqpParserClasspath.scala
+!project/RemoteCacheSetup.scala
 target/
 .sbt/
 
