@@ -18,9 +18,9 @@ package collection
 trait ClassificationBagByClassTests { this: munit.FunSuite =>
 
   test("testBasic") {
-    val bag  = new ClassificationBag[Class[?], Object]((value: Object) => value.getClass())
+    val bag = new ClassificationBag[Class[?], Object]((value: Object) => value.getClass())
     var item: Object = null // java interop boundary: the test's own null start value
-    var i    = 0
+    var i = 0
     while (i < 10) {
       item = Integer.valueOf(i)
       bag.add(item)
@@ -85,9 +85,9 @@ trait ClassificationBagByClassTests { this: munit.FunSuite =>
   }
 
   test("testInterleave") {
-    val bag  = new ClassificationBag[Class[?], Object]((value: Object) => value.getClass())
+    val bag = new ClassificationBag[Class[?], Object]((value: Object) => value.getClass())
     var item: Object = null // java interop boundary: the test's own null start value
-    var i    = 0
+    var i = 0
     while (i < 10) {
       item = Integer.valueOf(i)
       bag.add(item)
