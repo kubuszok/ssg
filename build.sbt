@@ -338,7 +338,7 @@ lazy val `ssg-liquid` = (projectMatrix in file("ssg-liquid"))
       // what the generated code is written against: the engine's cross-platform runtime, and the
       // service loader the port's own providers are found through. No JVM-only library: the ANTLR
       // runtime, jackson and strftime4j are replaced inside the port by hand-written Scala.
-      "com.kubuszok"                    %% "balticporter-runtime"      % "1b4a7b57a9b4a5e7c0f64e07a17b312ffd6d957a-SNAPSHOT",
+      "com.kubuszok"                    %% "balticporter-runtime"      % "74c286af179a28df4b60612b4496846cc2b54078-SNAPSHOT",
       "com.kubuszok"                    %% "multiarch-serviceloader"   % "0.4.0-12-gc168b2f-SNAPSHOT",
     ),
     resolvers += "Central Portal Snapshots" at "https://central.sonatype.com/repository/maven-snapshots",
@@ -359,20 +359,27 @@ lazy val `ssg-liquid` = (projectMatrix in file("ssg-liquid"))
 // multiarch.resources.PlatformResourcesImpl (scalajs) consults first, falling back to a Node fs lookup
 // for in-repo development. ssg.md.util.misc.PlatformResources is a thin boundary shim that delegates to
 // the shared API and converts Option -> Nullable (ISS-979).
+// what the ported number formatting (`Locale`, `NumberFormat`, `DecimalFormatSymbols`) needs off the JVM
+val mdOffJvmLocales: Seq[Setting[?]] = Seq(
+  libraryDependencies += "io.github.cquiroz" %% "scala-java-locales" % versions.scalaJavaLocales
+)
+
 lazy val `ssg-md` = (projectMatrix in file("ssg-md"))
   .defaultAxes(VirtualAxis.jvm, VirtualAxis.scalaABIVersion(versions.scala3))
   .someVariations(versions.scalas, versions.platforms)((commonSettings ++ dev.only1VersionInIDE ++ Seq(
     MatrixAction.ForPlatforms(VirtualAxis.js).Configure(_.settings(
+      mdOffJvmLocales,
       _root_.multiarch.sbt.MultiArchResourcesPlugin.embeddedResourcesSettings(
         objectName = "ssg.md.util.misc.GeneratedEmbeddedResources"
       )
-    ))
+    )),
+    MatrixAction.ForPlatforms(VirtualAxis.native).Configure(_.settings(mdOffJvmLocales))
   )) *)
   .settings(
     name := "ssg-md",
     libraryDependencies ++= Seq(
       "com.kubuszok"       %% "multiarch-resources"   % versions.multiarch,
-      "com.kubuszok"       %% "balticporter-runtime"  % "1b4a7b57a9b4a5e7c0f64e07a17b312ffd6d957a-SNAPSHOT",
+      "com.kubuszok"       %% "balticporter-runtime"  % "74c286af179a28df4b60612b4496846cc2b54078-SNAPSHOT",
       "org.jetbrains"       % "annotations"           % "24.0.1" % Provided,
       "org.nibor.autolink"  % "autolink"              % "0.6.0",
     ),
@@ -563,7 +570,7 @@ lazy val root = (project in file("."))
       val allModules = Seq("ssg-commons", "ssg-data-commons", "ssg-graphs-commons", "ssg-graphviz",
         "ssg-highlight", "ssg-js", "ssg-katex", "ssg-liquid", "ssg-md", "ssg-mermaid",
         "ssg-minify", "ssg-sass", "ssg-site")
-      val jvmOnly = Set("ssg-md", "ssg-highlight", "ssg-site")
+      val jvmOnly = Set("ssg-highlight")
       val compile = allModules.map(m => s"${m}Native/compile").mkString(" ; ")
       val test = allModules.filterNot(jvmOnly).map(m => s"${m}Native/testFull").mkString(" ; ")
       s"$compile ; ssgNative/compile ; $test"
