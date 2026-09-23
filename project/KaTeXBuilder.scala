@@ -36,7 +36,6 @@ object KaTeXBuilder {
     " `macro`",
     // JS operators and constructs the translator does not lower
     "typeof ",
-    "delete ",
     "void 0",
     "...",
     "?.",
@@ -49,7 +48,6 @@ object KaTeXBuilder {
     "RegExp(",
     // JS new with expression or constructor calls
     "new (",
-    "new Map(",
     "new Set(",
     "new RegExp(",
     // JS this rebinding
@@ -61,11 +59,8 @@ object KaTeXBuilder {
     ">>>=",
     // Bodies the translator emits that produce structural or semantic errors in ssg-katex.
     // Each pattern was identified from a compile error in the derived output.
-    "return ", // early return not supported under -no-indent
-    ".push(", // array mutation API not available on ssg-katex types
     ".charCodeAt(", // JS string API not in Scala String
     ".isInstanceOf[Function", // runtime function type check
-    "Map.empty", // wrong Map import (immutable vs mutable)
     "(((", // double-wrapped lambda the translator produces
     // The translator accesses fields and methods by their JS names, which do not match ssg-katex's
     // Scala API. Any body that references `this.` is almost certainly wrong.
@@ -89,7 +84,6 @@ object KaTeXBuilder {
     // Catch any remaining unbalanced bodies: the translator sometimes emits extra braces
     "++= ", // mutable collection append
     "new Array", // JS Array constructor
-    "Array(", // JS Array literal
     ".concat(", // JS array concatenation
     ".splice(", // JS array mutation
     ".join(", // JS array join
@@ -143,6 +137,67 @@ object KaTeXBuilder {
     "unit.unit" // validUnit body: wrong `unit` access
   )
 
+  /** Per-member exclusions: translated bodies that do not compile due to translator defects. Each entry maps a camelCase member name to the defect reason. The body is kept from the reference with
+    * reason `translator-refusal:<defect>` in bodies.tsv.
+    *
+    * Translator defects observed:
+    *   - empty-using: `(using )` emitted as boundary label (return type not resolved)
+    *   - nullable-ops: JS truthiness operators on Nullable types (`!x`, `x && y`)
+    *   - js-map-construction: JS object literal translated as `mutable.Map(...)` instead of a proper typed construction
+    *   - wrong-member-access: accessing `.loc`, `.children`, `.text` etc. on wrong Scala types
+    *   - wrong-function-ref: calling functions not in scope or with wrong signatures
+    *   - wrong-type: type mismatch in return position or arguments
+    */
+  private val memberExclusions: Map[String, String] = Map(
+    // KaTeX.scala: all 3 translated bodies produce empty-using and wrong type for parser output
+    "generateParseTree" -> "translator-defect:empty-using+wrong-type",
+    "renderToDomTree" -> "translator-defect:empty-using+wrong-type",
+    "renderToHTMLTree" -> "translator-defect:empty-using+wrong-type",
+    // SourceLocation.scala: nullable-ops and empty-using
+    "range" -> "translator-defect:empty-using+nullable-ops",
+    // CdEnv.scala: empty-using and js-map-construction
+    "newCell" -> "translator-defect:js-map-construction+wrong-type",
+    "cdArrow" -> "translator-defect:empty-using+js-map-construction+wrong-type",
+    // EnvironmentDef.scala: js-map-construction and wrong-function-ref
+    "defineEnvironment" -> "translator-defect:js-map-construction+wrong-function-ref",
+    // FontMetrics.scala: wrong-type for metrics map iteration
+    "setFontMetrics" -> "translator-defect:wrong-type+wrong-member-access",
+    "getGlobalMetrics" -> "translator-defect:wrong-type+wrong-member-access",
+    // Utils.scala: wrong-member-access and empty-using
+    "getBaseElem" -> "translator-defect:wrong-member-access+wrong-type",
+    "protocolFromUrl" -> "translator-defect:empty-using+wrong-member-access",
+    // FunctionDef.scala: js-map-construction and wrong-function-ref
+    "defineFunction" -> "translator-defect:js-map-construction+wrong-function-ref",
+    "normalizeArgument" -> "translator-defect:wrong-member-access",
+    "ordargument" -> "translator-defect:wrong-member-access",
+    // SupsubFunc.scala: wrong-type for HTML builder output
+    "htmlBuilderDelegate" -> "translator-defect:wrong-type+wrong-member-access",
+    // MathchoiceFunc.scala: wrong-type for style choice
+    "chooseMathStyle" -> "translator-defect:wrong-type",
+    // AccentFunc.scala: wrong-member-access on HtmlDomNode
+    "getBaseSymbol" -> "translator-defect:wrong-type+wrong-member-access",
+    // BuildCommon.scala: wrong-type and wrong-member-access
+    "boldsymbol" -> "translator-defect:wrong-type+wrong-member-access",
+    // BuildHTML.scala: wrong-type
+    "getOutermostNode" -> "translator-defect:wrong-type",
+    // MclassFunc.scala: wrong-type for mclass binary relation
+    "binrelClass" -> "translator-defect:wrong-type",
+    // UnicodeScripts.scala: wrong-type for code point check
+    "supportedCodepoint" -> "translator-defect:wrong-type",
+    // Macros.scala: wrong-type for macro definition
+    "defineMacro" -> "translator-defect:wrong-type",
+    // BuildMathML.scala: wrong-member-access on MathML nodes
+    "makeRow" -> "translator-defect:wrong-member-access",
+    // ArrayEnv.scala: wrong-type and wrong-member-access
+    "getHLines" -> "translator-defect:wrong-type+wrong-member-access",
+    "getAutoTag" -> "translator-defect:wrong-type",
+    "dCellStyle" -> "translator-defect:wrong-type",
+    // GenfracFunc.scala: wrong-type
+    "wrapWithStyle" -> "translator-defect:wrong-type",
+    // TagFunc.scala: wrong-type
+    "pad" -> "translator-defect:wrong-type"
+  )
+
   val policy: ParityDerive.Policy =
     ParityDerive.Policy(uncompilablePatterns = uncompilablePatterns, keepReferenceOnRefusal = true)
 
@@ -189,28 +244,25 @@ object KaTeXBuilder {
   private def capitalizeFirst(s: String): String =
     if (s.isEmpty) s else s(0).toUpper + s.substring(1)
 
-  /** Names of JS functions whose camelCase form collides with unoffered members in other reference files. Registering a translated body with one of these names causes an `unclassified` label in
-    * bodies.tsv for the OTHER file's member of that name.
+  /** Names of JS functions whose camelCase form collides with members in files that no RAST feeds. Registering a translated body with one of these names causes an `unclassified` label in bodies.tsv
+    * for the OTHER file's member of that name.
+    *
+    * With the module table mapping each exported TS file to its correct reference file, most former collisions are resolved. The remaining entries are names that appear as function definitions in
+    * multiple RAST files AND as members in no-export reference files.
     */
   private val collisionProneNames: Set[String] = Set(
-    "expandAfterFuture",
-    "consumeArgs",
-    "sizeAtStyle",
-    "havingStyle",
-    "reportNonstrict",
-    "get",
-    "setFontMetrics",
-    "getCharacterMetrics",
-    "getGlobalMetrics",
-    "text",
-    "defineSymbol",
-    "initNode",
-    "toMarkup",
-    "setAttribute",
-    "newDocumentFragment",
-    "toNode",
-    "hasClass",
-    "toText"
+    "get", // common method name across many types
+    "text", // method on many types (Token, SymbolNode, MathNode, etc.)
+    // Names that appear as function definitions in RAST files but whose reference-file members
+    // are in positions the skeleton parser cannot replace (file-level defs, private helpers in
+    // object companions, etc.). Suppressing them prevents `unclassified` in bodies.tsv.
+    "sizeAtStyle", // Options.scala: file-level private def
+    "havingStyle", // Options.scala: override inside class body not detected by skeleton
+    "reportNonstrict", // Settings.scala: override inside class body not detected by skeleton
+    "setHLinePos", // ArrayEnv.scala: nested def inside environment handler
+    "initNode", // DomTree.scala: private[tree] helper
+    "toMarkup", // DomTree.scala: method on multiple tree classes, one occurrence unoffered
+    "newDocumentFragment" // MathMLTree.scala: utility function
   )
 
   /** Extract every function, function-valued variable and method with a body from a RAST file. */
@@ -248,14 +300,17 @@ object KaTeXBuilder {
     results.toList
   }
 
-  /** Translate the RAST bodies in a file into parity-derive bodies.
+  /** Translate the RAST bodies from one or more files into parity-derive bodies.
     *
     * Every translated body goes through the uncompilable pattern check via the policy; bodies that contain any declared pattern are kept from the reference with a recorded reason in bodies.tsv.
     */
-  private def buildTranslatedBodyMap(rastFile: RastFile): ParityDerive.Bodies = {
+  private def buildTranslatedBodyMap(rastFiles: List[RastFile]): ParityDerive.Bodies = {
     val result = mutable.Map.empty[String, mutable.ListBuffer[ParityDerive.TranslatedBody]]
 
-    for ((name, params, body) <- functionBodies(rastFile)) {
+    for {
+      rastFile <- rastFiles
+      (name, params, body) <- functionBodies(rastFile)
+    } {
       // Skip functions whose camelCase name collides with common methods across many reference
       // files. These cause `unclassified` labels in bodies.tsv when a name from one file's RAST
       // matches an unoffered member in another file.
@@ -264,8 +319,13 @@ object KaTeXBuilder {
         val entry      = DefmethodEntry("_free_", name, params, body)
         val translated = DefmethodBodyTranslator.translateBody(entry, Nil, "    ", apiLookup = apiLookup)
         // An empty or whitespace-only body is a translator failure; record it as a refusal
-        val bodyText = translated.scalaBody.trim
-        val reasons  = if (bodyText.isEmpty) "empty-body" :: translated.refusalReasons else translated.refusalReasons
+        val bodyText    = translated.scalaBody.trim
+        val baseReasons = if (bodyText.isEmpty) "empty-body" :: translated.refusalReasons else translated.refusalReasons
+        // Per-member exclusions: bodies that do not compile due to known translator defects
+        val reasons = memberExclusions.get(key) match {
+          case Some(defect) => defect :: baseReasons
+          case None         => baseReasons
+        }
         result.getOrElseUpdate(key, mutable.ListBuffer.empty) += ParityDerive.TranslatedBody(translated.scalaBody, reasons)
       }
     }
@@ -278,6 +338,9 @@ object KaTeXBuilder {
   // -------------------------------------------------------------------------
 
   private val coreModules: List[(String, String)] = List(
+    // Top-level entry point
+    ("katex.rast.json", "KaTeX.scala"),
+    // Core types and settings
     ("src/Options.rast.json", "Options.scala"),
     ("src/Token.rast.json", "Token.scala"),
     ("src/ParseError.rast.json", "ParseError.scala"),
@@ -285,30 +348,51 @@ object KaTeXBuilder {
     ("src/Style.rast.json", "Style.scala"),
     ("src/Namespace.rast.json", "Namespace.scala"),
     ("src/Settings.rast.json", "Settings.scala"),
+    // Tree nodes
     ("src/domTree.rast.json", "tree/DomTree.scala"),
+    ("src/tree.rast.json", "tree/VirtualNode.scala"),
     ("src/mathMLTree.rast.json", "tree/MathMLTree.scala"),
+    // Build pipeline
     ("src/buildCommon.rast.json", "build/BuildCommon.scala"),
     ("src/buildHTML.rast.json", "build/BuildHTML.scala"),
     ("src/buildMathML.rast.json", "build/BuildMathML.scala"),
     ("src/buildTree.rast.json", "build/BuildTree.scala"),
     ("src/stretchy.rast.json", "build/Stretchy.scala"),
     ("src/delimiter.rast.json", "build/Delimiter.scala"),
+    // Data modules
     ("src/svgGeometry.rast.json", "data/SvgGeometry.scala"),
+    ("src/symbols.rast.json", "data/Symbols.scala"),
+    ("src/spacingData.rast.json", "data/SpacingData.scala"),
+    ("src/fontMetrics.rast.json", "data/FontMetrics.scala"),
+    ("src/fontMetricsData.rast.json", "data/FontMetricsData.scala"),
+    ("src/unicodeScripts.rast.json", "data/UnicodeScripts.scala"),
+    ("src/unicodeSupOrSub.rast.json", "data/UnicodeSupOrSub.scala"),
+    ("src/units.rast.json", "data/Units.scala"),
+    ("src/unicodeAccents.rast.json", "data/UnicodeAccents.scala"),
+    ("src/unicodeSymbols.rast.json", "data/UnicodeSymbols.scala"),
+    ("src/wide-character.rast.json", "data/WideCharacter.scala"),
+    // Parse layer
     ("src/parseNode.rast.json", "parse/ParseNode.scala"),
     ("src/parseTree.rast.json", "parse/ParseTree.scala"),
     ("src/Parser.rast.json", "parse/Parser.scala"),
     ("src/Lexer.rast.json", "parse/Lexer.scala"),
     ("src/MacroExpander.rast.json", "parse/MacroExpander.scala"),
+    // Macro definitions: macros.rast.json is the primary, defineMacro.rast.json
+    // adds the defineMacro function and type definitions (merged by NonJavaBodies)
     ("src/macros.rast.json", "data/Macros.scala"),
-    ("src/symbols.rast.json", "functions/SymbolsSpacingFunc.scala"),
-    ("src/spacingData.rast.json", "data/SpacingData.scala"),
-    ("src/fontMetrics.rast.json", "data/FontMetricsData.scala"),
-    ("src/unicodeScripts.rast.json", "data/UnicodeScripts.scala"),
-    ("src/unicodeSupOrSub.rast.json", "data/UnicodeSupOrSub.scala"),
-    ("src/units.rast.json", "data/Units.scala"),
+    ("src/defineMacro.rast.json", "data/Macros.scala"),
+    ("src/defineMacro.rast.json", "MacroDef.scala"),
+    // Function/environment definitions and registries
+    ("src/defineFunction.rast.json", "functions/FunctionDef.scala"),
+    ("src/functions.rast.json", "functions/Functions.scala"),
+    ("src/defineEnvironment.rast.json", "environments/EnvironmentDef.scala"),
+    ("src/environments.rast.json", "environments/Environments.scala"),
+    // Environment implementations
+    ("src/environments/array.rast.json", "environments/ArrayEnv.scala"),
+    ("src/environments/cd.rast.json", "environments/CdEnv.scala"),
+    // Utilities
     ("src/utils.rast.json", "util/Utils.scala"),
-    ("src/unicodeAccents.rast.json", "data/UnicodeAccents.scala"),
-    ("src/unicodeSymbols.rast.json", "data/UnicodeSymbols.scala")
+    ("src/functions/utils/assembleSupSub.rast.json", "functions/utils/AssembleSupSub.scala")
   )
 
   private val functionNames: List[String] = List(
@@ -335,8 +419,6 @@ object KaTeXBuilder {
     "math",
     "mathchoice",
     "mclass",
-    "newcommand",
-    "not",
     "op",
     "operatorname",
     "ordgroup",
@@ -354,9 +436,11 @@ object KaTeXBuilder {
     "symbolsOp",
     "symbolsOrd",
     "symbolsSpacing",
+    "tag",
     "text",
     "underline",
-    "vcenter"
+    "vcenter",
+    "verb"
   )
 
   private val functionModules: List[(String, String)] = functionNames.map { name =>
@@ -364,7 +448,18 @@ object KaTeXBuilder {
     (s"src/functions/$name.rast.json", s"functions/${capName}Func.scala")
   }
 
-  private val allModules: List[(String, String)] = coreModules ++ functionModules
+  /** Reference files with no corresponding RAST export. Registered with a deliberately non-existent RAST path so that NonJavaBodies reports `translator-refusal:missing-rast` for every member,
+    * distinguishing them from files whose RAST was loaded but had nothing to offer (which report `no-translated-body`).
+    */
+  private val noExportModules: List[(String, String)] = List(
+    ("__no-export__/KaTeXOptions", "KaTeXOptions.scala"),
+    ("__no-export__/LexerInterface", "LexerInterface.scala"),
+    ("__no-export__/Mode", "Mode.scala"),
+    ("__no-export__/Measurement", "data/Measurement.scala"),
+    ("__no-export__/InMemoryNode", "tree/InMemoryNode.scala")
+  )
+
+  private val allModules: List[(String, String)] = coreModules ++ functionModules ++ noExportModules
 
   /** The Library value for `NonJavaBodies.build`.
     *
@@ -379,7 +474,7 @@ object KaTeXBuilder {
       modules = _ =>
         Right(
           allModules.map { case (rastPath, refPath) =>
-            NonJavaBodies.Module(refPath, rastPath, Nil, rasts => buildTranslatedBodyMap(rasts.head))
+            NonJavaBodies.Module(refPath, rastPath, Nil, rasts => buildTranslatedBodyMap(rasts))
           }
         )
     )
