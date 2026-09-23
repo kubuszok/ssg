@@ -580,7 +580,7 @@ lazy val root = (project in file("."))
   )
   .settings(
     // generatePort: run the Baltic Porter markdown generation and nothing else (the CI `generate` job)
-    addCommandAlias("generatePort", "ssg-md/Compile/managedSources ; ssg-md/Compile/managedResources"),
+    addCommandAlias("generatePort", "ssg-md/Compile/managedSources ; ssg-md/Compile/managedResources ; ssg-katex/Compile/managedSources"),
     // verifyLocal: the gate before a push — every platform's tests, then record the verified commit
     addCommandAlias("verifyLocal", "scalafmtCheckAll ; scalafmtSbtCheck ; ci-jvm-3 ; ci-js-3 ; ci-native-3 ; markVerified")
   )
