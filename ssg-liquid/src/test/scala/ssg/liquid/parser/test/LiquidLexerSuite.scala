@@ -271,7 +271,7 @@ final class LiquidLexerSuite extends munit.FunSuite {
 
   // NOTE: SSG lexer strips whitespace after -}}, so " after" becomes "after".
   // But the expression "true-" may parse differently than "true" + closing "-}}".
-  test("OutEnd: -}} strips trailing whitespace".fail) { // ISS-1263 (ISS-1024 umbrella)
+  test("OutEnd: -}} strips trailing whitespace") {
     assertEquals(Template.parse("{{true-}} after").render(), "trueafter")
   }
 
@@ -300,7 +300,7 @@ final class LiquidLexerSuite extends munit.FunSuite {
   }
 
   // NOTE: SSG lexer may parse "true-" differently. Test with space: "true -%}"
-  test("TagEnd: -%} strips trailing whitespace".fail) { // ISS-1263 (ISS-1024 umbrella)
+  test("TagEnd: -%} strips trailing whitespace") {
     assertEquals(Template.parse("{%if true-%} ok{%endif%}").render(), "ok")
   }
 

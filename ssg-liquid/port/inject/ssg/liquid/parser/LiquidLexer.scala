@@ -216,8 +216,12 @@ final class LiquidLexer(
     val startCol  = col
     val idStart   = pos
 
-    while (pos < input.length() && isIdContinue(input.charAt(pos)))
-      advance(1)
+    while (
+      pos < input.length() && isIdContinue(input.charAt(pos)) &&
+      // Don't consume a '-' that begins '-%}' whitespace-control close
+      !(input.charAt(pos) == '-' && pos + 2 < input.length() &&
+        input.charAt(pos + 1) == '%' && input.charAt(pos + 2) == '}')
+    ) advance(1)
 
     if (pos == idStart) {
       // Empty tag: {% %}
@@ -447,8 +451,13 @@ final class LiquidLexer(
   /** Where an `Id` starting at `from` would end (LiquidLexer.g4:186). */
   private def idEndFrom(from: Int): Int = {
     var i = from
-    while (i < input.length() && isIdContinue(input.charAt(i)))
-      i += 1
+    while (
+      i < input.length() && isIdContinue(input.charAt(i)) &&
+      // Don't consume a '-' that begins '-}}' or '-%}' whitespace-control close
+      !(input.charAt(i) == '-' && i + 2 < input.length() &&
+        ((input.charAt(i + 1) == '}' && input.charAt(i + 2) == '}') ||
+          (input.charAt(i + 1) == '%' && input.charAt(i + 2) == '}')))
+    ) i += 1
     i
   }
 
@@ -504,8 +513,15 @@ final class LiquidLexer(
     val startCol  = col
     val idStart   = pos
 
-    while (pos < input.length() && isIdContinue(input.charAt(pos)))
-      advance(1)
+    while (
+      pos < input.length() && isIdContinue(input.charAt(pos)) &&
+      // Don't consume a '-' that begins the '-}}' or '-%}' whitespace-control close:
+      // liqp's ANTLR lexer matches '-}}' / '-%}' as dedicated OutEnd / TagEnd tokens,
+      // so the '-' belongs to the close, not the identifier — `{{true-}}` is `true` + `-}}`.
+      !(input.charAt(pos) == '-' && pos + 2 < input.length() &&
+        ((input.charAt(pos + 1) == '}' && input.charAt(pos + 2) == '}') ||
+          (input.charAt(pos + 1) == '%' && input.charAt(pos + 2) == '}')))
+    ) advance(1)
 
     val id = input.substring(idStart, pos)
 
