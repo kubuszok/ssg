@@ -9,6 +9,7 @@ project/*
 !project/build.properties
 !project/Versions.scala
 !project/BalticPorterGen.scala
+!project/KaTeXBuilder.scala
 !project/LiqpParserClasspath.scala
 !project/RemoteCacheSetup.scala
 target/

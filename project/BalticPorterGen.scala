@@ -258,6 +258,237 @@ object BalticPorterGen {
   }
 
   // ---------------------------------------------------------------------------
+  // KaTeX: export RAST from original-src/katex, then derive via NonJavaBodies.
+  // Both the export and the derived tree live under target/balticporter/ so the
+  // generated-port cache stores and restores them together. A single marker
+  // records the fingerprint; when it matches, no submodule is needed.
+  // ---------------------------------------------------------------------------
+
+  /** Read a submodule commit the same way `fingerprint` does: the submodule's HEAD when it is checked out, else `git ls-tree HEAD <path>` (works on a shallow checkout without the submodule).
+    */
+  private def submoduleCommit(ssgRoot: Path, path: String): String = {
+    def git(dir: Path, args: String*): Option[String] = {
+      val pb = new ProcessBuilder(("git" +: args)*)
+      pb.directory(dir.toFile)
+      pb.redirectErrorStream(true)
+      val p   = pb.start()
+      val out = new String(p.getInputStream.readAllBytes()).trim
+      if (p.waitFor() == 0 && out.nonEmpty) Some(out) else None
+    }
+    val submodule = ssgRoot.resolve(path)
+    (if (Files.exists(submodule.resolve(".git"))) git(submodule, "rev-parse", "HEAD") else None).orElse(git(ssgRoot, "ls-tree", "HEAD", path).flatMap(_.split("\\s+").lift(2))).getOrElse("unknown")
+  }
+
+  /** The exporter version from the manifest bundled in the frontend-ts jar. */
+  private def exporterVersion(): String = {
+    val mfUrl = getClass.getClassLoader.getResource("balticporter/frontend/ts/exporter/manifest.properties")
+    if (mfUrl == null) return "unknown"
+    val props  = new java.util.Properties()
+    val stream = mfUrl.openStream()
+    try props.load(stream)
+    finally stream.close()
+    props.getProperty("exporter.version", "unknown")
+  }
+
+  /** Fingerprint for the ssg-katex generated tree: the inputs that, when any changes, require a full re-export and re-derive. Readable WITHOUT the submodule checked out.
+    */
+  private def katexFingerprint(ssgRoot: Path): String = {
+    val pin     = """balticporter-engine" % "([^"]+)"""".r.findFirstMatchIn(Files.readString(ssgRoot.resolve("project/plugins.sbt"))).map(_.group(1)).getOrElse("unknown")
+    val katex   = submoduleCommit(ssgRoot, "original-src/katex")
+    val expVer  = exporterVersion()
+    val builder = {
+      val md = java.security.MessageDigest.getInstance("SHA-256")
+      md.update(Files.readString(ssgRoot.resolve("project/KaTeXBuilder.scala")).replace("\r", "").getBytes("UTF-8"))
+      md.digest().take(8).map(b => f"$b%02x").mkString
+    }
+    val reference = {
+      val refDir = ssgRoot.resolve("ssg-katex/reference/scala")
+      val md     = java.security.MessageDigest.getInstance("SHA-256")
+      if (Files.isDirectory(refDir)) {
+        val s = Files.walk(refDir)
+        try {
+          val files = scala.jdk.CollectionConverters.IteratorHasAsScala(s.filter(Files.isRegularFile(_)).iterator()).asScala.toList
+          files.map(p => refDir.relativize(p).toString.replace('\\', '/') -> p).sortBy(_._1).foreach { case (rel, p) =>
+            md.update(rel.getBytes("UTF-8"))
+            md.update(Files.readAllBytes(p))
+          }
+        } finally s.close()
+      }
+      md.digest().take(8).map(b => f"$b%02x").mkString
+    }
+    s"engine=$pin katex=$katex exporter=$expVer builder=$builder reference=$reference"
+  }
+
+  /** Generate ssg-katex: export RAST from original-src/katex (if needed), then derive.
+    *
+    * Everything lives under `target/balticporter/ssg-katex/`. When the marker matches the fingerprint, both the export and the derived tree are reused without touching the submodule. Only a
+    * fingerprint mismatch needs the submodule initialised.
+    */
+  def generateKatex(buildBase: File, log: sbt.util.Logger): Seq[File] =
+    BalticPorterGen.synchronized {
+      val ssgRoot      = buildBase.toPath.toAbsolutePath.normalize
+      val katexRoot    = ssgRoot.resolve("target/balticporter/ssg-katex")
+      val rastDir      = katexRoot.resolve("rast")
+      val outDir       = katexRoot.resolve("src_managed/main/scala")
+      val reportDir    = katexRoot.resolve("report")
+      val marker       = katexRoot.resolve(".generated-marker")
+      val referenceDir = ssgRoot.resolve("ssg-katex/reference/scala")
+
+      val expected = katexFingerprint(ssgRoot)
+
+      val cached = Files.exists(marker) && Files.isDirectory(outDir) && Files.isDirectory(rastDir) &&
+        Files.readString(marker).trim == expected
+
+      if (cached) {
+        log.info(s"[Baltic Porter] Using cached ssg-katex tree ($expected)")
+        return collectScalaFiles(outDir)
+      }
+
+      // --- fingerprint mismatch: need the submodule ---
+      val katexSrc = ssgRoot.resolve("original-src/katex")
+      if (!Files.isDirectory(katexSrc.resolve("src")))
+        sys.error(
+          s"[Baltic Porter] ssg-katex sources are missing or stale ($marker does not read `$expected`) " +
+            "and original-src/katex is not initialised. Run `git submodule update --init --depth=1 original-src/katex`, " +
+            s"or place a generated tree with a matching marker under $katexRoot."
+        )
+
+      log.info(s"[Baltic Porter] Generating ssg-katex ($expected)")
+
+      // 1. Extract the exporter from the jar
+      val exporterDir = ssgRoot.resolve("target/balticporter-work/ts-exporter")
+      Files.createDirectories(exporterDir)
+      val exporterScript = exporterDir.resolve("export.js")
+
+      val jsUrl = getClass.getClassLoader.getResource("balticporter/frontend/ts/exporter/export.js")
+      if (jsUrl == null) sys.error("[Baltic Porter] export.js not found in the frontend-ts jar")
+      Files.copy(jsUrl.openStream(), exporterScript, java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+
+      val mfUrl = getClass.getClassLoader.getResource("balticporter/frontend/ts/exporter/manifest.properties")
+      if (mfUrl != null) {
+        val mfTarget = exporterDir.resolve("manifest.properties")
+        Files.copy(mfUrl.openStream(), mfTarget, java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+      }
+      val mfProps = new java.util.Properties()
+      if (mfUrl != null) {
+        val s = mfUrl.openStream();
+        try mfProps.load(s)
+        finally s.close()
+      }
+      val tsVersion = mfProps.getProperty("typescript.version", "5.8.3")
+
+      // 2. Ensure the typescript npm package is available
+      val exporterNodeModules = exporterDir.resolve("node_modules")
+      val katexNodeModules    = katexSrc.resolve("node_modules")
+      if (!Files.isDirectory(exporterNodeModules.resolve("typescript"))) {
+        if (Files.isDirectory(katexNodeModules.resolve("typescript"))) {
+          Files.deleteIfExists(exporterNodeModules)
+          Files.createSymbolicLink(exporterNodeModules, katexNodeModules)
+        } else {
+          val npmPb = new ProcessBuilder("npm", "install", "--no-save", s"typescript@$tsVersion")
+          npmPb.directory(exporterDir.toFile)
+          npmPb.redirectErrorStream(true)
+          val npmP   = npmPb.start()
+          val npmOut = new String(npmP.getInputStream.readAllBytes())
+          if (npmP.waitFor() != 0) sys.error(s"[Baltic Porter] npm install typescript failed: $npmOut")
+        }
+      }
+
+      // 3. Export RAST
+      if (Files.exists(rastDir)) {
+        val s = Files.walk(rastDir)
+        try s.sorted(java.util.Comparator.reverseOrder()).forEach(Files.delete(_))
+        finally s.close()
+      }
+      Files.createDirectories(rastDir)
+
+      val pb = new ProcessBuilder("node", exporterScript.toString, "--project", katexSrc.resolve("tsconfig.json").toString, "--out", rastDir.toString)
+      pb.directory(exporterDir.toFile)
+      pb.redirectErrorStream(true)
+      val p   = pb.start()
+      val out = new String(p.getInputStream.readAllBytes())
+      if (p.waitFor() != 0) sys.error(s"[Baltic Porter] KaTeX RAST export failed:\n$out")
+      log.info(s"[Baltic Porter] Exported KaTeX RAST to $rastDir")
+
+      // 4. Derive
+      val lib = KaTeXBuilder.library
+      balticporter.frontend.ts.NonJavaBodies.build(lib, referenceDir, rastDir) match {
+        case refused: balticporter.frontend.ts.NonJavaBodies.Refused =>
+          log.warn(s"[Baltic Porter] ssg-katex: ${refused.message}")
+          deriveReferenceOnly("ssg-katex", referenceDir, outDir, reportDir, lib.policy, log)
+
+        case built: balticporter.frontend.ts.NonJavaBodies.Built =>
+          val run = built.derive(outDir, reportDir)
+          log.info(s"[Baltic Porter] ssg-katex: ${run.summary.line}")
+          Files.createDirectories(marker.getParent)
+          Files.writeString(marker, expected)
+          run.written.map(_.toFile)
+      }
+    }
+
+  /** Derive a module from reference only, with no RAST — every body is kept from the reference. Used when the RAST export is not available (the other four non-Java modules until they get their own
+    * export).
+    */
+  def deriveReferenceOnly(
+    moduleName:   String,
+    referenceDir: java.io.File,
+    outDir:       java.io.File,
+    log:          sbt.util.Logger,
+    policy:       balticporter.frontend.ts.ParityDerive.Policy = balticporter.frontend.ts.ParityDerive.Policy()
+  ): Seq[File] = {
+    val refPath    = referenceDir.toPath
+    val outPath    = outDir.toPath
+    val reportPath = outPath.resolveSibling("report")
+    deriveReferenceOnly(moduleName, refPath, outPath, reportPath, policy, log)
+  }
+
+  private def deriveReferenceOnly(
+    moduleName:   String,
+    referenceDir: Path,
+    outDir:       Path,
+    reportDir:    Path,
+    policy:       balticporter.frontend.ts.ParityDerive.Policy,
+    log:          sbt.util.Logger
+  ): Seq[File] = {
+    if (!Files.isDirectory(referenceDir)) {
+      log.warn(s"[Baltic Porter] No reference/ dir for $moduleName, skipping")
+      return Seq.empty
+    }
+
+    val marker  = outDir.resolve(".generated-marker")
+    val refHash = referenceDir.hashCode.toString + "-reference-only"
+
+    val cached = Files.exists(marker) && Files.readString(marker).trim == refHash
+    if (cached) {
+      return collectScalaFiles(outDir)
+    }
+
+    // Build a Library with an empty module list — every body stays reference
+    val lib = balticporter.frontend.ts.NonJavaBodies.Library(
+      name = moduleName,
+      policy = policy,
+      readRast = balticporter.frontend.ts.Rast.readFile(_: Path),
+      modules = _ => Right(Nil)
+    )
+
+    // Create a trivial rast dir (the build method requires it to exist)
+    val dummyRastDir = outDir.resolveSibling("dummy-rast")
+    Files.createDirectories(dummyRastDir)
+
+    balticporter.frontend.ts.NonJavaBodies.build(lib, referenceDir, dummyRastDir) match {
+      case built: balticporter.frontend.ts.NonJavaBodies.Built =>
+        val run = built.derive(outDir, reportDir)
+        log.info(s"[Baltic Porter] $moduleName (reference only): ${run.summary.line}")
+        Files.createDirectories(marker.getParent)
+        Files.writeString(marker, refHash)
+        run.written.map(_.toFile)
+      case refused: balticporter.frontend.ts.NonJavaBodies.Refused =>
+        log.warn(s"[Baltic Porter] $moduleName: ${refused.message}")
+        Seq.empty
+    }
+  }
+
+  // ---------------------------------------------------------------------------
   // Non-Java port generation: reference/ → ParityDerive → src_managed/
   // ---------------------------------------------------------------------------
 

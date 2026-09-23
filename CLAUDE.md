@@ -96,18 +96,21 @@ ANTLR parser as a classpath input. A change to any of them regenerates; no engin
   once (the `generate` job) and every other job restores it — those jobs have no submodule.
 - `sbt --client generatePort` runs the generation alone.
 
-### Non-Java ports (ssg-graphs-commons, ssg-katex, ssg-mermaid, ssg-js, ssg-sass)
+### Non-Java ports (ssg-katex, ssg-graphs-commons, ssg-mermaid, ssg-js, ssg-sass)
 
-Each module has two directories consumed by generation:
+Each module has a hand-written reference Scala tree (`<module>/reference/scala/`); parity-derive
+interleaves RAST-translated method bodies where they compile, and keeps the reference body otherwise.
 
-| Directory | What it is |
-|---|---|
-| `<module>/reference/scala/` | Hand-ported Scala, used as the skeleton for parity-derive. Auditable, **never generated**. |
-| `<module>/rast/` | Pre-exported RAST (Resolved AST) from the upstream source. Committed, deterministic input. |
+**ssg-katex** exports its own RAST from `original-src/katex` with the engine's TS exporter (shipped
+in the frontend-ts jar) and Node, cached under `target/balticporter-rast/katex` on the submodule
+commit and the exporter version. The KaTeX builder (`project/KaTeXBuilder.scala`) supplies a
+`NonJavaBodies.Library` value with the full policy (uncompilable patterns catch bodies the
+translator cannot yet compile). `bodies.tsv` records translated 1/474, reference by reason:
+no-translated-body=284, uncompilable-pattern=179, translator-refusal=8, occurrence-out-of-range=2.
 
-`sourceGenerators` call `BalticPorterGen.generateNonJavaModule` which passes each reference file
-through `ParityDerive.derive`, interleaving RAST-translated method bodies where the translation
-compiles. Output goes to `(Compile / sourceManaged)`.
+**ssg-graphs-commons, ssg-js, ssg-mermaid, ssg-sass** derive from reference only with no RAST
+export yet; every body is `reference` with reason `no-translated-body`. Each will get its own
+export when its upstream submodule is wired into the build.
 
 ### Rules
 

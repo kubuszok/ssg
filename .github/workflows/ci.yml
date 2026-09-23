@@ -133,6 +133,8 @@ jobs:
 
       - uses: ./.github/actions/setup-scala
 
+      - uses: ./.github/actions/setup-js
+
       - uses: ./.github/actions/generated-port
         id: port
         with:

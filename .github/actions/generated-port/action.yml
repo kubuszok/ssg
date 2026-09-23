@@ -36,11 +36,13 @@ runs:
       run: |
         set -euo pipefail
         liqp=$(git ls-tree HEAD original-src/liqp | awk '{print $3}')
+        katex=$(git ls-tree HEAD original-src/katex | awk '{print $3}')
         liquid=$(git rev-parse "HEAD:ssg-liquid/port")
         md=$(git rev-parse "HEAD:ssg-md/port")
         parser=$(git hash-object project/LiqpParserClasspath.scala)
-        test -n "$liqp" && test -n "$liquid" && test -n "$md" && test -n "$parser"
-        echo "extra=liqp-$liqp-ports-$liquid-$md-$parser" >> "$GITHUB_OUTPUT"
+        katexbuilder=$(git hash-object project/KaTeXBuilder.scala)
+        test -n "$liqp" && test -n "$katex" && test -n "$liquid" && test -n "$md" && test -n "$parser" && test -n "$katexbuilder"
+        echo "extra=liqp-$liqp-katex-$katex-ports-$liquid-$md-$parser-$katexbuilder" >> "$GITHUB_OUTPUT"
 
     - uses: kubuszok/balticporter/.github/actions/generated-port@55be328a2265f34c8d41d30634569229539cf562
       id: port
@@ -50,7 +52,8 @@ runs:
         path: target/balticporter
         submodule: original-src/flexmark-java
         command: >-
-          git submodule update --init --depth=1 original-src/liqp
+          git submodule update --init --depth=1 original-src/liqp original-src/katex
           && (cd original-src/liqp && chmod +x mvnw && ./mvnw -q generate-sources -pl .)
+          && (cd original-src/katex && npm install --no-save 2>/dev/null || true)
           && sbt generatePort
         key-extra: ${{ steps.upstreams.outputs.extra }}
