@@ -23,6 +23,67 @@ object KaTeXBuilder {
     "sqrtMain("
   )
 
+  /** Per-member exclusions: translated bodies that do not compile due to translator defects. Each entry maps a camelCase member name to the defect reason. The body is kept from the reference with
+    * reason `translator-refusal:<defect>` in bodies.tsv.
+    *
+    * Translator defects observed:
+    *   - empty-using: `(using )` emitted as boundary label (return type not resolved)
+    *   - nullable-ops: JS truthiness operators on Nullable types (`!x`, `x && y`)
+    *   - js-map-construction: JS object literal translated as `mutable.Map(...)` instead of a proper typed construction
+    *   - wrong-member-access: accessing `.loc`, `.children`, `.text` etc. on wrong Scala types
+    *   - wrong-function-ref: calling functions not in scope or with wrong signatures
+    *   - wrong-type: type mismatch in return position or arguments
+    */
+  private val memberExclusions: Map[String, String] = Map(
+    // KaTeX.scala: all 3 translated bodies produce empty-using and wrong type for parser output
+    "generateParseTree" -> "translator-defect:empty-using+wrong-type",
+    "renderToDomTree" -> "translator-defect:empty-using+wrong-type",
+    "renderToHTMLTree" -> "translator-defect:empty-using+wrong-type",
+    // SourceLocation.scala: nullable-ops and empty-using
+    "range" -> "translator-defect:empty-using+nullable-ops",
+    // CdEnv.scala: empty-using and js-map-construction
+    "newCell" -> "translator-defect:js-map-construction+wrong-type",
+    "cdArrow" -> "translator-defect:empty-using+js-map-construction+wrong-type",
+    // EnvironmentDef.scala: js-map-construction and wrong-function-ref
+    "defineEnvironment" -> "translator-defect:js-map-construction+wrong-function-ref",
+    // FontMetrics.scala: wrong-type for metrics map iteration
+    "setFontMetrics" -> "translator-defect:wrong-type+wrong-member-access",
+    "getGlobalMetrics" -> "translator-defect:wrong-type+wrong-member-access",
+    // Utils.scala: wrong-member-access and empty-using
+    "getBaseElem" -> "translator-defect:wrong-member-access+wrong-type",
+    "protocolFromUrl" -> "translator-defect:empty-using+wrong-member-access",
+    // FunctionDef.scala: js-map-construction and wrong-function-ref
+    "defineFunction" -> "translator-defect:js-map-construction+wrong-function-ref",
+    "normalizeArgument" -> "translator-defect:wrong-member-access",
+    "ordargument" -> "translator-defect:wrong-member-access",
+    // SupsubFunc.scala: wrong-type for HTML builder output
+    "htmlBuilderDelegate" -> "translator-defect:wrong-type+wrong-member-access",
+    // MathchoiceFunc.scala: wrong-type for style choice
+    "chooseMathStyle" -> "translator-defect:wrong-type",
+    // AccentFunc.scala: wrong-member-access on HtmlDomNode
+    "getBaseSymbol" -> "translator-defect:wrong-type+wrong-member-access",
+    // BuildCommon.scala: wrong-type and wrong-member-access
+    "boldsymbol" -> "translator-defect:wrong-type+wrong-member-access",
+    // BuildHTML.scala: wrong-type
+    "getOutermostNode" -> "translator-defect:wrong-type",
+    // MclassFunc.scala: wrong-type for mclass binary relation
+    "binrelClass" -> "translator-defect:wrong-type",
+    // UnicodeScripts.scala: wrong-type for code point check
+    "supportedCodepoint" -> "translator-defect:wrong-type",
+    // Macros.scala: wrong-type for macro definition
+    "defineMacro" -> "translator-defect:wrong-type",
+    // BuildMathML.scala: wrong-member-access on MathML nodes
+    "makeRow" -> "translator-defect:wrong-member-access",
+    // ArrayEnv.scala: wrong-type and wrong-member-access
+    "getHLines" -> "translator-defect:wrong-type+wrong-member-access",
+    "getAutoTag" -> "translator-defect:wrong-type",
+    "dCellStyle" -> "translator-defect:wrong-type",
+    // GenfracFunc.scala: wrong-type
+    "wrapWithStyle" -> "translator-defect:wrong-type",
+    // TagFunc.scala: wrong-type
+    "pad" -> "translator-defect:wrong-type"
+  )
+
   val policy: ParityDerive.Policy =
     ParityDerive.Policy(
       uncompilablePatterns = uncompilablePatterns,
@@ -270,8 +331,13 @@ object KaTeXBuilder {
           oracle = oracle
         )
         // An empty or whitespace-only body is a translator failure; record it as a refusal
-        val bodyText = translated.scalaBody.trim
-        val reasons  = if (bodyText.isEmpty) "empty-body" :: translated.refusalReasons else translated.refusalReasons
+        val bodyText    = translated.scalaBody.trim
+        val baseReasons = if (bodyText.isEmpty) "empty-body" :: translated.refusalReasons else translated.refusalReasons
+        // Per-member exclusions: bodies that do not compile due to known translator defects
+        val reasons = memberExclusions.get(key) match {
+          case Some(defect) => defect :: baseReasons
+          case None         => baseReasons
+        }
         result.getOrElseUpdate(key, mutable.ListBuffer.empty) += ParityDerive.TranslatedBody(translated.scalaBody, reasons)
       }
     }
