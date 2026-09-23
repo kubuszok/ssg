@@ -214,12 +214,14 @@ final class IncludeExtraSuite extends munit.FunSuite {
   // Own scope in include
   // ---------------------------------------------------------------------------
 
-  // SSG: for loop variable scoping in includes differs
-  test("include: own scope in include".fail) { // ISS-1265 (ISS-1024 umbrella)
+  // liqp's snippets/include_iteration.liquid contains its own for-loop over (1..2), rendering
+  // "12" per inclusion; the outer for-loop runs it twice, and the trailing {{ item }} renders empty
+  // because the for-loop variable does not leak into the outer scope.
+  test("include: own scope in include") {
     val parser = parserWith(
       Flavor.LIQP,
       true,
-      "include_iteration" -> "{{ item }}"
+      "include_iteration" -> "{% for item in (1..2) %}{{ item }}{% endfor %}"
     )
     val template = parser.parse("{% for item in (1..2) %}{% include 'include_iteration' %}{% endfor %}{{ item }}")
     assertEquals(template.render(), "1212")
