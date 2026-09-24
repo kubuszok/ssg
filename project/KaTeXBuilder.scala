@@ -21,10 +21,8 @@ object KaTeXBuilder {
   private val uncompilablePatterns: List[String] = List(
     // JS template literal not lowered
     "${",
-    // Bodies the translator emits that produce structural or semantic errors in ssg-katex.
-    ".charCodeAt(",
-    ".isInstanceOf[Function",
-    "(((", // double-wrapped lambda
+    // Double-wrapped lambda the translator produces
+    "(((",
     // The translator accesses fields and methods by their JS names
     "this.",
     // Wrong identifiers
