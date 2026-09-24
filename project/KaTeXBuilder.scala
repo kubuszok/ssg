@@ -77,7 +77,6 @@ object KaTeXBuilder {
     // Builder API patterns the translator emits that do not exist in ssg-katex
     "BuildCommon.", // API name from JS not lowered by apiLookup
     "BuildHTML.", // API name from JS
-    "BuildMathML.", // API name from JS
     "buildExpression(", // free function that does not exist as free in Scala
     "buildGroup(", // free function
     // Catch any remaining unbalanced bodies: the translator sometimes emits extra braces
