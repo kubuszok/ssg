@@ -19,7 +19,6 @@ object KaTeXBuilder {
     * produce syntax the Scala compiler cannot parse.
     */
   private val uncompilablePatterns: List[String] = List(
-    // JS template literal not lowered
     "${",
     // The translator accesses fields and methods by their JS names
     "this.",
@@ -38,7 +37,18 @@ object KaTeXBuilder {
   )
 
   val policy: ParityDerive.Policy =
-    ParityDerive.Policy(uncompilablePatterns = uncompilablePatterns, keepReferenceOnRefusal = true)
+    ParityDerive.Policy(
+      uncompilablePatterns = uncompilablePatterns,
+      keepReferenceOnRefusal = true,
+      aliases = Map(
+        // camelCase("_getExpansion") produces "GetExpansion" but the reference member is _getExpansion
+        "_getExpansion" -> List("GetExpansion"),
+        // KaTeX.scala wraps these TS module-level functions under __ prefixed API names
+        "__parse" -> List("generateParseTree"),
+        "__renderToDomTree" -> List("renderToDomTree"),
+        "__renderToHTMLTree" -> List("renderToHTMLTree")
+      )
+    )
 
   /** KaTeX API name lookup for the body translator: JS identifier to Scala equivalent. */
   private val apiLookup: Map[String, String] = Map(
@@ -83,26 +93,128 @@ object KaTeXBuilder {
   private def capitalizeFirst(s: String): String =
     if (s.isEmpty) s else s(0).toUpper + s.substring(1)
 
-  /** Names of JS functions whose camelCase form collides with members in files that no RAST feeds. Registering a translated body with one of these names causes an `unclassified` label in bodies.tsv
-    * for the OTHER file's member of that name.
-    *
-    * With the module table mapping each exported TS file to its correct reference file, most former collisions are resolved. The remaining entries are names that appear as function definitions in
-    * multiple RAST files AND as members in no-export reference files.
+  /** Collision-prone names cleared: the module table now maps each RAST file to its own reference file, so names appearing in multiple RAST files no longer collide. The former entries (get, text,
+    * sizeAtStyle, havingStyle, reportNonstrict, setHLinePos, initNode, toMarkup, newDocumentFragment) are all correctly isolated by their module and need not be suppressed.
     */
-  private val collisionProneNames: Set[String] = Set(
-    "get", // common method name across many types
-    "text", // method on many types (Token, SymbolNode, MathNode, etc.)
-    // Names that appear as function definitions in RAST files but whose reference-file members
-    // are in positions the skeleton parser cannot replace (file-level defs, private helpers in
-    // object companions, etc.). Suppressing them prevents `unclassified` in bodies.tsv.
-    "sizeAtStyle", // Options.scala: file-level private def
-    "havingStyle", // Options.scala: override inside class body not detected by skeleton
-    "reportNonstrict", // Settings.scala: override inside class body not detected by skeleton
-    "setHLinePos", // ArrayEnv.scala: nested def inside environment handler
-    "initNode", // DomTree.scala: private[tree] helper
-    "toMarkup", // DomTree.scala: method on multiple tree classes, one occurrence unoffered
-    "newDocumentFragment" // MathMLTree.scala: utility function
+  private val collisionProneNames: Set[String] = Set.empty
+
+  // -------------------------------------------------------------------------
+  // Reference-only members: Scala-specific members with no TS counterpart.
+  // Each entry is (memberName, occurrenceCount, reason).
+  // -------------------------------------------------------------------------
+
+  private val fontMetricsAccessors: List[String] = List(
+    "cssEmPerMu", "slant", "space", "stretch", "shrink", "xHeight", "quad", "extraSpace",
+    "num1", "num2", "num3", "denom1", "denom2", "sup1", "sup2", "sup3", "sub1", "sub2",
+    "supDrop", "subDrop", "delim1", "delim2", "axisHeight", "defaultRuleThickness",
+    "bigOpSpacing1", "bigOpSpacing2", "bigOpSpacing3", "bigOpSpacing4", "bigOpSpacing5",
+    "sqrtRuleThickness", "ptPerEm", "doubleRuleSep", "arrayRuleWidth", "fboxsep", "fboxrule",
+    "apply", "get"
   )
+
+  private lazy val referenceOnlyMembers: Map[String, List[(String, Int, String)]] = {
+    // Every function and environment file wraps TS module-level defineFunction/defineEnvironment
+    // calls in a register() or registerAll() method that has no TS function counterpart.
+    val registrations: List[(String, List[(String, Int, String)])] =
+      functionNames.map { name =>
+        val capName = capitalizeFirst(name)
+        s"functions/${capName}Func.scala" -> List(("register", 1, "module-level-side-effect"))
+      } ++ List(
+        "environments/ArrayEnv.scala" -> List(("register", 1, "module-level-side-effect")),
+        "environments/CdEnv.scala" -> List(("register", 1, "module-level-side-effect")),
+        "environments/Environments.scala" -> List(("registerAll", 1, "module-level-side-effect")),
+        "functions/Functions.scala" -> List(("registerAll", 1, "module-level-side-effect")),
+        "data/Macros.scala" -> List(("registerAll", 1, "module-level-side-effect"))
+      )
+
+    val perFile: List[(String, List[(String, Int, String)])] = List(
+      "KaTeX.scala" -> List(
+        ("ensureRegistered", 1, "scala-registration-wrapper"),
+        ("renderToStringResult", 2, "scala-diagnostic-api"),
+        ("positionOf", 1, "scala-diagnostic-api"),
+        ("__setFontMetrics", 1, "cross-module-delegation"),
+        ("__defineSymbol", 1, "cross-module-delegation"),
+        ("__defineFunction", 1, "cross-module-delegation"),
+        ("__defineMacro", 1, "cross-module-delegation")
+      ),
+      "MacroDef.scala" -> List(
+        ("mode", 1, "abstract-trait-method"),
+        ("expandAfterFuture", 1, "abstract-trait-method"),
+        ("consumeArgs", 1, "abstract-trait-method")
+      ),
+      "parse/ParseNode.scala" -> List(
+        ("nodeType", 1, "type-discriminator-field"),
+        ("bodyNode", 1, "type-discriminator-field"),
+        ("bodyNodes", 1, "type-discriminator-field"),
+        ("text", 1, "type-discriminator-field")
+      ),
+      "ParseError.scala" -> List(
+        ("buildMessage", 1, "constructor-extracted-helper"),
+        ("computePosition", 1, "constructor-extracted-helper"),
+        ("computeLength", 1, "constructor-extracted-helper")
+      ),
+      "Settings.scala" -> List(
+        ("command", 1, "constructor-parameter")
+      ),
+      "build/BuildCommon.scala" -> List(
+        ("childType", 3, "case-class-field")
+      ),
+      "build/BuildHTML.scala" -> List(
+        ("traverseNonSpaceNodesInner", 1, "scala-specific-split")
+      ),
+      "build/BuildTree.scala" -> List(
+        ("validateOutput", 1, "scala-specific-helper")
+      ),
+      "data/Macros.scala" -> List(
+        ("defineMacroFn", 1, "scala-wrapping-helper")
+      ),
+      "data/FontMetrics.scala" -> fontMetricsAccessors.map(n => (n, 1, "data-accessor-delegation")),
+      "data/Symbols.scala" -> List(
+        ("math", 1, "scala-accessor"),
+        ("text", 1, "scala-accessor"),
+        ("symbolsForMode", 1, "scala-accessor"),
+        ("getSymbol", 1, "scala-accessor"),
+        ("apply", 2, "scala-accessor"),
+        ("initSymbols", 1, "scala-initialization")
+      ),
+      "data/Units.scala" -> List(
+        ("fontMetrics", 1, "scala-accessor")
+      ),
+      "tree/DomTree.scala" -> List(
+        ("foreachEntry", 1, "scala-specific-helper"),
+        ("isEmpty", 1, "scala-specific-helper"),
+        ("nonEmpty", 1, "scala-specific-helper"),
+        ("virtualChildren", 3, "scala-specific-accessor"),
+        ("toInMemoryNode", 1, "scala-specific-helper"),
+        // TS toMarkup(tag: string) takes a parameter the Scala port removes; RAST bodies are incompatible
+        ("toMarkup", 7, "parameter-mismatch")
+      ),
+      "Style.scala" -> List(
+        ("toString", 1, "scala-override")
+      )
+    )
+
+    // Merge: multiple sources can contribute to the same file (e.g. Macros.scala has both
+    // registerAll from registrations and defineMacroFn from perFile).
+    (registrations ++ perFile)
+      .groupMap(_._1)(_._2)
+      .map { case (k, vs) => k -> vs.flatten }
+  }
+
+  /** Members whose RAST translation is incompatible with the Scala signature and must be forced to reference-only, overriding any RAST body. */
+  private val forceReferenceOnly: Map[String, Set[String]] = Map(
+    // TS toMarkup(tag: string) takes a parameter the Scala port hardcodes per class
+    "tree/DomTree.scala" -> Set("toMarkup")
+  )
+
+  /** Build Bodies entries for reference-only members (empty text, descriptive refusal). */
+  private def referenceOnlyBodiesFor(refPath: String): ParityDerive.Bodies = {
+    val entries = referenceOnlyMembers.getOrElse(refPath, Nil)
+    if (entries.isEmpty) ParityDerive.Bodies.empty
+    else ParityDerive.Bodies(entries.map { case (name, count, reason) =>
+      name -> (1 to count).toList.map(_ => ParityDerive.TranslatedBody("", List(s"reference-only:$reason")))
+    }.toMap)
+  }
 
   /** Extract every function, function-valued variable and method with a body from a RAST file. */
   private def functionBodies(file: RastFile): List[(String, List[String], RastNode)] = {
@@ -178,7 +290,7 @@ object KaTeXBuilder {
           calleeIndex = calleeIdx,
           memberIndex = memberIdx,
           ctorSchema = ctorSchema,
-          enumIndex = enumIdx
+          enumIndex = enumIdx,
         )
         // An empty or whitespace-only body is a translator failure; record it as a refusal
         val bodyText = translated.scalaBody.trim
@@ -353,7 +465,16 @@ object KaTeXBuilder {
         Right(
           allModules.map { case (rastPath, refPath) =>
             val refObjectName = refPath.stripSuffix(".scala").split('/').last
-            NonJavaBodies.Module(refPath, rastPath, Nil, rasts => buildTranslatedBodyMap(rasts, refObjectName, oracle, calleeIdx, memberIdx, ctorSchema, enumIdx))
+            NonJavaBodies.Module(refPath, rastPath, Nil, rasts => {
+              val translated = buildTranslatedBodyMap(rasts, refObjectName, oracle, calleeIdx, memberIdx, ctorSchema, enumIdx)
+              val refOnly    = referenceOnlyBodiesFor(refPath)
+              val forced     = forceReferenceOnly.getOrElse(refPath, Set.empty)
+              // Override RAST translations for forced reference-only members (parameter mismatches etc.),
+              // and add reference-only entries for names not already covered by RAST extraction.
+              val translatedFiltered = ParityDerive.Bodies((translated.byName -- forced).toMap)
+              val refOnlyFiltered    = ParityDerive.Bodies(refOnly.byName.view.filterKeys(k => forced.contains(k) || !translated.byName.contains(k)).toMap)
+              translatedFiltered ++ refOnlyFiltered
+            })
           }
         )
     )
