@@ -21,8 +21,6 @@ object KaTeXBuilder {
   private val uncompilablePatterns: List[String] = List(
     // JS template literal not lowered
     "${",
-    // Double-wrapped lambda the translator produces
-    "(((",
     // The translator accesses fields and methods by their JS names
     "this.",
     // Builder API patterns
