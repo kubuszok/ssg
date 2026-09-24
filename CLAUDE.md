@@ -107,8 +107,8 @@ commit and the exporter version. The KaTeX builder (`project/KaTeXBuilder.scala`
 `NonJavaBodies.Library` value with the full policy: reference indices and type oracle from the
 reference Scala tree feed return types, parameter types, callees, members, constructors and enums
 to the body translator; 11 uncompilable patterns guard bodies the translator cannot yet compile
-(ISS-1396). `bodies.tsv` records translated 5/474, reference by reason: no-translated-body=212,
-uncompilable-pattern=166, translator-refusal=84, occurrence-out-of-range=7.
+(ISS-1396). `bodies.tsv` records translated 5/474, reference by reason:
+translator-refusal=219, unclassified=69, uncompilable-pattern=174, occurrence-out-of-range=7.
 
 **ssg-graphs-commons, ssg-js, ssg-mermaid, ssg-sass** derive from reference only with no RAST
 export yet; every body is `reference` with reason `no-translated-body`. Each will get its own

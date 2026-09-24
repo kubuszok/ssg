@@ -104,12 +104,43 @@ object KaTeXBuilder {
   // -------------------------------------------------------------------------
 
   private val fontMetricsAccessors: List[String] = List(
-    "cssEmPerMu", "slant", "space", "stretch", "shrink", "xHeight", "quad", "extraSpace",
-    "num1", "num2", "num3", "denom1", "denom2", "sup1", "sup2", "sup3", "sub1", "sub2",
-    "supDrop", "subDrop", "delim1", "delim2", "axisHeight", "defaultRuleThickness",
-    "bigOpSpacing1", "bigOpSpacing2", "bigOpSpacing3", "bigOpSpacing4", "bigOpSpacing5",
-    "sqrtRuleThickness", "ptPerEm", "doubleRuleSep", "arrayRuleWidth", "fboxsep", "fboxrule",
-    "apply", "get"
+    "cssEmPerMu",
+    "slant",
+    "space",
+    "stretch",
+    "shrink",
+    "xHeight",
+    "quad",
+    "extraSpace",
+    "num1",
+    "num2",
+    "num3",
+    "denom1",
+    "denom2",
+    "sup1",
+    "sup2",
+    "sup3",
+    "sub1",
+    "sub2",
+    "supDrop",
+    "subDrop",
+    "delim1",
+    "delim2",
+    "axisHeight",
+    "defaultRuleThickness",
+    "bigOpSpacing1",
+    "bigOpSpacing2",
+    "bigOpSpacing3",
+    "bigOpSpacing4",
+    "bigOpSpacing5",
+    "sqrtRuleThickness",
+    "ptPerEm",
+    "doubleRuleSep",
+    "arrayRuleWidth",
+    "fboxsep",
+    "fboxrule",
+    "apply",
+    "get"
   )
 
   private lazy val referenceOnlyMembers: Map[String, List[(String, Int, String)]] = {
@@ -196,9 +227,7 @@ object KaTeXBuilder {
 
     // Merge: multiple sources can contribute to the same file (e.g. Macros.scala has both
     // registerAll from registrations and defineMacroFn from perFile).
-    (registrations ++ perFile)
-      .groupMap(_._1)(_._2)
-      .map { case (k, vs) => k -> vs.flatten }
+    (registrations ++ perFile).groupMap(_._1)(_._2).map { case (k, vs) => k -> vs.flatten }
   }
 
   /** Members whose RAST translation is incompatible with the Scala signature and must be forced to reference-only, overriding any RAST body. */
@@ -211,9 +240,12 @@ object KaTeXBuilder {
   private def referenceOnlyBodiesFor(refPath: String): ParityDerive.Bodies = {
     val entries = referenceOnlyMembers.getOrElse(refPath, Nil)
     if (entries.isEmpty) ParityDerive.Bodies.empty
-    else ParityDerive.Bodies(entries.map { case (name, count, reason) =>
-      name -> (1 to count).toList.map(_ => ParityDerive.TranslatedBody("", List(s"reference-only:$reason")))
-    }.toMap)
+    else
+      ParityDerive.Bodies(
+        entries.map { case (name, count, reason) =>
+          name -> (1 to count).toList.map(_ => ParityDerive.TranslatedBody("", List(s"reference-only:$reason")))
+        }.toMap
+      )
   }
 
   /** Extract every function, function-valued variable and method with a body from a RAST file. */
@@ -290,7 +322,7 @@ object KaTeXBuilder {
           calleeIndex = calleeIdx,
           memberIndex = memberIdx,
           ctorSchema = ctorSchema,
-          enumIndex = enumIdx,
+          enumIndex = enumIdx
         )
         // An empty or whitespace-only body is a translator failure; record it as a refusal
         val bodyText = translated.scalaBody.trim
@@ -465,16 +497,21 @@ object KaTeXBuilder {
         Right(
           allModules.map { case (rastPath, refPath) =>
             val refObjectName = refPath.stripSuffix(".scala").split('/').last
-            NonJavaBodies.Module(refPath, rastPath, Nil, rasts => {
-              val translated = buildTranslatedBodyMap(rasts, refObjectName, oracle, calleeIdx, memberIdx, ctorSchema, enumIdx)
-              val refOnly    = referenceOnlyBodiesFor(refPath)
-              val forced     = forceReferenceOnly.getOrElse(refPath, Set.empty)
-              // Override RAST translations for forced reference-only members (parameter mismatches etc.),
-              // and add reference-only entries for names not already covered by RAST extraction.
-              val translatedFiltered = ParityDerive.Bodies((translated.byName -- forced).toMap)
-              val refOnlyFiltered    = ParityDerive.Bodies(refOnly.byName.view.filterKeys(k => forced.contains(k) || !translated.byName.contains(k)).toMap)
-              translatedFiltered ++ refOnlyFiltered
-            })
+            NonJavaBodies.Module(
+              refPath,
+              rastPath,
+              Nil,
+              rasts => {
+                val translated = buildTranslatedBodyMap(rasts, refObjectName, oracle, calleeIdx, memberIdx, ctorSchema, enumIdx)
+                val refOnly    = referenceOnlyBodiesFor(refPath)
+                val forced     = forceReferenceOnly.getOrElse(refPath, Set.empty)
+                // Override RAST translations for forced reference-only members (parameter mismatches etc.),
+                // and add reference-only entries for names not already covered by RAST extraction.
+                val translatedFiltered = ParityDerive.Bodies((translated.byName -- forced).toMap)
+                val refOnlyFiltered    = ParityDerive.Bodies(refOnly.byName.view.filterKeys(k => forced.contains(k) || !translated.byName.contains(k)).toMap)
+                translatedFiltered ++ refOnlyFiltered
+              }
+            )
           }
         )
     )
