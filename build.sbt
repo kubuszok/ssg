@@ -382,7 +382,7 @@ lazy val `ssg-md` = (projectMatrix in file("ssg-md"))
     libraryDependencies ++= Seq(
       "com.kubuszok"       %% "multiarch-resources"   % versions.multiarch,
       "com.kubuszok"       %% "balticporter-runtime"  % "74c286af179a28df4b60612b4496846cc2b54078-SNAPSHOT",
-      "org.jetbrains"       % "annotations"           % "24.0.1" % Provided,
+      "org.jetbrains"       % "annotations"           % "24.1.0" % Provided,
       "org.nibor.autolink"  % "autolink"              % "0.6.0",
     ),
     // Baltic Porter: generate ssg-md + ssg-md-ext Scala sources from flexmark-java, from the
