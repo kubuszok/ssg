@@ -96,7 +96,6 @@ object KaTeXBuilder {
     "elem.", // accesses .children on a variable named elem
     "span.", // accesses .height, .depth on a span variable
     "child.", // accesses properties on child nodes
-    "node.", // accesses properties on node variables
     "result.", // accesses properties on result variables
     ".italic", // JS property not in Scala types
     ".depth", // JS property accessed on wrong Scala type
