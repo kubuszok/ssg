@@ -20,7 +20,10 @@ object KaTeXBuilder {
     */
   private val uncompilablePatterns: List[String] = List(
     "${",
-    // The translator accesses fields and methods by their JS names
+    // The translator accesses fields and methods by their JS names; memberRenames fixes the names
+    // but engine defects still break compilation: misplaced bodies (DomTree, MathMLTree, Parser,
+    // MacroExpander), module-level array access (Style `styles[...]`), map iteration type mismatch
+    // (Namespace). Filed as ISS-1396 entries.
     "this.",
     // Builder API patterns
     "BuildCommon.",
@@ -49,6 +52,16 @@ object KaTeXBuilder {
         "__renderToHTMLTree" -> List("renderToHTMLTree")
       )
     )
+
+  /** JS property names that the Scala reference renamed. The translator's `snakeToCamel` would mangle underscore-prefixed names; `type` is a Scala reserved word renamed to `nodeType`. */
+  private val memberRenames: Map[String, String] = Map(
+    // mathMLTree.ts `this.type` -> MathMLTree.scala `val nodeType: MathNodeType`
+    "type" -> "nodeType",
+    // Options.ts `this._fontMetrics` -> Options.scala `private var _fontMetrics`; snakeToCamel mangles to FontMetrics
+    "_fontMetrics" -> "_fontMetrics",
+    // MacroExpander.ts `this._getExpansion(name)` -> MacroExpander.scala `private def _getExpansion`; snakeToCamel mangles to GetExpansion
+    "_getExpansion" -> "_getExpansion"
+  )
 
   /** KaTeX API name lookup for the body translator: JS identifier to Scala equivalent. */
   private val apiLookup: Map[String, String] = Map(
@@ -323,6 +336,7 @@ object KaTeXBuilder {
           memberIndex = memberIdx,
           ctorSchema = ctorSchema,
           enumIndex = enumIdx,
+          memberRenames = memberRenames,
           oracle = oracle
         )
         // An empty or whitespace-only body is a translator failure; record it as a refusal
