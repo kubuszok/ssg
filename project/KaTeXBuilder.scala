@@ -19,21 +19,6 @@ object KaTeXBuilder {
     * produce syntax the Scala compiler cannot parse.
     */
   private val uncompilablePatterns: List[String] = List(
-    // Removing ${ yields translated 6/474 but makeEm's f"${n}%.4f" is locale-sensitive
-    // (reference uses pure integer math for locale independence). Engine defect, pattern stays.
-    "${",
-    // The translator accesses fields and methods by their JS names; memberRenames fixes the names
-    // but engine defects still break compilation: misplaced bodies (DomTree, MathMLTree, Parser,
-    // MacroExpander), module-level array access (Style `styles[...]`), map iteration type mismatch
-    // (Namespace). Filed as ISS-1396 entries.
-    "this.",
-    // Builder API patterns: removing BuildCommon. yields translated 15/474 but 8 compile errors
-    // (missing-arg sizeElementFromChildren, val-reassignment style.borderBottomWidth/marginRight,
-    // Array-vs-ArrayBuffer, String-vs-Null). Engine defects, pattern stays.
-    "BuildCommon.",
-    // Removing BuildHTML. yields translated 7/474 but 3 errors (Nullable truthiness,
-    // missing member on Nullable, HtmlDomNode-vs-MathDomNode). Engine defects, pattern stays.
-    "BuildHTML.",
     // Wrong property access
     "span.",
     "toNode(",
