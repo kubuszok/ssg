@@ -339,7 +339,7 @@ lazy val `ssg-liquid` = (projectMatrix in file("ssg-liquid"))
       // service loader the port's own providers are found through. No JVM-only library: the ANTLR
       // runtime, jackson and strftime4j are replaced inside the port by hand-written Scala.
       "com.kubuszok"                    %% "balticporter-runtime"      % "74c286af179a28df4b60612b4496846cc2b54078-SNAPSHOT",
-      "com.kubuszok"                    %% "multiarch-serviceloader"   % "0.4.0-12-gc168b2f-SNAPSHOT",
+      "com.kubuszok"                    %% "multiarch-serviceloader"   % "0.4.0-16-gfc598fc-SNAPSHOT",
     ),
     resolvers += "Central Portal Snapshots" at "https://central.sonatype.com/repository/maven-snapshots",
     Compile / resourceGenerators += Def.task {
