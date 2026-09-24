@@ -31,7 +31,6 @@ object KaTeXBuilder {
     // Terser-specific construct
     "DEFMETHOD(",
     // Translator holes and unhandled constructs
-    "???",
     "/* UNTRANSLATED",
     // Scala reserved words the translator emits as JS identifiers
     "var macro",
