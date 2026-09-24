@@ -19,37 +19,8 @@ object KaTeXBuilder {
     * produce syntax the Scala compiler cannot parse.
     */
   private val uncompilablePatterns: List[String] = List(
-    // Terser-specific construct
-    "DEFMETHOD(",
-    // Translator holes and unhandled constructs
-    "/* UNTRANSLATED",
-    // Scala reserved words the translator emits as JS identifiers
-    "var macro",
-    "val macro",
-    " `macro`",
-    // JS operators and constructs the translator does not lower
-    "typeof ",
-    "void 0",
-    "...",
-    "?.",
-    ".prototype",
-    // JS arguments object
-    "arguments[",
-    "arguments.",
-    // JS template literal and regex not lowered
+    // JS template literal not lowered
     "${",
-    "RegExp(",
-    // JS new with expression or constructor calls
-    "new (",
-    "new Set(",
-    "new RegExp(",
-    // JS this rebinding
-    "self = this",
-    "that = this",
-    // JS throw/Error not lowered to Scala
-    "throw new Error",
-    // Bitwise shift assignment
-    ">>>=",
     // Bodies the translator emits that produce structural or semantic errors in ssg-katex.
     // Each pattern was identified from a compile error in the derived output.
     ".charCodeAt(", // JS string API not in Scala String
