@@ -144,13 +144,13 @@ object KaTeXBuilder {
     * Every translated body goes through the uncompilable pattern check via the policy; bodies that contain any declared pattern are kept from the reference with a recorded reason in bodies.tsv.
     */
   private def buildTranslatedBodyMap(
-    rastFiles:    List[RastFile],
+    rastFiles:     List[RastFile],
     refObjectName: String,
-    oracle:       ReferenceSignatures.TypeOracle,
-    calleeIdx:    ReferenceSignatures.CalleeIndex,
-    memberIdx:    ReferenceSignatures.MemberIndex,
-    ctorSchema:   ReferenceSignatures.ConstructorSchema,
-    enumIdx:      ReferenceSignatures.EnumIndex
+    oracle:        ReferenceSignatures.TypeOracle,
+    calleeIdx:     ReferenceSignatures.CalleeIndex,
+    memberIdx:     ReferenceSignatures.MemberIndex,
+    ctorSchema:    ReferenceSignatures.ConstructorSchema,
+    enumIdx:       ReferenceSignatures.EnumIndex
   ): ParityDerive.Bodies = {
     val result = mutable.Map.empty[String, mutable.ListBuffer[ParityDerive.TranslatedBody]]
 
@@ -164,23 +164,25 @@ object KaTeXBuilder {
       val key = camelCase(name)
       if (!collisionProneNames.contains(key)) {
         // Look up type information from the reference tree
-        val sig       = oracle.get(refObjectName, key)
-        val retType   = sig.map(_.returnType)
-        val paramTpes = sig.map(s => s.params.map(p => p.name -> p.tpe).toMap).getOrElse(Map.empty)
+        val sig        = oracle.get(refObjectName, key)
+        val retType    = sig.map(_.returnType)
+        val paramTpes  = sig.map(s => s.params.map(p => p.name -> p.tpe).toMap).getOrElse(Map.empty)
         val entry      = DefmethodEntry("_free_", name, params, body)
         val translated = DefmethodBodyTranslator.translateBody(
-          entry, Nil, "    ",
-          apiLookup   = apiLookup,
-          returnType  = retType,
-          paramTypes  = paramTpes,
+          entry,
+          Nil,
+          "    ",
+          apiLookup = apiLookup,
+          returnType = retType,
+          paramTypes = paramTpes,
           calleeIndex = calleeIdx,
           memberIndex = memberIdx,
-          ctorSchema  = ctorSchema,
-          enumIndex   = enumIdx
+          ctorSchema = ctorSchema,
+          enumIndex = enumIdx
         )
         // An empty or whitespace-only body is a translator failure; record it as a refusal
-        val bodyText    = translated.scalaBody.trim
-        val reasons = if (bodyText.isEmpty) "empty-body" :: translated.refusalReasons else translated.refusalReasons
+        val bodyText = translated.scalaBody.trim
+        val reasons  = if (bodyText.isEmpty) "empty-body" :: translated.refusalReasons else translated.refusalReasons
         result.getOrElseUpdate(key, mutable.ListBuffer.empty) += ParityDerive.TranslatedBody(translated.scalaBody, reasons)
       }
     }
@@ -319,8 +321,10 @@ object KaTeXBuilder {
   /** Read all `.scala` files under a directory as `(objectName, source)` pairs. The object name is the filename stem. */
   private def readReferenceSources(dir: Path): List[(String, String)] = {
     val stream = Files.walk(dir)
-    try {
-      stream.iterator().asScala
+    try
+      stream
+        .iterator()
+        .asScala
         .filter(p => Files.isRegularFile(p) && p.getFileName.toString.endsWith(".scala"))
         .map { p =>
           val stem   = p.getFileName.toString.stripSuffix(".scala")
@@ -328,7 +332,7 @@ object KaTeXBuilder {
           (stem, source)
         }
         .toList
-    } finally stream.close()
+    finally stream.close()
   }
 
   /** The Library value for `NonJavaBodies.build`.
@@ -337,9 +341,9 @@ object KaTeXBuilder {
     * enums.
     */
   def library(referenceDir: Path): NonJavaBodies.Library = {
-    val refSources                                = readReferenceSources(referenceDir)
+    val refSources                                  = readReferenceSources(referenceDir)
     val (calleeIdx, memberIdx, ctorSchema, enumIdx) = ReferenceSignatures.buildIndices(refSources)
-    val oracle                                    = ReferenceSignatures.TypeOracle.fromEntries(refSources.flatMap((n, s) => ReferenceSignatures.parseFile(n, s)))
+    val oracle                                      = ReferenceSignatures.TypeOracle.fromEntries(refSources.flatMap((n, s) => ReferenceSignatures.parseFile(n, s)))
 
     NonJavaBodies.Library(
       name = "katex",
