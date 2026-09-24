@@ -12,5 +12,5 @@ ThisBuild / libraryDependencySchemes += "org.scala-lang.modules" %% "scala-xml" 
 // the configurations and injected sources under `ssg-liquid/port` and `ssg-md/port`, run by
 // project/BalticPorterGen.scala. The frontend-ts module provides the non-Java emitters.
 resolvers += "Central Portal Snapshots" at "https://central.sonatype.com/repository/maven-snapshots"
-libraryDependencies += "com.kubuszok" %% "balticporter-engine" % "44c6e4d0e4404b1038ecb312f35dba030ffdfabf-SNAPSHOT"
-libraryDependencies += "com.kubuszok" %% "balticporter-frontend-ts" % "44c6e4d0e4404b1038ecb312f35dba030ffdfabf-SNAPSHOT"
+libraryDependencies += "com.kubuszok" %% "balticporter-engine" % "3d0d42b5e1a02b29a3f4631a16617af9f48f6720-SNAPSHOT"
+libraryDependencies += "com.kubuszok" %% "balticporter-frontend-ts" % "3d0d42b5e1a02b29a3f4631a16617af9f48f6720-SNAPSHOT"

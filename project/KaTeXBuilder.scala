@@ -322,7 +322,8 @@ object KaTeXBuilder {
           calleeIndex = calleeIdx,
           memberIndex = memberIdx,
           ctorSchema = ctorSchema,
-          enumIndex = enumIdx
+          enumIndex = enumIdx,
+          oracle = oracle
         )
         // An empty or whitespace-only body is a translator failure; record it as a refusal
         val bodyText = translated.scalaBody.trim
