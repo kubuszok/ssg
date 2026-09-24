@@ -29,8 +29,6 @@ object KaTeXBuilder {
     // Wrong property access
     "span.",
     "toNode(",
-    // Builder function errors
-    "throw new ParseError",
     // Per-body guards: bodies that cannot compile without these patterns
     "sqrtMain(",
     "delimFromValue(",
