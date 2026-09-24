@@ -127,11 +127,15 @@ uncompilable-pattern=30, skeleton-cannot-offer=10.
 `checkJs`) and a committed `ast.d.ts` (under `ssg-js/port/`) declaring the AST class hierarchy so
 the checker can resolve field accesses. The builder (`project/TerserBuilder.scala`) supplies a
 `NonJavaBodies.Library` value with the module table (28 exported files mapped to 51 reference
-files), `memberRenames`, reference indices, and `referenceOnly` entries for Scala-specific members.
-116 uncompilable patterns guard bodies the translator cannot yet compile (wrong object dispatch,
-wrong constructor patterns, wrong state references). `bodies.tsv` records translated 5/1057,
-reference by reason: no-translated-body=498, reference-only=39, skeleton-cannot-offer=245,
-translator-refusal=154, uncompilable-pattern=116.
+files), `memberRenames`, reference indices, and `referenceOnly` classifying 620 Scala-specific
+members by reason (defnode-type-constant 113, defmethod-codegen 53, defmethod-opt-dispatch 43,
+defmethod-inference 33, cross-module-restructured 46, defmethod-needs-parens 16,
+defmethod-drop-side-effect 8, defmethod-eval 8, scope-analysis-pass 7, defmethod-reduce-vars 5,
+defmethod-negate 4, scala-restructured 245, plus 39 original entries). 35 uncompilable patterns
+guard 115 bodies the translator cannot yet compile (ISS-1398: wrong object dispatch 54,
+wrong constructor patterns 10, wrong state references 33, val-reassignment 8, truthiness 1,
+wrong callee resolution 9). `bodies.tsv` records translated 5/1057, reference by reason:
+reference-only=620, skeleton-cannot-offer=172, translator-refusal=145, uncompilable-pattern=115.
 
 **ssg-mermaid, ssg-sass** derive from reference only with no RAST
 export yet; every body is `reference` with reason `no-translated-body`. Each will get its own
