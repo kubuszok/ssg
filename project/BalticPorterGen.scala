@@ -411,7 +411,7 @@ object BalticPorterGen {
       log.info(s"[Baltic Porter] Exported KaTeX RAST to $rastDir")
 
       // 4. Derive
-      val lib = KaTeXBuilder.library
+      val lib = KaTeXBuilder.library(referenceDir)
       balticporter.frontend.ts.NonJavaBodies.build(lib, referenceDir, rastDir) match {
         case refused: balticporter.frontend.ts.NonJavaBodies.Refused =>
           log.warn(s"[Baltic Porter] ssg-katex: ${refused.message}")

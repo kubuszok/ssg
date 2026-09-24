@@ -1,7 +1,10 @@
-import balticporter.frontend.ts.{ NonJavaBodies, ParityDerive, Rast, RastFile, RastNode, RastValue }
+import balticporter.frontend.ts.{ NonJavaBodies, ParityDerive, Rast, RastFile, RastNode, RastValue, ReferenceSignatures }
 import balticporter.frontend.ts.dedicated.{ DefmethodBodyTranslator, DefmethodEntry }
 
+import java.nio.charset.StandardCharsets
+import java.nio.file.{ Files, Path }
 import scala.collection.mutable
+import scala.jdk.CollectionConverters.*
 
 /** KaTeX body builder for parity-derive: the per-library policy that was in the engine's KaTeXEmitter, adapted to the generic `NonJavaBodies.build` entry point.
   *
@@ -137,67 +140,6 @@ object KaTeXBuilder {
     "unit.unit" // validUnit body: wrong `unit` access
   )
 
-  /** Per-member exclusions: translated bodies that do not compile due to translator defects. Each entry maps a camelCase member name to the defect reason. The body is kept from the reference with
-    * reason `translator-refusal:<defect>` in bodies.tsv.
-    *
-    * Translator defects observed:
-    *   - empty-using: `(using )` emitted as boundary label (return type not resolved)
-    *   - nullable-ops: JS truthiness operators on Nullable types (`!x`, `x && y`)
-    *   - js-map-construction: JS object literal translated as `mutable.Map(...)` instead of a proper typed construction
-    *   - wrong-member-access: accessing `.loc`, `.children`, `.text` etc. on wrong Scala types
-    *   - wrong-function-ref: calling functions not in scope or with wrong signatures
-    *   - wrong-type: type mismatch in return position or arguments
-    */
-  private val memberExclusions: Map[String, String] = Map(
-    // KaTeX.scala: all 3 translated bodies produce empty-using and wrong type for parser output
-    "generateParseTree" -> "translator-defect:empty-using+wrong-type",
-    "renderToDomTree" -> "translator-defect:empty-using+wrong-type",
-    "renderToHTMLTree" -> "translator-defect:empty-using+wrong-type",
-    // SourceLocation.scala: nullable-ops and empty-using
-    "range" -> "translator-defect:empty-using+nullable-ops",
-    // CdEnv.scala: empty-using and js-map-construction
-    "newCell" -> "translator-defect:js-map-construction+wrong-type",
-    "cdArrow" -> "translator-defect:empty-using+js-map-construction+wrong-type",
-    // EnvironmentDef.scala: js-map-construction and wrong-function-ref
-    "defineEnvironment" -> "translator-defect:js-map-construction+wrong-function-ref",
-    // FontMetrics.scala: wrong-type for metrics map iteration
-    "setFontMetrics" -> "translator-defect:wrong-type+wrong-member-access",
-    "getGlobalMetrics" -> "translator-defect:wrong-type+wrong-member-access",
-    // Utils.scala: wrong-member-access and empty-using
-    "getBaseElem" -> "translator-defect:wrong-member-access+wrong-type",
-    "protocolFromUrl" -> "translator-defect:empty-using+wrong-member-access",
-    // FunctionDef.scala: js-map-construction and wrong-function-ref
-    "defineFunction" -> "translator-defect:js-map-construction+wrong-function-ref",
-    "normalizeArgument" -> "translator-defect:wrong-member-access",
-    "ordargument" -> "translator-defect:wrong-member-access",
-    // SupsubFunc.scala: wrong-type for HTML builder output
-    "htmlBuilderDelegate" -> "translator-defect:wrong-type+wrong-member-access",
-    // MathchoiceFunc.scala: wrong-type for style choice
-    "chooseMathStyle" -> "translator-defect:wrong-type",
-    // AccentFunc.scala: wrong-member-access on HtmlDomNode
-    "getBaseSymbol" -> "translator-defect:wrong-type+wrong-member-access",
-    // BuildCommon.scala: wrong-type and wrong-member-access
-    "boldsymbol" -> "translator-defect:wrong-type+wrong-member-access",
-    // BuildHTML.scala: wrong-type
-    "getOutermostNode" -> "translator-defect:wrong-type",
-    // MclassFunc.scala: wrong-type for mclass binary relation
-    "binrelClass" -> "translator-defect:wrong-type",
-    // UnicodeScripts.scala: wrong-type for code point check
-    "supportedCodepoint" -> "translator-defect:wrong-type",
-    // Macros.scala: wrong-type for macro definition
-    "defineMacro" -> "translator-defect:wrong-type",
-    // BuildMathML.scala: wrong-member-access on MathML nodes
-    "makeRow" -> "translator-defect:wrong-member-access",
-    // ArrayEnv.scala: wrong-type and wrong-member-access
-    "getHLines" -> "translator-defect:wrong-type+wrong-member-access",
-    "getAutoTag" -> "translator-defect:wrong-type",
-    "dCellStyle" -> "translator-defect:wrong-type",
-    // GenfracFunc.scala: wrong-type
-    "wrapWithStyle" -> "translator-defect:wrong-type",
-    // TagFunc.scala: wrong-type
-    "pad" -> "translator-defect:wrong-type"
-  )
-
   val policy: ParityDerive.Policy =
     ParityDerive.Policy(uncompilablePatterns = uncompilablePatterns, keepReferenceOnRefusal = true)
 
@@ -304,7 +246,15 @@ object KaTeXBuilder {
     *
     * Every translated body goes through the uncompilable pattern check via the policy; bodies that contain any declared pattern are kept from the reference with a recorded reason in bodies.tsv.
     */
-  private def buildTranslatedBodyMap(rastFiles: List[RastFile]): ParityDerive.Bodies = {
+  private def buildTranslatedBodyMap(
+    rastFiles:    List[RastFile],
+    refObjectName: String,
+    oracle:       ReferenceSignatures.TypeOracle,
+    calleeIdx:    ReferenceSignatures.CalleeIndex,
+    memberIdx:    ReferenceSignatures.MemberIndex,
+    ctorSchema:   ReferenceSignatures.ConstructorSchema,
+    enumIdx:      ReferenceSignatures.EnumIndex
+  ): ParityDerive.Bodies = {
     val result = mutable.Map.empty[String, mutable.ListBuffer[ParityDerive.TranslatedBody]]
 
     for {
@@ -316,16 +266,24 @@ object KaTeXBuilder {
       // matches an unoffered member in another file.
       val key = camelCase(name)
       if (!collisionProneNames.contains(key)) {
+        // Look up type information from the reference tree
+        val sig       = oracle.get(refObjectName, key)
+        val retType   = sig.map(_.returnType)
+        val paramTpes = sig.map(s => s.params.map(p => p.name -> p.tpe).toMap).getOrElse(Map.empty)
         val entry      = DefmethodEntry("_free_", name, params, body)
-        val translated = DefmethodBodyTranslator.translateBody(entry, Nil, "    ", apiLookup = apiLookup)
+        val translated = DefmethodBodyTranslator.translateBody(
+          entry, Nil, "    ",
+          apiLookup   = apiLookup,
+          returnType  = retType,
+          paramTypes  = paramTpes,
+          calleeIndex = calleeIdx,
+          memberIndex = memberIdx,
+          ctorSchema  = ctorSchema,
+          enumIndex   = enumIdx
+        )
         // An empty or whitespace-only body is a translator failure; record it as a refusal
         val bodyText    = translated.scalaBody.trim
-        val baseReasons = if (bodyText.isEmpty) "empty-body" :: translated.refusalReasons else translated.refusalReasons
-        // Per-member exclusions: bodies that do not compile due to known translator defects
-        val reasons = memberExclusions.get(key) match {
-          case Some(defect) => defect :: baseReasons
-          case None         => baseReasons
-        }
+        val reasons = if (bodyText.isEmpty) "empty-body" :: translated.refusalReasons else translated.refusalReasons
         result.getOrElseUpdate(key, mutable.ListBuffer.empty) += ParityDerive.TranslatedBody(translated.scalaBody, reasons)
       }
     }
@@ -461,12 +419,31 @@ object KaTeXBuilder {
 
   private val allModules: List[(String, String)] = coreModules ++ functionModules ++ noExportModules
 
+  /** Read all `.scala` files under a directory as `(objectName, source)` pairs. The object name is the filename stem. */
+  private def readReferenceSources(dir: Path): List[(String, String)] = {
+    val stream = Files.walk(dir)
+    try {
+      stream.iterator().asScala
+        .filter(p => Files.isRegularFile(p) && p.getFileName.toString.endsWith(".scala"))
+        .map { p =>
+          val stem   = p.getFileName.toString.stripSuffix(".scala")
+          val source = new String(Files.readAllBytes(p), StandardCharsets.UTF_8)
+          (stem, source)
+        }
+        .toList
+    } finally stream.close()
+  }
+
   /** The Library value for `NonJavaBodies.build`.
     *
-    * Uses strictPolicy until the body translator produces compilable output for KaTeX. The RAST export runs and bodies.tsv records translated vs reference per member; every body is currently kept
-    * from the reference with reason `uncompilable-pattern`.
+    * Builds type indices from the reference Scala tree once, then passes them to every module's body translator so it can resolve return types, parameter types, callees, members, constructors and
+    * enums.
     */
-  def library: NonJavaBodies.Library =
+  def library(referenceDir: Path): NonJavaBodies.Library = {
+    val refSources                                = readReferenceSources(referenceDir)
+    val (calleeIdx, memberIdx, ctorSchema, enumIdx) = ReferenceSignatures.buildIndices(refSources)
+    val oracle                                    = ReferenceSignatures.TypeOracle.fromEntries(refSources.flatMap((n, s) => ReferenceSignatures.parseFile(n, s)))
+
     NonJavaBodies.Library(
       name = "katex",
       policy = policy,
@@ -474,8 +451,10 @@ object KaTeXBuilder {
       modules = _ =>
         Right(
           allModules.map { case (rastPath, refPath) =>
-            NonJavaBodies.Module(refPath, rastPath, Nil, rasts => buildTranslatedBodyMap(rasts))
+            val refObjectName = refPath.stripSuffix(".scala").split('/').last
+            NonJavaBodies.Module(refPath, rastPath, Nil, rasts => buildTranslatedBodyMap(rasts, refObjectName, oracle, calleeIdx, memberIdx, ctorSchema, enumIdx))
           }
         )
     )
+  }
 }
