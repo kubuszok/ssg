@@ -32,15 +32,6 @@ object KaTeXBuilder {
     "BuildHTML.",
     "buildExpression(",
     "buildGroup(",
-    // Collection operations the translator emits wrong
-    "++= ",
-    "new Array",
-    ".concat(",
-    ".splice(",
-    ".join(",
-    ".map(",
-    ".filter(",
-    ".forEach(",
     // Wrong property access on JS types
     "span.",
     "toNode(",
