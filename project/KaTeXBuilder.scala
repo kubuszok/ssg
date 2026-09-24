@@ -25,12 +25,10 @@ object KaTeXBuilder {
     "(((",
     // The translator accesses fields and methods by their JS names
     "this.",
-    // Wrong identifiers
-    "options =",
     // Builder API patterns
     "BuildCommon.",
     "BuildHTML.",
-    // Wrong property access on JS types
+    // Wrong property access
     "span.",
     "toNode(",
     // Builder function errors
