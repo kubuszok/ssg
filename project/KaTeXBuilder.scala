@@ -20,7 +20,6 @@ object KaTeXBuilder {
     */
   private val uncompilablePatterns: List[String] = List(
     // DOM/browser APIs not available in ssg
-    "document.",
     "window.",
     "console.",
     "HTMLElement",
