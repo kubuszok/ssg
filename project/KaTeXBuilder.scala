@@ -19,14 +19,6 @@ object KaTeXBuilder {
     * produce syntax the Scala compiler cannot parse.
     */
   private val uncompilablePatterns: List[String] = List(
-    // DOM/browser APIs not available in ssg
-    "window.",
-    "console.",
-    "HTMLElement",
-    "addEventListener",
-    "createElement",
-    "querySelector",
-    "innerHTML",
     // Terser-specific construct
     "DEFMETHOD(",
     // Translator holes and unhandled constructs
