@@ -104,11 +104,13 @@ interleaves RAST-translated method bodies where they compile, and keeps the refe
 **ssg-katex** exports its own RAST from `original-src/katex` with the engine's TS exporter (shipped
 in the frontend-ts jar) and Node, cached under `target/balticporter-rast/katex` on the submodule
 commit and the exporter version. The KaTeX builder (`project/KaTeXBuilder.scala`) supplies a
-`NonJavaBodies.Library` value with the full policy: reference indices and type oracle from the
-reference Scala tree feed return types, parameter types, callees, members, constructors and enums
-to the body translator; 11 uncompilable patterns guard bodies the translator cannot yet compile
-(ISS-1396). `bodies.tsv` records translated 5/474, reference by reason:
-translator-refusal=219, unclassified=69, uncompilable-pattern=174, occurrence-out-of-range=7.
+`NonJavaBodies.Library` value with the full policy: reference indices, type oracle and
+`memberRenames` from the reference Scala tree feed return types, parameter types, callees, members,
+constructors and enums to the body translator; 10 uncompilable patterns guard bodies the translator
+cannot yet compile (ISS-1396); `referenceOnly` classifies 208 Scala-specific members.
+`bodies.tsv` records translated 5/474, reference by reason: reference-only=208,
+translator-refusal=108, uncompilable-pattern=141, skeleton-cannot-offer=6,
+occurrence-out-of-range=6.
 
 **ssg-graphs-commons, ssg-js, ssg-mermaid, ssg-sass** derive from reference only with no RAST
 export yet; every body is `reference` with reason `no-translated-body`. Each will get its own
