@@ -19,15 +19,8 @@ object KaTeXBuilder {
     * produce syntax the Scala compiler cannot parse.
     */
   private val uncompilablePatterns: List[String] = List(
-    // Wrong property access
-    "span.",
-    "toNode(",
-    // Per-body guards: bodies that cannot compile without these patterns
-    "sqrtMain(",
-    "delimFromValue(",
-    "canCombine(",
-    ".depth",
-    "var delim = null"
+    // sqrtMain body: val-reassignment (extraVinculum) in SvgGeometry.scala
+    "sqrtMain("
   )
 
   val policy: ParityDerive.Policy =
