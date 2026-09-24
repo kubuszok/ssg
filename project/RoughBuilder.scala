@@ -6,13 +6,11 @@ import java.nio.file.{ Files, Path }
 import scala.collection.mutable
 import scala.jdk.CollectionConverters.*
 
-/** Rough.js body builder for parity-derive: the per-library policy for the five rough.js
-  * family upstreams (roughjs, path-data-parser, points-on-curve, points-on-path, hachure-fill),
-  * adapted to the generic `NonJavaBodies.build` entry point.
+/** Rough.js body builder for parity-derive: the per-library policy for the five rough.js family upstreams (roughjs, path-data-parser, points-on-curve, points-on-path, hachure-fill), adapted to the
+  * generic `NonJavaBodies.build` entry point.
   *
-  * The mechanism (ParityDerive, bodies.tsv, refusal recording) lives in the engine. This file
-  * carries only what is specific to the rough.js family: the module table, the referenceOnly
-  * entries, the aliases, and the body translator invocation.
+  * The mechanism (ParityDerive, bodies.tsv, refusal recording) lives in the engine. This file carries only what is specific to the rough.js family: the module table, the referenceOnly entries, the
+  * aliases, and the body translator invocation.
   */
 object RoughBuilder {
 
@@ -27,9 +25,8 @@ object RoughBuilder {
 
   /** Patterns in a translated RAST body that cannot compile in ssg-graphs-commons.
     *
-    * Each catches a construct the body translator emits that breaks compilation, documented
-    * with the defect class and affected members. A pattern is the LAST resort, one per
-    * defect class; defects are recorded in the tracker.
+    * Each catches a construct the body translator emits that breaks compilation, documented with the defect class and affected members. A pattern is the LAST resort, one per defect class; defects are
+    * recorded in the tracker.
     */
   private val uncompilablePatterns: List[String] = List(
     // JS ** exponentiation operator emitted as literal token name (randomSeed, next in RoughMath)
@@ -73,52 +70,50 @@ object RoughBuilder {
       aliases = Map(
         // Underscore-prefixed TS names whose camelCase form differs from the reference member name.
         // camelCase("_fillPolygons") -> "FillPolygons" but reference keeps "_fillPolygons"
-        "_fillPolygons"        -> List("FillPolygons"),
+        "_fillPolygons" -> List("FillPolygons"),
         // renderer.ts private helpers
-        "_offset"              -> List("Offset"),
-        "_offsetOpt"           -> List("OffsetOpt"),
-        "_doubleLine"          -> List("DoubleLine"),
-        "_line"                -> List("Line"),
-        "_curveWithOffset"     -> List("CurveWithOffset"),
-        "_curve"               -> List("Curve"),
+        "_offset" -> List("Offset"),
+        "_offsetOpt" -> List("OffsetOpt"),
+        "_doubleLine" -> List("DoubleLine"),
+        "_line" -> List("Line"),
+        "_curveWithOffset" -> List("CurveWithOffset"),
+        "_curve" -> List("Curve"),
         "_computeEllipsePoints" -> List("ComputeEllipsePoints"),
-        "_arc"                 -> List("Arc"),
-        "_bezierTo"            -> List("BezierTo"),
+        "_arc" -> List("Arc"),
+        "_bezierTo" -> List("BezierTo"),
         // generator.ts
-        "_o"                   -> List("O"),
-        "_d"                   -> List("D"),
-        "_mergedShape"         -> List("MergedShape")
+        "_o" -> List("O"),
+        "_d" -> List("D"),
+        "_mergedShape" -> List("MergedShape")
       )
     )
 
-  /** JS property names that the Scala reference renamed. The body translator's `snakeToCamel`
-    * would mangle underscore-prefixed names; `type` is a Scala reserved word.
+  /** JS property names that the Scala reference renamed. The body translator's `snakeToCamel` would mangle underscore-prefixed names; `type` is a Scala reserved word.
     */
   private val memberRenames: Map[String, String] = Map(
     // path-data-parser Parser.scala: TS PathToken `type` field -> `tokenType`
     "type" -> "`type`"
   )
 
-  /** API name lookup for the body translator: JS identifier to Scala equivalent.
-    * Module-level functions and cross-module references that the translator needs to resolve.
+  /** API name lookup for the body translator: JS identifier to Scala equivalent. Module-level functions and cross-module references that the translator needs to resolve.
     */
   private val apiLookup: Map[String, String] = Map(
     // roughjs cross-module references
-    "lineLength"             -> "Geometry.lineLength",
-    "polygonHachureLines"    -> "ScanLineHachure.polygonHachureLines",
-    "hachureLines"           -> "HachureFill.hachureLines",
-    "getFiller"              -> "Filler.getFiller",
-    "randomSeed"             -> "RoughMath.randomSeed",
+    "lineLength" -> "Geometry.lineLength",
+    "polygonHachureLines" -> "ScanLineHachure.polygonHachureLines",
+    "hachureLines" -> "HachureFill.hachureLines",
+    "getFiller" -> "Filler.getFiller",
+    "randomSeed" -> "RoughMath.randomSeed",
     // path-data-parser cross-module references
-    "parsePath"              -> "Parser.parsePath",
-    "serialize"              -> "Parser.serialize",
-    "absolutize"             -> "Absolutize.absolutize",
-    "normalize"              -> "Normalize.normalize",
+    "parsePath" -> "Parser.parsePath",
+    "serialize" -> "Parser.serialize",
+    "absolutize" -> "Absolutize.absolutize",
+    "normalize" -> "Normalize.normalize",
     // points-on-curve
-    "curveToBezier"          -> "CurveToBezier.curveToBezier",
-    "pointsOnBezierCurves"   -> "PointsOnCurve.pointsOnBezierCurves",
+    "curveToBezier" -> "CurveToBezier.curveToBezier",
+    "pointsOnBezierCurves" -> "PointsOnCurve.pointsOnBezierCurves",
     // points-on-path
-    "pointsOnPath"           -> "PointsOnPath.pointsOnPath"
+    "pointsOnPath" -> "PointsOnPath.pointsOnPath"
   )
 
   private def camelCase(s: String): String =
@@ -134,86 +129,84 @@ object RoughBuilder {
   // -------------------------------------------------------------------------
 
   private val roughjsModules: List[(String, String)] = List(
-    ("roughjs/src/core.rast.json",                        "Core.scala"),
-    ("roughjs/src/geometry.rast.json",                    "Geometry.scala"),
-    ("roughjs/src/rough.rast.json",                       "Rough.scala"),
-    ("roughjs/src/generator.rast.json",                   "RoughGenerator.scala"),
-    ("roughjs/src/math.rast.json",                        "RoughMath.scala"),
-    ("roughjs/src/renderer.rast.json",                    "RoughRenderer.scala"),
-    ("roughjs/src/svg.rast.json",                         "RoughSVG.scala"),
+    ("roughjs/src/core.rast.json", "Core.scala"),
+    ("roughjs/src/geometry.rast.json", "Geometry.scala"),
+    ("roughjs/src/rough.rast.json", "Rough.scala"),
+    ("roughjs/src/generator.rast.json", "RoughGenerator.scala"),
+    ("roughjs/src/math.rast.json", "RoughMath.scala"),
+    ("roughjs/src/renderer.rast.json", "RoughRenderer.scala"),
+    ("roughjs/src/svg.rast.json", "RoughSVG.scala"),
     // canvas.ts is platform-inapplicable (browser DOM only, no reference file)
     // fillers
-    ("roughjs/src/fillers/dashed-filler.rast.json",       "fillers/DashedFiller.scala"),
-    ("roughjs/src/fillers/dot-filler.rast.json",          "fillers/DotFiller.scala"),
-    ("roughjs/src/fillers/filler.rast.json",              "fillers/Filler.scala"),
+    ("roughjs/src/fillers/dashed-filler.rast.json", "fillers/DashedFiller.scala"),
+    ("roughjs/src/fillers/dot-filler.rast.json", "fillers/DotFiller.scala"),
+    ("roughjs/src/fillers/filler.rast.json", "fillers/Filler.scala"),
     // FillerInterface.scala declares ABSTRACT trait methods (TS interface); these have no RAST body.
     // Using a non-existent RAST so the members report as translator-refusal:missing-rast
     // rather than no-translated-body (the concrete implementations in the fillers get their own RAST).
-    ("__no-export__/FillerInterface",                     "fillers/FillerInterface.scala"),
-    ("roughjs/src/fillers/hachure-filler.rast.json",      "fillers/HachureFiller.scala"),
-    ("roughjs/src/fillers/hatch-filler.rast.json",        "fillers/HatchFiller.scala"),
-    ("roughjs/src/fillers/scan-line-hachure.rast.json",   "fillers/ScanLineHachure.scala"),
-    ("roughjs/src/fillers/zigzag-filler.rast.json",       "fillers/ZigZagFiller.scala"),
-    ("roughjs/src/fillers/zigzag-line-filler.rast.json",  "fillers/ZigZagLineFiller.scala")
+    ("__no-export__/FillerInterface", "fillers/FillerInterface.scala"),
+    ("roughjs/src/fillers/hachure-filler.rast.json", "fillers/HachureFiller.scala"),
+    ("roughjs/src/fillers/hatch-filler.rast.json", "fillers/HatchFiller.scala"),
+    ("roughjs/src/fillers/scan-line-hachure.rast.json", "fillers/ScanLineHachure.scala"),
+    ("roughjs/src/fillers/zigzag-filler.rast.json", "fillers/ZigZagFiller.scala"),
+    ("roughjs/src/fillers/zigzag-line-filler.rast.json", "fillers/ZigZagLineFiller.scala")
   )
 
   private val pathDataParserModules: List[(String, String)] = List(
-    ("path-data-parser/src/absolutize.rast.json",  "pathdata/Absolutize.scala"),
-    ("path-data-parser/src/normalize.rast.json",   "pathdata/Normalize.scala"),
-    ("path-data-parser/src/parser.rast.json",      "pathdata/Parser.scala"),
-    ("path-data-parser/src/index.rast.json",       "pathdata/PathDataParser.scala")
+    ("path-data-parser/src/absolutize.rast.json", "pathdata/Absolutize.scala"),
+    ("path-data-parser/src/normalize.rast.json", "pathdata/Normalize.scala"),
+    ("path-data-parser/src/parser.rast.json", "pathdata/Parser.scala"),
+    ("path-data-parser/src/index.rast.json", "pathdata/PathDataParser.scala")
   )
 
   private val pointsOnCurveModules: List[(String, String)] = List(
-    ("points-on-curve/src/curve-to-bezier.rast.json",  "curve/CurveToBezier.scala"),
-    ("points-on-curve/src/index.rast.json",            "curve/PointsOnCurve.scala")
+    ("points-on-curve/src/curve-to-bezier.rast.json", "curve/CurveToBezier.scala"),
+    ("points-on-curve/src/index.rast.json", "curve/PointsOnCurve.scala")
   )
 
   private val pointsOnPathModules: List[(String, String)] = List(
-    ("points-on-path/src/index.rast.json",  "curve/PointsOnPath.scala")
+    ("points-on-path/src/index.rast.json", "curve/PointsOnPath.scala")
   )
 
   private val hachureFillModules: List[(String, String)] = List(
-    ("hachure-fill/src/hachure.rast.json",  "fillers/HachureFill.scala")
+    ("hachure-fill/src/hachure.rast.json", "fillers/HachureFill.scala")
   )
 
   private val allModules: List[(String, String)] =
     roughjsModules ++ pathDataParserModules ++ pointsOnCurveModules ++ pointsOnPathModules ++ hachureFillModules
 
-  /** Members the reference declares that have no TS counterpart: the engine keeps the
-    * reference body and records the reason in bodies.tsv. Keyed by member name
-    * (matched globally across all files).
+  /** Members the reference declares that have no TS counterpart: the engine keeps the reference body and records the reason in bodies.tsv. Keyed by member name (matched globally across all files).
     */
   private val referenceOnly: Map[String, String] = Map(
     // RoughSVG.scala: Scala-specific helpers for SVG attribute formatting (no TS counterpart;
     // the TS version uses browser DOM setAttribute which handles numeric conversion implicitly)
-    "numStr"              -> "scala-specific-helper",
-    "numTruthy"           -> "scala-specific-helper",
+    "numStr" -> "scala-specific-helper",
+    "numTruthy" -> "scala-specific-helper",
     // RoughSVG.scala + RoughRenderer.scala + RoughGenerator.scala: Scala-specific helpers
     // for SVG attribute formatting and numeric truthiness (no TS counterpart)
-    "numStr"              -> "scala-specific-helper",
-    "numTruthy"           -> "scala-specific-helper",
+    "numStr" -> "scala-specific-helper",
+    "numTruthy" -> "scala-specific-helper",
     // HachureFill.scala + ScanLineHachure.scala + ZigZagFiller.scala: Scala-specific helpers
     // for JS truthiness semantics (no TS counterpart; the TS uses JS truthiness directly)
-    "truthy"              -> "scala-truthiness-helper",
+    "truthy" -> "scala-truthiness-helper",
     // RoughSVG.scala: TS get accessor for the gen field, not extracted from RAST;
     // Rough.scala: factory method, trivially correct in the reference (one-liner)
-    "generator"           -> "get-accessor-or-trivial",
+    "generator" -> "get-accessor-or-trivial",
     // Rough.scala: the TS has canvas() but the Scala body is a deliberate platform-inapplicable
     // throw (RoughCanvas does not exist in SSG); keep the reference body
-    "canvas"              -> "platform-inapplicable",
+    "canvas" -> "platform-inapplicable",
     // RoughGenerator.scala: Scala-specific helpers with no TS counterpart
-    "mergeOptions"        -> "scala-specific-helper",
-    "fillTruthy"          -> "scala-specific-helper",
-    "toCurvePoint"        -> "scala-specific-helper",
-    "toGeomPoint"         -> "scala-specific-helper",
-    "bezierPolyPoints"    -> "scala-specific-helper",
-    "ecmaFormat"          -> "scala-specific-helper",
+    "mergeOptions" -> "scala-specific-helper",
+    "fillTruthy" -> "scala-specific-helper",
+    "toCurvePoint" -> "scala-specific-helper",
+    "toGeomPoint" -> "scala-specific-helper",
+    "bezierPolyPoints" -> "scala-specific-helper",
+    "ecmaFormat" -> "scala-specific-helper",
     // HachureFill.scala: Scala comparators replacing inline JS sort arrow functions
-    "edgeCompare"         -> "scala-comparator-helper",
-    "activeCompare"       -> "scala-comparator-helper",
+    "edgeCompare" -> "scala-comparator-helper",
+    "activeCompare" -> "scala-comparator-helper",
     // Parser.scala: Scala-specific JS number formatting helper
-    "jsNum"               -> "scala-specific-helper"
+    "jsNum" -> "scala-specific-helper"
   )
 
   /** Extract every function, function-valued variable and method with a body from a RAST file. */
@@ -267,7 +260,7 @@ object RoughBuilder {
       rastFile <- rastFiles
       (name, params, body) <- functionBodies(rastFile)
     } {
-      val key = camelCase(name)
+      val key        = camelCase(name)
       val sig        = oracle.get(refObjectName, key)
       val retType    = sig.map(_.returnType)
       val paramTpes  = sig.map(s => s.params.map(p => p.name -> p.tpe).toMap).getOrElse(Map.empty)
@@ -313,8 +306,7 @@ object RoughBuilder {
 
   /** The Library value for `NonJavaBodies.build`.
     *
-    * Builds type indices from the reference Scala tree once, then passes them to every
-    * module's body translator.
+    * Builds type indices from the reference Scala tree once, then passes them to every module's body translator.
     */
   def library(referenceDir: Path): NonJavaBodies.Library = {
     val refSources                                  = readReferenceSources(referenceDir)
@@ -345,8 +337,7 @@ object RoughBuilder {
   // RAST export: one export per upstream, cached on commit + exporter version
   // -------------------------------------------------------------------------
 
-  /** Export RAST for one upstream into `<parentDir>/<name>/`, cached on the submodule's
-    * commit and the exporter version. Returns the output directory.
+  /** Export RAST for one upstream into `<parentDir>/<name>/`, cached on the submodule's commit and the exporter version. Returns the output directory.
     */
   def exportRast(
     name:         String,
