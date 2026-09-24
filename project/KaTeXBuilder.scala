@@ -67,7 +67,6 @@ object KaTeXBuilder {
     // Scala API. Any body that references `this.` is almost certainly wrong.
     "this.",
     // The translator emits JS identifiers with wrong casing or unknown names
-    "symbols(", // should be Symbols (capitalized)
     "data(", // recursive value or wrong constructor
     "data ++=", // mutable append on immutable
     "data ++= ", // mutable append on immutable (with space)
