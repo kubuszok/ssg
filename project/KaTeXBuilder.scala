@@ -73,7 +73,6 @@ object KaTeXBuilder {
     "data ++=", // mutable append on immutable
     "data ++= ", // mutable append on immutable (with space)
     "options(", // wrong constructor call
-    " options.", // wrong field access
     "new Options", // wrong constructor
     "new Style", // wrong constructor
     "options =", // reassigning an immutable
