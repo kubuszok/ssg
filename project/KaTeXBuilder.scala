@@ -30,8 +30,6 @@ object KaTeXBuilder {
     // Builder API patterns
     "BuildCommon.",
     "BuildHTML.",
-    "buildExpression(",
-    "buildGroup(",
     // Wrong property access on JS types
     "span.",
     "toNode(",
