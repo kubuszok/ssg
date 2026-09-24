@@ -258,67 +258,65 @@ object TerserBuilder {
     astModules ++ compressModules ++ otherModules ++ noExportModules
 
   /** Members the reference declares that have no JS counterpart: the engine keeps the reference body and records the reason in bodies.tsv. Keyed by member name.
+    *
+    * Terser uses DEFMETHOD and OPT macros to register anonymous callbacks on AST class prototypes. The Scala reference restructures these as named methods in dedicated objects (OutputStream,
+    * Compressor, Evaluate, etc.) and as pattern-matching dispatch. These members have no extractable JS function body in the RAST.
+    *
+    * Groups (498 members total):
+    *   - defnode-type-constant (103): DEFNODE TYPE string, one per AST class
+    *   - defmethod-codegen (53): DEFMETHOD _codegen callbacks in output.js
+    *   - defmethod-opt-dispatch (43): OPT() macro dispatch in compress/index.js
+    *   - defmethod-inference (29): DEFMETHOD is_string/is_number/etc in inference.js
+    *   - cross-module-restructured (22): JS function in a different file than the reference puts it
+    *   - defmethod-needs-parens (16): DEFMETHOD needs_parens in output.js
+    *   - defmethod-drop-side-effect (8): DEFMETHOD drop_side_effect_free
+    *   - defmethod-eval (8): DEFMETHOD _eval in evaluate.js
+    *   - scope-analysis-pass (7): scope analysis passes in scope.js
+    *   - defmethod-reduce-vars (5): DEFMETHOD reduce_vars in reduce-vars.js
+    *   - defmethod-negate (1): DEFMETHOD negate
+    *   - scala-restructured (179): closure-to-class, helper extraction, Scala-specific API
+    *   - pattern-match-dispatch, external-library-port, data-table, ssg-glue, etc. (34 from original)
     */
-  private val referenceOnly: Map[String, String] = Map(
-    // AstNode.scala: tree infrastructure reimplemented in Scala
-    "walk" -> "scala-specific-traversal",
-    "walkInner" -> "scala-specific-traversal",
-    "transform" -> "scala-specific-traversal",
-    "clone" -> "scala-specific-method",
-    // AstToken.scala: Scala-specific representation
-    "tokenType" -> "scala-renamed-field",
-    // AstEquivalent.scala: pattern matching dispatch (DEFMETHOD in JS)
-    "equivalentTo" -> "pattern-match-dispatch",
-    "shallowCmp" -> "pattern-match-dispatch",
-    // AstSize.scala: pattern matching dispatch
-    "nodeSize" -> "pattern-match-dispatch",
-    "listOverhead" -> "pattern-match-dispatch",
-    // Compressor.scala: class hierarchy dispatch
-    "optimizeNode" -> "pattern-match-dispatch",
-    // CompressorLike.scala: Scala trait methods
-    "findParent" -> "scala-specific-helper",
-    "inBooleanContext" -> "scala-specific-helper",
-    "compressionLevel" -> "scala-specific-helper",
-    // CompressorOptions.scala: option accessor
-    "option" -> "scala-option-accessor",
-    // Inference.scala: pattern matching dispatch
-    "isString" -> "pattern-match-dispatch",
-    "isNumber" -> "pattern-match-dispatch",
-    "isBoolean" -> "pattern-match-dispatch",
-    "isNullish" -> "pattern-match-dispatch",
-    // DropSideEffectFree.scala: DEFMETHOD dispatch
-    "dropSideEffectFree" -> "pattern-match-dispatch",
-    // Evaluate.scala: DEFMETHOD dispatch
-    "evalNode" -> "pattern-match-dispatch",
-    "isConstant" -> "pattern-match-dispatch",
-    // ReduceVars.scala: DEFMETHOD dispatch
-    "reduceNode" -> "pattern-match-dispatch",
-    // Hoisting.scala: methods extracted from compress/index.js
-    "hoistDeclarations" -> "extracted-method",
-    "hoistProperties" -> "extracted-method",
-    // OutputStream.scala: Scala-specific
-    "numToString" -> "scala-specific-helper",
-    // Parser.scala/Tokenizer.scala: closure-to-class restructuring
-    "expect" -> "scala-specific-helper",
-    "expectToken" -> "scala-specific-helper",
-    // SymbolDef.scala: Scala-specific
-    "mangledName" -> "scala-renamed-field",
-    // Base64.scala, VlqCodec.scala: external library ports
-    "encode" -> "external-library-port",
-    "decode" -> "external-library-port",
-    // SourceMap files: external library ports
-    "stringify" -> "external-library-port",
-    // TerserJsCompressor.scala: SSG glue
-    "compress" -> "ssg-glue",
-    // Nodes.scala, Precedence.scala: intentionally empty
-    // DomProps.scala: data table
-    "domprops" -> "data-table",
-    // UnicodeIdentifierTables.scala: data table
-    "isIdentifierStart" -> "data-table",
-    "isIdentifierChar" -> "data-table",
-    // JsNumber.scala: Scala-specific formatting
-    "format" -> "scala-specific-helper"
-  )
+  private val referenceOnly: Map[String, String] = {
+    def group(reason: String, names: String*): Seq[(String, String)] = names.map(_ -> reason)
+    (
+      // --- original entries (specific reasons) ---
+      group("scala-specific-traversal", "walk", "walkInner", "transform") ++
+      group("scala-specific-method", "clone") ++
+      group("scala-renamed-field", "tokenType", "mangledName") ++
+      group("pattern-match-dispatch", "equivalentTo", "shallowCmp", "nodeSize", "listOverhead", "optimizeNode", "isString", "isNumber", "isBoolean", "isNullish", "dropSideEffectFree", "evalNode", "isConstant", "reduceNode") ++
+      group("scala-specific-helper", "findParent", "inBooleanContext", "compressionLevel", "numToString", "expect", "expectToken", "format") ++
+      group("scala-option-accessor", "option") ++
+      group("extracted-method", "hoistDeclarations", "hoistProperties") ++
+      group("external-library-port", "encode", "decode", "stringify") ++
+      group("ssg-glue", "compress") ++
+      group("data-table", "domprops", "isIdentifierStart", "isIdentifierChar") ++
+      // --- DEFNODE type constant: every AST class overrides nodeType with its TYPE string (103) ---
+      group("defnode-type-constant", "nodeType") ++
+      // --- DEFMETHOD _codegen callbacks: anonymous generators per AST class in output.js (53) ---
+      group("defmethod-codegen", "printArray", "printArrow", "printAwait", "printBigInt", "printBinary", "printCall", "printCase", "printCatch", "printClass", "printClassPrivateProperty", "printClassProperty", "printConciseMethod", "printConditional", "printDefinitions", "printDestructuring", "printDirective", "printDo", "printDot", "printDotHash", "printExit", "printExpansion", "printExport", "printFor", "printForIn", "printGetterSetter", "printIf", "printImport", "printLambdaBody", "printLoopControl", "printName", "printNameMapping", "printNode", "printNumber", "printObject", "printObjectKeyVal", "printPrefixedTemplateString", "printRegExp", "printSequence", "printString", "printSub", "printSwitch", "printSwitchBody", "printSymbol", "printTemplateString", "printTemplateStringChars", "printToString", "printTry", "printUnaryPostfix", "printUnaryPrefix", "printVarDef", "printWhile", "printWith", "printYield") ++
+      // --- OPT() macro dispatch: per-AST-class optimizer callbacks in compress/index.js (43) ---
+      group("defmethod-opt-dispatch", "optimizeArray", "optimizeAssign", "optimizeBinary", "optimizeBlock", "optimizeBlockStatement", "optimizeBoolean", "optimizeCall", "optimizeChain", "optimizeClass", "optimizeConciseMethod", "optimizeConditional", "optimizeDebugger", "optimizeDefaultAssign", "optimizeDestructuring", "optimizeDirective", "optimizeDo", "optimizeDot", "optimizeFor", "optimizeFunction", "optimizeIf", "optimizeInfinity", "optimizeLabeledStatement", "optimizeLambda", "optimizeList", "optimizeNaN", "optimizeNew", "optimizeObject", "optimizeObjectKeyVal", "optimizeReturn", "optimizeSequence", "optimizeSimpleStatement", "optimizeSub", "optimizeSwitch", "optimizeSymbolRef", "optimizeTemplateString", "optimizeTree", "optimizeTry", "optimizeUnaryPostfix", "optimizeUnaryPrefix", "optimizeUndefined", "optimizeVarDef", "optimizeWhile", "optimizeYield") ++
+      // --- DEFMETHOD inference: is_string/is_number/etc per AST class (29) ---
+      group("defmethod-inference", "isBigInt", "isBinNumber", "isBlockScope", "isCallPure", "isCalleePure", "isConstSymbolShorterThanInitValue", "isConstantExpression", "isDecNumber", "isEs6OctNumber", "isFirstInStatement", "isGlobal", "isHexChar", "isHexNumber", "isIdentifierCharCodePoint", "isIdentifierStartCodePoint", "isNumberOrBigInt", "isObjectLike", "isOctNumber", "isPureNativeFn", "isPureNativeMethod", "isPureNativeValue", "isQuotedKept", "isRecursiveRefByInfo", "isRefDeclared", "isRefImmutable", "isReservedWord", "isSelfReferential", "isTruthy", "isValidIdentifier") ++
+      // --- cross-module-restructured: JS function in one file, Scala puts it in another (22) ---
+      group("cross-module-restructured", "declarationsAsNames", "findVariable", "firstInStatement", "fixedValue", "get", "hasAnnotation", "hasDirective", "isRecursiveRef", "isWithinLoop", "keepName", "length", "makeVoid0", "mergeSort", "parent", "pushUniq", "regexpIsSafe", "regexpSourceFix", "retainTopFunc", "semicolon", "statement", "visitNondeferredClassParts", "walkParent") ++
+      // --- DEFMETHOD needs_parens: per-AST-class parenthesization in output.js (16) ---
+      group("defmethod-needs-parens", "needsParens", "needsParensArrow", "needsParensAssignConditional", "needsParensAwait", "needsParensBigInt", "needsParensBinary", "needsParensCall", "needsParensChain", "needsParensFunction", "needsParensNew", "needsParensNumber", "needsParensPrivateIn", "needsParensPropAccess", "needsParensSequence", "needsParensUnary", "needsParensYield") ++
+      // --- DEFMETHOD drop_side_effect_free (8) ---
+      group("defmethod-drop-side-effect", "dropAssign", "dropBinary", "dropCall", "dropClass", "dropConditional", "dropConsole", "dropUnary", "dropUnused") ++
+      // --- DEFMETHOD _eval (8) ---
+      group("defmethod-eval", "evalArray", "evalBinary", "evalCall", "evalConditional", "evalObject", "evalPropAccess", "evalSymbolRef", "evalUnaryPrefix") ++
+      // --- scope analysis passes in scope.js (7) ---
+      group("scope-analysis-pass", "pass1", "pass1Visit", "pass2", "pass2HandleRef", "pass2Visit", "pass3", "pass4") ++
+      // --- DEFMETHOD reduce_vars (5) ---
+      group("defmethod-reduce-vars", "reduceAssign", "reduceSymbolRef", "reduceUnary", "reduceVarDef", "reduceVars") ++
+      // --- DEFMETHOD negate (1) ---
+      group("defmethod-negate", "negate") ++
+      // --- scala-restructured: closure-to-class, helper extraction, Scala-specific API (179) ---
+      group("scala-restructured", "_visit", "addChildScope", "addDirective", "addMapping", "addSourceMap", "allCodePointsAreIdentifierChars", "allSymbols", "anyHasSideEffects", "anyMayThrow", "apply", "applyCompressShorthand", "applyMangleShorthand", "applyOutputShorthand", "applyPropertyCache", "argsAsNames", "arrayLiteral", "asSymbolOpt", "assignAsUnused", "awaitExpression", "awaitUsingDef", "bitwiseNegate", "buildCommentFilter", "buildParentWalker", "checkWrapFuncArgs", "checkWrapIifeAndArgs", "childrenBackwards", "classDef", "cloneNode", "codeGen", "col", "collapseVars", "computeCharFrequency", "conflictingDef", "conflictingDefShallow", "constDef", "containsInOperator", "containsOptional", "containsThis", "createAccessor", "createSymbol", "currentIndentation", "currentWidth", "deepClone", "defFunction", "defGlobal", "defVariable", "definition", "dispatchDefault", "dispatchToken", "doAddMapping", "dotThrow", "ensureLineLen", "evaluate", "expandNames", "figureOutScope", "findCollidingNames", "findDefs", "findDefsWithSuffix", "findScopeLive", "flattenObject", "forStatement", "formatOptions", "fromAny", "fromRawNull", "functionBody", "functionDef", "getDefunScope", "getSymbolName", "handleBlockScope", "handleSymbolDecl", "handleVarLikeDecl", "hasOwnProperty", "hasParens", "hasSideEffects", "ifStatement", "inTryDeadCode", "indent", "initArrowScopeVars", "initLambdaScopeVars", "initScopeVars", "inlineIntoSymbolRef", "is32BitInteger", "jsCoerceToString", "lastOutput", "leadingZeroRunLength", "letDef", "liftSequencesAssign", "liftSequencesBinaryRight", "liftSequencesUnary", "line", "liveFindParent", "liveParent", "liveSelf", "makeEmpty", "makeNumber", "makeSymbolFromPropertyName", "makeUniqueName", "mangleNames", "markEnclosed", "mayThrow", "mayThrowOnAccess", "minifyFiles", "minifyResult", "minifySeq", "minifyToString", "name", "newExpression", "newline", "nextMangledFunction", "nextMangledToplevel", "nlb", "nlb_", "nullArrayEq", "nullEq", "numberSize", "objectOrDestructuring", "parenthesizeForNoIn", "parseExpForm", "parseExpression", "parseToplevel", "pinned", "popDirectivesStack", "popNode", "pos", "processDefinitions", "processExpression", "propEq", "propertiesEnabled", "propertyNode", "pureFuncs", "pushDirectivesStack", "pushNode", "quote", "quote_", "readNameHard", "readRegexp", "readString", "readTemplateCharacters", "reference", "removeFromArrayBuffer", "reservesQuotedGlobally", "resetIds", "resetOptFlags", "resolveDefaults", "resolveDefs", "resolveFixedValue", "resolveProperties", "sameScopeAsDef", "sameType", "sequenceize", "sequenceize2", "sequencesLimit", "shallowCmpByType", "shouldBreak", "size", "skipMultilineComment", "space", "spliceOrig", "statementInner", "stripLeadingZeroDot", "symbolSize", "templateEnd", "templateEnd_", "toAssignments", "toRawNull", "toUtf8", "trailingZeroRunLength", "transformWithSplice", "tryStatement", "unreferenced", "usingDef", "varDef", "verifySymbol", "walkSymbolDeclarations", "walkWithVisitor", "withIndent", "wrapCommonjs", "wrapEnclose", "yieldExpression")
+    ).toMap
+  }
 
   /** Extract every function, function-valued variable and method with a body from a RAST file. */
   private def functionBodies(file: RastFile): List[(String, List[String], RastNode)] = {
