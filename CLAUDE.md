@@ -112,7 +112,18 @@ Scala-specific members. `bodies.tsv` records translated 4/466, reference by reas
 translator-refusal=248, reference-only=201, skeleton-cannot-offer=6, occurrence-out-of-range=4,
 no-translated-body=2, uncompilable-pattern=1.
 
-**ssg-graphs-commons, ssg-js, ssg-mermaid, ssg-sass** derive from reference only with no RAST
+**ssg-graphs-commons** exports RAST from five upstream submodules (roughjs, path-data-parser,
+points-on-curve, points-on-path, hachure-fill) with the engine's TS exporter and Node, cached
+under `target/balticporter-rast/<name>` per submodule commit and exporter version. The builder
+(`project/RoughBuilder.scala`) supplies a `NonJavaBodies.Library` value with aliases for
+underscore-prefixed TS names, `memberRenames`, reference indices, and `referenceOnly` entries for
+19 Scala-specific members (helpers, comparators, get-accessors, platform-inapplicable). 14
+uncompilable patterns guard bodies the translator cannot yet compile (tuple-as-array-access,
+exponentiation operator, wrong self-reference, ArrayBuffer-vs-Vector/tuple). `bodies.tsv` records
+translated 17/130, reference by reason: reference-only=19, translator-refusal=54,
+uncompilable-pattern=30, skeleton-cannot-offer=10.
+
+**ssg-js, ssg-mermaid, ssg-sass** derive from reference only with no RAST
 export yet; every body is `reference` with reason `no-translated-body`. Each will get its own
 export when its upstream submodule is wired into the build.
 

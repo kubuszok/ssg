@@ -11,6 +11,7 @@ project/*
 !project/BalticPorterGen.scala
 !project/KaTeXBuilder.scala
 !project/LiqpParserClasspath.scala
+!project/RoughBuilder.scala
 !project/RemoteCacheSetup.scala
 target/
 .sbt/

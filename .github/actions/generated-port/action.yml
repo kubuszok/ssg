@@ -37,15 +37,21 @@ runs:
         set -euo pipefail
         liqp=$(git ls-tree HEAD original-src/liqp | awk '{print $3}')
         katex=$(git ls-tree HEAD original-src/katex | awk '{print $3}')
+        roughjs=$(git ls-tree HEAD original-src/roughjs | awk '{print $3}')
+        pathdataparser=$(git ls-tree HEAD original-src/path-data-parser | awk '{print $3}')
+        pointsoncurve=$(git ls-tree HEAD original-src/points-on-curve | awk '{print $3}')
+        pointsonpath=$(git ls-tree HEAD original-src/points-on-path | awk '{print $3}')
+        hachurefill=$(git ls-tree HEAD original-src/hachure-fill | awk '{print $3}')
         liquid=$(git rev-parse "HEAD:ssg-liquid/port")
         md=$(git rev-parse "HEAD:ssg-md/port")
         parser=$(git hash-object project/LiqpParserClasspath.scala)
         katexbuilder=$(git hash-object project/KaTeXBuilder.scala)
+        roughbuilder=$(git hash-object project/RoughBuilder.scala)
         # build.sbt decides WHICH generators `generatePort` runs: a tree cached before a generator
         # was added would otherwise be restored, and the compile jobs (no submodule) cannot fill the gap
         build=$(git hash-object build.sbt)
-        test -n "$liqp" && test -n "$katex" && test -n "$liquid" && test -n "$md" && test -n "$parser" && test -n "$katexbuilder"
-        echo "extra=liqp-$liqp-katex-$katex-ports-$liquid-$md-$parser-$katexbuilder-build-$build" >> "$GITHUB_OUTPUT"
+        test -n "$liqp" && test -n "$katex" && test -n "$roughjs" && test -n "$pathdataparser" && test -n "$pointsoncurve" && test -n "$pointsonpath" && test -n "$hachurefill" && test -n "$liquid" && test -n "$md" && test -n "$parser" && test -n "$katexbuilder" && test -n "$roughbuilder"
+        echo "extra=liqp-$liqp-katex-$katex-rough-$roughjs-pdp-$pathdataparser-poc-$pointsoncurve-pop-$pointsonpath-hf-$hachurefill-ports-$liquid-$md-$parser-$katexbuilder-$roughbuilder-build-$build" >> "$GITHUB_OUTPUT"
 
     - uses: kubuszok/balticporter/.github/actions/generated-port@55be328a2265f34c8d41d30634569229539cf562
       id: port
@@ -55,7 +61,7 @@ runs:
         path: target/balticporter
         submodule: original-src/flexmark-java
         command: >-
-          git submodule update --init --depth=1 original-src/liqp original-src/katex
+          git submodule update --init --depth=1 original-src/liqp original-src/katex original-src/roughjs original-src/path-data-parser original-src/points-on-curve original-src/points-on-path original-src/hachure-fill
           && (cd original-src/liqp && chmod +x mvnw && ./mvnw -q generate-sources -pl .)
           && (cd original-src/katex && npm install --no-save 2>/dev/null || true)
           && sbt generatePort

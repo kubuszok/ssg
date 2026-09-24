@@ -426,6 +426,157 @@ object BalticPorterGen {
       }
     }
 
+  // ---------------------------------------------------------------------------
+  // Graphs-commons: export RAST from the five rough.js family submodules,
+  // then derive via NonJavaBodies. Structured like KaTeX: one marker, one
+  // fingerprint, one generated tree under target/balticporter/ssg-graphs-commons/.
+  // ---------------------------------------------------------------------------
+
+  /** Fingerprint for the ssg-graphs-commons generated tree: engine pin, the five submodule commits, exporter version, builder hash, and reference hash.
+    */
+  private def graphsCommonsFingerprint(ssgRoot: Path): String = {
+    val pin     = """balticporter-engine" % "([^"]+)"""".r.findFirstMatchIn(Files.readString(ssgRoot.resolve("project/plugins.sbt"))).map(_.group(1)).getOrElse("unknown")
+    val expVer  = exporterVersion()
+    val commits = RoughBuilder.upstreamNames.map { name =>
+      name -> submoduleCommit(ssgRoot, s"original-src/$name")
+    }
+    val builder = {
+      val md = java.security.MessageDigest.getInstance("SHA-256")
+      md.update(Files.readString(ssgRoot.resolve("project/RoughBuilder.scala")).replace("\r", "").getBytes("UTF-8"))
+      md.digest().take(8).map(b => f"$b%02x").mkString
+    }
+    val reference = {
+      val refDir = ssgRoot.resolve("ssg-graphs-commons/reference/scala")
+      val md     = java.security.MessageDigest.getInstance("SHA-256")
+      if (Files.isDirectory(refDir)) {
+        val s = Files.walk(refDir)
+        try {
+          val files = scala.jdk.CollectionConverters.IteratorHasAsScala(s.filter(Files.isRegularFile(_)).iterator()).asScala.toList
+          files.map(p => refDir.relativize(p).toString.replace('\\', '/') -> p).sortBy(_._1).foreach { case (rel, p) =>
+            md.update(rel.getBytes("UTF-8"))
+            md.update(Files.readAllBytes(p))
+          }
+        } finally s.close()
+      }
+      md.digest().take(8).map(b => f"$b%02x").mkString
+    }
+    val upstreams = commits.map { case (n, c) => s"$n=$c" }.mkString(" ")
+    s"engine=$pin $upstreams exporter=$expVer builder=$builder reference=$reference"
+  }
+
+  /** Generate ssg-graphs-commons: export RAST from the five rough.js family submodules, then derive.
+    *
+    * Structured like `generateKatex`: everything under `target/balticporter/ssg-graphs-commons/`, cached on the fingerprint. Each upstream's RAST goes into `rast/<name>/` so the module table can
+    * reference `<name>/src/<file>.rast.json`.
+    */
+  def generateGraphsCommons(buildBase: File, log: sbt.util.Logger): Seq[File] =
+    BalticPorterGen.synchronized {
+      val ssgRoot      = buildBase.toPath.toAbsolutePath.normalize
+      val gcRoot       = ssgRoot.resolve("target/balticporter/ssg-graphs-commons")
+      val rastDir      = gcRoot.resolve("rast")
+      val outDir       = gcRoot.resolve("src_managed/main/scala")
+      val reportDir    = gcRoot.resolve("report")
+      val marker       = gcRoot.resolve(".generated-marker")
+      val referenceDir = ssgRoot.resolve("ssg-graphs-commons/reference/scala")
+
+      val expected = graphsCommonsFingerprint(ssgRoot)
+
+      val cached = Files.exists(marker) && Files.isDirectory(outDir) && Files.isDirectory(rastDir) &&
+        Files.readString(marker).trim == expected
+
+      if (cached) {
+        log.info(s"[Baltic Porter] Using cached ssg-graphs-commons tree ($expected)")
+        return collectScalaFiles(outDir)
+      }
+
+      // --- fingerprint mismatch: need the submodules ---
+      val missing = RoughBuilder.upstreamNames.filter { name =>
+        val src = ssgRoot.resolve(s"original-src/$name/src")
+        !Files.isDirectory(src)
+      }
+      if (missing.nonEmpty)
+        sys.error(
+          s"[Baltic Porter] ssg-graphs-commons sources are missing or stale ($marker does not read `$expected`) " +
+            s"and these submodules are not initialised: ${missing.mkString(", ")}. " +
+            s"Run `git submodule update --init --depth=1 ${missing.map(n => s"original-src/$n").mkString(" ")}`, " +
+            s"or place a generated tree with a matching marker under $gcRoot."
+        )
+
+      log.info(s"[Baltic Porter] Generating ssg-graphs-commons ($expected)")
+
+      // 1. Extract the exporter from the jar (shared with KaTeX)
+      val exporterDir = ssgRoot.resolve("target/balticporter-work/ts-exporter")
+      Files.createDirectories(exporterDir)
+      val exporterScript = exporterDir.resolve("export.js")
+
+      val jsUrl = getClass.getClassLoader.getResource("balticporter/frontend/ts/exporter/export.js")
+      if (jsUrl == null) sys.error("[Baltic Porter] export.js not found in the frontend-ts jar")
+      Files.copy(jsUrl.openStream(), exporterScript, java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+
+      val mfUrl = getClass.getClassLoader.getResource("balticporter/frontend/ts/exporter/manifest.properties")
+      if (mfUrl != null) {
+        val mfTarget = exporterDir.resolve("manifest.properties")
+        Files.copy(mfUrl.openStream(), mfTarget, java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+      }
+      val mfProps = new java.util.Properties()
+      if (mfUrl != null) {
+        val s = mfUrl.openStream();
+        try mfProps.load(s)
+        finally s.close()
+      }
+      val tsVersion = mfProps.getProperty("typescript.version", "5.8.3")
+
+      // 2. Ensure the typescript npm package is available
+      val exporterNodeModules = exporterDir.resolve("node_modules")
+      if (!Files.isDirectory(exporterNodeModules.resolve("typescript"))) {
+        // Try katex's node_modules first, then ssg root, then npm install
+        val katexNodeModules = ssgRoot.resolve("original-src/katex/node_modules")
+        val ssgNodeModules   = ssgRoot.resolve("node_modules")
+        if (Files.isDirectory(katexNodeModules.resolve("typescript"))) {
+          Files.deleteIfExists(exporterNodeModules)
+          Files.createSymbolicLink(exporterNodeModules, katexNodeModules)
+        } else if (Files.isDirectory(ssgNodeModules.resolve("typescript"))) {
+          Files.deleteIfExists(exporterNodeModules)
+          Files.createSymbolicLink(exporterNodeModules, ssgNodeModules)
+        } else {
+          val npmPb = new ProcessBuilder("npm", "install", "--no-save", s"typescript@$tsVersion")
+          npmPb.directory(exporterDir.toFile)
+          npmPb.redirectErrorStream(true)
+          val npmP   = npmPb.start()
+          val npmOut = new String(npmP.getInputStream.readAllBytes())
+          if (npmP.waitFor() != 0) sys.error(s"[Baltic Porter] npm install typescript failed: $npmOut")
+        }
+      }
+
+      // 3. Export RAST for each upstream
+      if (Files.exists(rastDir)) {
+        val s = Files.walk(rastDir)
+        try s.sorted(java.util.Comparator.reverseOrder()).forEach(Files.delete(_))
+        finally s.close()
+      }
+      Files.createDirectories(rastDir)
+
+      for (name <- RoughBuilder.upstreamNames) {
+        val submoduleDir = ssgRoot.resolve(s"original-src/$name")
+        RoughBuilder.exportRast(name, submoduleDir, rastDir, exporterDir, log)
+      }
+
+      // 4. Derive
+      val lib = RoughBuilder.library(referenceDir)
+      balticporter.frontend.ts.NonJavaBodies.build(lib, referenceDir, rastDir) match {
+        case refused: balticporter.frontend.ts.NonJavaBodies.Refused =>
+          log.warn(s"[Baltic Porter] ssg-graphs-commons: ${refused.message}")
+          deriveReferenceOnly("ssg-graphs-commons", referenceDir, outDir, reportDir, lib.policy, log)
+
+        case built: balticporter.frontend.ts.NonJavaBodies.Built =>
+          val run = built.derive(outDir, reportDir)
+          log.info(s"[Baltic Porter] ssg-graphs-commons: ${run.summary.line}")
+          Files.createDirectories(marker.getParent)
+          Files.writeString(marker, expected)
+          run.written.map(_.toFile)
+      }
+    }
+
   /** Derive a module from reference only, with no RAST — every body is kept from the reference. Used when the RAST export is not available (the other four non-Java modules until they get their own
     * export).
     */
