@@ -117,155 +117,101 @@ object KaTeXBuilder {
     */
   private val collisionProneNames: Set[String] = Set.empty
 
-  // -------------------------------------------------------------------------
-  // Reference-only members: Scala-specific members with no TS counterpart.
-  // Each entry is (memberName, occurrenceCount, reason).
-  // -------------------------------------------------------------------------
-
-  private val fontMetricsAccessors: List[String] = List(
-    "cssEmPerMu",
-    "slant",
-    "space",
-    "stretch",
-    "shrink",
-    "xHeight",
-    "quad",
-    "extraSpace",
-    "num1",
-    "num2",
-    "num3",
-    "denom1",
-    "denom2",
-    "sup1",
-    "sup2",
-    "sup3",
-    "sub1",
-    "sub2",
-    "supDrop",
-    "subDrop",
-    "delim1",
-    "delim2",
-    "axisHeight",
-    "defaultRuleThickness",
-    "bigOpSpacing1",
-    "bigOpSpacing2",
-    "bigOpSpacing3",
-    "bigOpSpacing4",
-    "bigOpSpacing5",
-    "sqrtRuleThickness",
-    "ptPerEm",
-    "doubleRuleSep",
-    "arrayRuleWidth",
-    "fboxsep",
-    "fboxrule",
-    "apply",
-    "get"
+  /** Members the reference declares that have no TS counterpart: the engine keeps the reference body and records the reason in bodies.tsv. Keyed by member name (matched globally across all files). */
+  private val referenceOnly: Map[String, String] = Map(
+    // Registration wrappers (48 function files + 3 environment files + 2 registries)
+    "register"                    -> "module-level-side-effect",
+    "registerAll"                 -> "module-level-side-effect",
+    // KaTeX.scala: Scala-only entry points and cross-module delegation
+    "ensureRegistered"            -> "scala-registration-wrapper",
+    "renderToStringResult"        -> "scala-diagnostic-api",
+    "positionOf"                  -> "scala-diagnostic-api",
+    "__setFontMetrics"            -> "cross-module-delegation",
+    "__defineSymbol"              -> "cross-module-delegation",
+    "__defineFunction"            -> "cross-module-delegation",
+    "__defineMacro"               -> "cross-module-delegation",
+    // MacroDef.scala: abstract trait members (consumeArgs and mode also appear in MacroExpander
+    // where they are classified structurally; the referenceOnly reason takes precedence globally)
+    "mode"                        -> "abstract-trait-method",
+    "expandAfterFuture"           -> "abstract-trait-method",
+    "consumeArgs"                 -> "abstract-trait-method",
+    // ParseNode.scala: sealed-trait discriminator fields (nodeType and text also appear as
+    // skeleton-cannot-offer:override in subclasses; referenceOnly takes precedence globally)
+    "nodeType"                    -> "type-discriminator-field",
+    "bodyNode"                    -> "type-discriminator-field",
+    "bodyNodes"                   -> "type-discriminator-field",
+    "text"                        -> "type-discriminator-field",
+    // ParseError.scala: constructor-extracted helpers
+    "buildMessage"                -> "constructor-extracted-helper",
+    "computePosition"             -> "constructor-extracted-helper",
+    "computeLength"               -> "constructor-extracted-helper",
+    // Settings.scala
+    "command"                     -> "constructor-parameter",
+    // BuildCommon.scala
+    "childType"                   -> "case-class-field",
+    // BuildHTML.scala
+    "traverseNonSpaceNodesInner"  -> "scala-specific-split",
+    // BuildTree.scala
+    "validateOutput"              -> "scala-specific-helper",
+    // Macros.scala
+    "defineMacroFn"               -> "scala-wrapping-helper",
+    // FontMetrics.scala: data accessor delegation (35 metrics + apply + get)
+    "cssEmPerMu"                  -> "data-accessor-delegation",
+    "slant"                       -> "data-accessor-delegation",
+    "space"                       -> "data-accessor-delegation",
+    "stretch"                     -> "data-accessor-delegation",
+    "shrink"                      -> "data-accessor-delegation",
+    "xHeight"                     -> "data-accessor-delegation",
+    "quad"                        -> "data-accessor-delegation",
+    "extraSpace"                  -> "data-accessor-delegation",
+    "num1"                        -> "data-accessor-delegation",
+    "num2"                        -> "data-accessor-delegation",
+    "num3"                        -> "data-accessor-delegation",
+    "denom1"                      -> "data-accessor-delegation",
+    "denom2"                      -> "data-accessor-delegation",
+    "sup1"                        -> "data-accessor-delegation",
+    "sup2"                        -> "data-accessor-delegation",
+    "sup3"                        -> "data-accessor-delegation",
+    "sub1"                        -> "data-accessor-delegation",
+    "sub2"                        -> "data-accessor-delegation",
+    "supDrop"                     -> "data-accessor-delegation",
+    "subDrop"                     -> "data-accessor-delegation",
+    "delim1"                      -> "data-accessor-delegation",
+    "delim2"                      -> "data-accessor-delegation",
+    "axisHeight"                  -> "data-accessor-delegation",
+    "defaultRuleThickness"        -> "data-accessor-delegation",
+    "bigOpSpacing1"               -> "data-accessor-delegation",
+    "bigOpSpacing2"               -> "data-accessor-delegation",
+    "bigOpSpacing3"               -> "data-accessor-delegation",
+    "bigOpSpacing4"               -> "data-accessor-delegation",
+    "bigOpSpacing5"               -> "data-accessor-delegation",
+    "sqrtRuleThickness"           -> "data-accessor-delegation",
+    "ptPerEm"                     -> "data-accessor-delegation",
+    "doubleRuleSep"               -> "data-accessor-delegation",
+    "arrayRuleWidth"              -> "data-accessor-delegation",
+    "fboxsep"                     -> "data-accessor-delegation",
+    "fboxrule"                    -> "data-accessor-delegation",
+    // Symbols.scala
+    "math"                        -> "scala-accessor",
+    "symbolsForMode"              -> "scala-accessor",
+    "getSymbol"                   -> "scala-accessor",
+    "initSymbols"                 -> "scala-initialization",
+    // Units.scala
+    "fontMetrics"                 -> "scala-accessor",
+    // DomTree.scala (toMarkup, isEmpty, nonEmpty also appear in subclasses as
+    // skeleton-cannot-offer:override; referenceOnly takes precedence globally)
+    "foreachEntry"                -> "scala-specific-helper",
+    "isEmpty"                     -> "scala-specific-helper",
+    "nonEmpty"                    -> "scala-specific-helper",
+    "virtualChildren"             -> "scala-specific-accessor",
+    "toInMemoryNode"              -> "scala-specific-helper",
+    "toMarkup"                    -> "parameter-mismatch",
+    // Style.scala
+    "toString"                    -> "scala-override",
+    // FontMetrics.scala and Symbols.scala share these names; both are reference-only
+    "apply"                       -> "data-accessor-delegation",
+    "get"                         -> "data-accessor-delegation"
   )
-
-  private lazy val referenceOnlyMembers: Map[String, List[(String, Int, String)]] = {
-    // Every function and environment file wraps TS module-level defineFunction/defineEnvironment
-    // calls in a register() or registerAll() method that has no TS function counterpart.
-    val registrations: List[(String, List[(String, Int, String)])] =
-      functionNames.map { name =>
-        val capName = capitalizeFirst(name)
-        s"functions/${capName}Func.scala" -> List(("register", 1, "module-level-side-effect"))
-      } ++ List(
-        "environments/ArrayEnv.scala" -> List(("register", 1, "module-level-side-effect")),
-        "environments/CdEnv.scala" -> List(("register", 1, "module-level-side-effect")),
-        "environments/Environments.scala" -> List(("registerAll", 1, "module-level-side-effect")),
-        "functions/Functions.scala" -> List(("registerAll", 1, "module-level-side-effect")),
-        "data/Macros.scala" -> List(("registerAll", 1, "module-level-side-effect"))
-      )
-
-    val perFile: List[(String, List[(String, Int, String)])] = List(
-      "KaTeX.scala" -> List(
-        ("ensureRegistered", 1, "scala-registration-wrapper"),
-        ("renderToStringResult", 2, "scala-diagnostic-api"),
-        ("positionOf", 1, "scala-diagnostic-api"),
-        ("__setFontMetrics", 1, "cross-module-delegation"),
-        ("__defineSymbol", 1, "cross-module-delegation"),
-        ("__defineFunction", 1, "cross-module-delegation"),
-        ("__defineMacro", 1, "cross-module-delegation")
-      ),
-      "MacroDef.scala" -> List(
-        ("mode", 1, "abstract-trait-method"),
-        ("expandAfterFuture", 1, "abstract-trait-method"),
-        ("consumeArgs", 1, "abstract-trait-method")
-      ),
-      "parse/ParseNode.scala" -> List(
-        ("nodeType", 1, "type-discriminator-field"),
-        ("bodyNode", 1, "type-discriminator-field"),
-        ("bodyNodes", 1, "type-discriminator-field"),
-        ("text", 1, "type-discriminator-field")
-      ),
-      "ParseError.scala" -> List(
-        ("buildMessage", 1, "constructor-extracted-helper"),
-        ("computePosition", 1, "constructor-extracted-helper"),
-        ("computeLength", 1, "constructor-extracted-helper")
-      ),
-      "Settings.scala" -> List(
-        ("command", 1, "constructor-parameter")
-      ),
-      "build/BuildCommon.scala" -> List(
-        ("childType", 3, "case-class-field")
-      ),
-      "build/BuildHTML.scala" -> List(
-        ("traverseNonSpaceNodesInner", 1, "scala-specific-split")
-      ),
-      "build/BuildTree.scala" -> List(
-        ("validateOutput", 1, "scala-specific-helper")
-      ),
-      "data/Macros.scala" -> List(
-        ("defineMacroFn", 1, "scala-wrapping-helper")
-      ),
-      "data/FontMetrics.scala" -> fontMetricsAccessors.map(n => (n, 1, "data-accessor-delegation")),
-      "data/Symbols.scala" -> List(
-        ("math", 1, "scala-accessor"),
-        ("text", 1, "scala-accessor"),
-        ("symbolsForMode", 1, "scala-accessor"),
-        ("getSymbol", 1, "scala-accessor"),
-        ("apply", 2, "scala-accessor"),
-        ("initSymbols", 1, "scala-initialization")
-      ),
-      "data/Units.scala" -> List(
-        ("fontMetrics", 1, "scala-accessor")
-      ),
-      "tree/DomTree.scala" -> List(
-        ("foreachEntry", 1, "scala-specific-helper"),
-        ("isEmpty", 1, "scala-specific-helper"),
-        ("nonEmpty", 1, "scala-specific-helper"),
-        ("virtualChildren", 3, "scala-specific-accessor"),
-        ("toInMemoryNode", 1, "scala-specific-helper"),
-        // TS toMarkup(tag: string) takes a parameter the Scala port removes; RAST bodies are incompatible
-        ("toMarkup", 7, "parameter-mismatch")
-      ),
-      "Style.scala" -> List(
-        ("toString", 1, "scala-override")
-      )
-    )
-
-    // Merge: multiple sources can contribute to the same file (e.g. Macros.scala has both
-    // registerAll from registrations and defineMacroFn from perFile).
-    (registrations ++ perFile).groupMap(_._1)(_._2).map { case (k, vs) => k -> vs.flatten }
-  }
-
-  /** Members whose RAST translation is incompatible with the Scala signature and must be forced to reference-only, overriding any RAST body. */
-  private val forceReferenceOnly: Map[String, Set[String]] = Map(
-    // TS toMarkup(tag: string) takes a parameter the Scala port hardcodes per class
-    "tree/DomTree.scala" -> Set("toMarkup")
-  )
-
-  /** Build Bodies entries for reference-only members (empty text, descriptive refusal). */
-  private def referenceOnlyBodiesFor(refPath: String): ParityDerive.Bodies = {
-    val entries = referenceOnlyMembers.getOrElse(refPath, Nil)
-    if (entries.isEmpty) ParityDerive.Bodies.empty
-    else
-      ParityDerive.Bodies(
-        entries.map { case (name, count, reason) =>
-          name -> (1 to count).toList.map(_ => ParityDerive.TranslatedBody("", List(s"reference-only:$reason")))
-        }.toMap
-      )
-  }
 
   /** Extract every function, function-valued variable and method with a body from a RAST file. */
   private def functionBodies(file: RastFile): List[(String, List[String], RastNode)] = {
@@ -514,6 +460,7 @@ object KaTeXBuilder {
       name = "katex",
       policy = policy,
       readRast = Rast.readFile(_: java.nio.file.Path),
+      referenceOnly = referenceOnly,
       modules = _ =>
         Right(
           allModules.map { case (rastPath, refPath) =>
@@ -522,16 +469,7 @@ object KaTeXBuilder {
               refPath,
               rastPath,
               Nil,
-              rasts => {
-                val translated = buildTranslatedBodyMap(rasts, refObjectName, oracle, calleeIdx, memberIdx, ctorSchema, enumIdx)
-                val refOnly    = referenceOnlyBodiesFor(refPath)
-                val forced     = forceReferenceOnly.getOrElse(refPath, Set.empty)
-                // Override RAST translations for forced reference-only members (parameter mismatches etc.),
-                // and add reference-only entries for names not already covered by RAST extraction.
-                val translatedFiltered = ParityDerive.Bodies((translated.byName -- forced).toMap)
-                val refOnlyFiltered    = ParityDerive.Bodies(refOnly.byName.view.filterKeys(k => forced.contains(k) || !translated.byName.contains(k)).toMap)
-                translatedFiltered ++ refOnlyFiltered
-              }
+              rasts => buildTranslatedBodyMap(rasts, refObjectName, oracle, calleeIdx, memberIdx, ctorSchema, enumIdx)
             )
           }
         )
