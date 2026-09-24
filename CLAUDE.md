@@ -123,7 +123,17 @@ exponentiation operator, wrong self-reference, ArrayBuffer-vs-Vector/tuple). `bo
 translated 17/130, reference by reason: reference-only=19, translator-refusal=54,
 uncompilable-pattern=30, skeleton-cannot-offer=10.
 
-**ssg-js, ssg-mermaid, ssg-sass** derive from reference only with no RAST
+**ssg-js** exports RAST from `original-src/terser` with the engine's TS exporter (`allowJs`, no
+`checkJs`) and a committed `ast.d.ts` (under `ssg-js/port/`) declaring the AST class hierarchy so
+the checker can resolve field accesses. The builder (`project/TerserBuilder.scala`) supplies a
+`NonJavaBodies.Library` value with the module table (28 exported files mapped to 51 reference
+files), `memberRenames`, reference indices, and `referenceOnly` entries for Scala-specific members.
+116 uncompilable patterns guard bodies the translator cannot yet compile (wrong object dispatch,
+wrong constructor patterns, wrong state references). `bodies.tsv` records translated 5/1057,
+reference by reason: no-translated-body=498, reference-only=39, skeleton-cannot-offer=245,
+translator-refusal=154, uncompilable-pattern=116.
+
+**ssg-mermaid, ssg-sass** derive from reference only with no RAST
 export yet; every body is `reference` with reason `no-translated-body`. Each will get its own
 export when its upstream submodule is wired into the build.
 

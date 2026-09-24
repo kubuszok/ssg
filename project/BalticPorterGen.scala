@@ -577,6 +577,148 @@ object BalticPorterGen {
       }
     }
 
+  // ---------------------------------------------------------------------------
+  // Terser: export RAST from original-src/terser with allowJs and a committed
+  // ast.d.ts, then derive via NonJavaBodies. Structured like KaTeX and
+  // graphs-commons.
+  // ---------------------------------------------------------------------------
+
+  /** Fingerprint for the ssg-js generated tree. */
+  private def terserFingerprint(ssgRoot: Path): String = {
+    val pin     = """balticporter-engine" % "([^"]+)"""".r.findFirstMatchIn(Files.readString(ssgRoot.resolve("project/plugins.sbt"))).map(_.group(1)).getOrElse("unknown")
+    val terser  = submoduleCommit(ssgRoot, "original-src/terser")
+    val expVer  = exporterVersion()
+    val builder = {
+      val md = java.security.MessageDigest.getInstance("SHA-256")
+      md.update(Files.readString(ssgRoot.resolve("project/TerserBuilder.scala")).replace("\r", "").getBytes("UTF-8"))
+      md.digest().take(8).map(b => f"$b%02x").mkString
+    }
+    val astDts = {
+      val dtsFile = ssgRoot.resolve("ssg-js/port/ast.d.ts")
+      val md      = java.security.MessageDigest.getInstance("SHA-256")
+      if (Files.isRegularFile(dtsFile))
+        md.update(Files.readAllBytes(dtsFile))
+      md.digest().take(8).map(b => f"$b%02x").mkString
+    }
+    val reference = {
+      val refDir = ssgRoot.resolve("ssg-js/reference/scala")
+      val md     = java.security.MessageDigest.getInstance("SHA-256")
+      if (Files.isDirectory(refDir)) {
+        val s = Files.walk(refDir)
+        try {
+          val files = scala.jdk.CollectionConverters.IteratorHasAsScala(s.filter(Files.isRegularFile(_)).iterator()).asScala.toList
+          files.map(p => refDir.relativize(p).toString.replace('\\', '/') -> p).sortBy(_._1).foreach { case (rel, p) =>
+            md.update(rel.getBytes("UTF-8"))
+            md.update(Files.readAllBytes(p))
+          }
+        } finally s.close()
+      }
+      md.digest().take(8).map(b => f"$b%02x").mkString
+    }
+    s"engine=$pin terser=$terser exporter=$expVer builder=$builder astdts=$astDts reference=$reference"
+  }
+
+  /** Generate ssg-js: export RAST from original-src/terser (with allowJs + ast.d.ts), then derive. */
+  def generateTerser(buildBase: File, log: sbt.util.Logger): Seq[File] =
+    BalticPorterGen.synchronized {
+      val ssgRoot      = buildBase.toPath.toAbsolutePath.normalize
+      val jsRoot       = ssgRoot.resolve("target/balticporter/ssg-js")
+      val rastDir      = jsRoot.resolve("rast")
+      val outDir       = jsRoot.resolve("src_managed/main/scala")
+      val reportDir    = jsRoot.resolve("report")
+      val marker       = jsRoot.resolve(".generated-marker")
+      val referenceDir = ssgRoot.resolve("ssg-js/reference/scala")
+      val astDtsFile   = ssgRoot.resolve("ssg-js/port/ast.d.ts")
+
+      val expected = terserFingerprint(ssgRoot)
+
+      val cached = Files.exists(marker) && Files.isDirectory(outDir) && Files.isDirectory(rastDir) &&
+        Files.readString(marker).trim == expected
+
+      if (cached) {
+        log.info(s"[Baltic Porter] Using cached ssg-js tree ($expected)")
+        return collectScalaFiles(outDir)
+      }
+
+      // --- fingerprint mismatch: need the submodule ---
+      val terserSrc = ssgRoot.resolve("original-src/terser")
+      if (!Files.isDirectory(terserSrc.resolve("lib")))
+        sys.error(
+          s"[Baltic Porter] ssg-js sources are missing or stale ($marker does not read `$expected`) " +
+            "and original-src/terser is not initialised. Run `git submodule update --init --depth=1 original-src/terser`, " +
+            s"or place a generated tree with a matching marker under $jsRoot."
+        )
+
+      if (!Files.isRegularFile(astDtsFile))
+        sys.error(s"[Baltic Porter] ssg-js/port/ast.d.ts is missing — it must be committed as a build input")
+
+      log.info(s"[Baltic Porter] Generating ssg-js ($expected)")
+
+      // 1. Extract the exporter from the jar (shared with KaTeX/graphs-commons)
+      val exporterDir = ssgRoot.resolve("target/balticporter-work/ts-exporter")
+      Files.createDirectories(exporterDir)
+      val exporterScript = exporterDir.resolve("export.js")
+
+      val jsUrl = getClass.getClassLoader.getResource("balticporter/frontend/ts/exporter/export.js")
+      if (jsUrl == null) sys.error("[Baltic Porter] export.js not found in the frontend-ts jar")
+      Files.copy(jsUrl.openStream(), exporterScript, java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+
+      val mfUrl = getClass.getClassLoader.getResource("balticporter/frontend/ts/exporter/manifest.properties")
+      if (mfUrl != null) {
+        val mfTarget = exporterDir.resolve("manifest.properties")
+        Files.copy(mfUrl.openStream(), mfTarget, java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+      }
+      val mfProps = new java.util.Properties()
+      if (mfUrl != null) {
+        val s = mfUrl.openStream();
+        try mfProps.load(s)
+        finally s.close()
+      }
+      val tsVersion = mfProps.getProperty("typescript.version", "5.8.3")
+
+      // 2. Ensure the typescript npm package is available
+      val exporterNodeModules = exporterDir.resolve("node_modules")
+      if (!Files.isDirectory(exporterNodeModules.resolve("typescript"))) {
+        val ssgNodeModules = ssgRoot.resolve("node_modules")
+        if (Files.isDirectory(ssgNodeModules.resolve("typescript"))) {
+          Files.deleteIfExists(exporterNodeModules)
+          Files.createSymbolicLink(exporterNodeModules, ssgNodeModules)
+        } else {
+          val npmPb = new ProcessBuilder("npm", "install", "--no-save", s"typescript@$tsVersion")
+          npmPb.directory(exporterDir.toFile)
+          npmPb.redirectErrorStream(true)
+          val npmP   = npmPb.start()
+          val npmOut = new String(npmP.getInputStream.readAllBytes())
+          if (npmP.waitFor() != 0) sys.error(s"[Baltic Porter] npm install typescript failed: $npmOut")
+        }
+      }
+
+      // 3. Export RAST
+      if (Files.exists(rastDir)) {
+        val s = Files.walk(rastDir)
+        try s.sorted(java.util.Comparator.reverseOrder()).forEach(Files.delete(_))
+        finally s.close()
+      }
+      Files.createDirectories(rastDir)
+
+      TerserBuilder.exportRast(terserSrc, astDtsFile, rastDir, exporterDir, log)
+
+      // 4. Derive
+      val lib = TerserBuilder.library(referenceDir)
+      balticporter.frontend.ts.NonJavaBodies.build(lib, referenceDir, rastDir) match {
+        case refused: balticporter.frontend.ts.NonJavaBodies.Refused =>
+          log.warn(s"[Baltic Porter] ssg-js: ${refused.message}")
+          deriveReferenceOnly("ssg-js", referenceDir, outDir, reportDir, lib.policy, log)
+
+        case built: balticporter.frontend.ts.NonJavaBodies.Built =>
+          val run = built.derive(outDir, reportDir)
+          log.info(s"[Baltic Porter] ssg-js: ${run.summary.line}")
+          Files.createDirectories(marker.getParent)
+          Files.writeString(marker, expected)
+          run.written.map(_.toFile)
+      }
+    }
+
   /** Derive a module from reference only, with no RAST — every body is kept from the reference. Used when the RAST export is not available (the other four non-Java modules until they get their own
     * export).
     */

@@ -12,6 +12,7 @@ project/*
 !project/KaTeXBuilder.scala
 !project/LiqpParserClasspath.scala
 !project/RoughBuilder.scala
+!project/TerserBuilder.scala
 !project/RemoteCacheSetup.scala
 target/
 .sbt/

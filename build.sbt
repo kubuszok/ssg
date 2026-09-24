@@ -245,10 +245,8 @@ lazy val `ssg-js` = (projectMatrix in file("ssg-js"))
   .settings(
     name := "ssg-js",
     Compile / sourceGenerators += Def.task {
-      BalticPorterGen.deriveReferenceOnly(
-        "ssg-js",
-        (ThisBuild / baseDirectory).value / "ssg-js" / "reference" / "scala",
-        (Compile / sourceManaged).value / "balticporter",
+      BalticPorterGen.generateTerser(
+        (ThisBuild / baseDirectory).value,
         streams.value.log)
     }.taskValue,
     // The Terser port's name mangler keeps process-global mutable state (object Base54's char/frequency
@@ -578,7 +576,7 @@ lazy val root = (project in file("."))
   )
   .settings(
     // generatePort: run the Baltic Porter markdown generation and nothing else (the CI `generate` job)
-    addCommandAlias("generatePort", "ssg-md/Compile/managedSources ; ssg-md/Compile/managedResources ; ssg-katex/Compile/managedSources ; ssg-graphs-commons/Compile/managedSources"),
+    addCommandAlias("generatePort", "ssg-md/Compile/managedSources ; ssg-md/Compile/managedResources ; ssg-katex/Compile/managedSources ; ssg-graphs-commons/Compile/managedSources ; ssg-js/Compile/managedSources"),
     // verifyLocal: the gate before a push — every platform's tests, then record the verified commit
     addCommandAlias("verifyLocal", "scalafmtCheckAll ; scalafmtSbtCheck ; ci-jvm-3 ; ci-js-3 ; ci-native-3 ; markVerified")
   )
