@@ -22,79 +22,38 @@ object KaTeXBuilder {
     // JS template literal not lowered
     "${",
     // Bodies the translator emits that produce structural or semantic errors in ssg-katex.
-    // Each pattern was identified from a compile error in the derived output.
-    ".charCodeAt(", // JS string API not in Scala String
-    ".isInstanceOf[Function", // runtime function type check
-    "(((", // double-wrapped lambda the translator produces
-    // The translator accesses fields and methods by their JS names, which do not match ssg-katex's
-    // Scala API. Any body that references `this.` is almost certainly wrong.
+    ".charCodeAt(",
+    ".isInstanceOf[Function",
+    "(((", // double-wrapped lambda
+    // The translator accesses fields and methods by their JS names
     "this.",
-    // The translator emits JS identifiers with wrong casing or unknown names
-    "data(", // recursive value or wrong constructor
-    "data ++=", // mutable append on immutable
-    "data ++= ", // mutable append on immutable (with space)
-    "options(", // wrong constructor call
-    "new Options", // wrong constructor
-    "new Style", // wrong constructor
-    "options =", // reassigning an immutable
-    // Builder API patterns the translator emits that do not exist in ssg-katex
-    "BuildCommon.", // API name from JS not lowered by apiLookup
-    "BuildHTML.", // API name from JS
-    "buildExpression(", // free function that does not exist as free in Scala
-    "buildGroup(", // free function
-    // Catch any remaining unbalanced bodies: the translator sometimes emits extra braces
-    "++= ", // mutable collection append
-    "new Array", // JS Array constructor
-    ".concat(", // JS array concatenation
-    ".splice(", // JS array mutation
-    ".join(", // JS array join
-    ".map(", // translator emits .map( with wrong lambda shape
-    ".filter(", // translator emits .filter( with wrong lambda shape
-    ".forEach(", // translator emits .forEach(
-    // The translator accesses properties that exist on JS objects but not on the Scala types
-    "prev.", // accesses .text, .italic on a variable named prev
-    "next.", // accesses .text, .italic on a variable named next
-    "elem.", // accesses .children on a variable named elem
-    "span.", // accesses .height, .depth on a span variable
-    "child.", // accesses properties on child nodes
-    "result.", // accesses properties on result variables
-    ".italic", // JS property not in Scala types
-    ".depth", // JS property accessed on wrong Scala type
-    ".height", // JS property accessed on wrong Scala type
-    "toNode(", // method not in scope
-    "toMarkup(", // method not in scope
-    "validUnit(", // function not in scope
-    "assertParsed(", // function not in scope
-    "canCombine(", // function call with wrong arg types
-    "sqrtPath(", // function not in scope
-    "braketHelper(", // function not in scope
-    "delimFromValue(", // function not in scope
-    "formLigatures(", // function not in scope
-    // Patterns found in the 12 remaining translated bodies that don't compile:
-    "new Span(", // makeSpan body: wrong constructor
-    "sizeElementFromChildren", // makeSpan body: wrong call
-    "new Anchor(", // makeAnchor body: wrong constructor
-    "new DocumentFragment", // makeFragment body: wrong constructor
-    "sqrtMain(", // sqrtPath body: calls undefined functions
-    "sqrtSize", // sqrtPath body: calls undefined functions
-    "extraVinculum =", // sqrtPath body: reassigns val parameter
-    "consumeArg", // braketHelper body: JS parser API
-    "macros.get(", // braketHelper body: JS macro API
-    "macros.update(", // braketHelper body: JS macro API
-    "macros.beginGroup", // braketHelper body: JS macro API
-    "context.consumeArg", // DefFunc body: JS parser API
-    "parser.gullet", // DefFunc body: JS parser internal
-    ".tokens", // token access patterns from translator
-    "tok.text", // DefFunc body: JS token access
-    "isAssertParsed", // DelimsizingFunc body
-    "delimsizingFromValue", // GenfracFunc body
-    "mu =", // Units body: mutable assignment
-    "pt =", // Units body: mutable assignment
-    "throw new ParseError", // various: JS error not lowered
-    "throw new RuntimeException", // assertParsed body: wrong exception type
-    "var delim = null", // delimFromValue body: null assignment
-    "unit.isInstanceOf", // validUnit body: wrong `unit` reference
-    "unit.unit" // validUnit body: wrong `unit` access
+    // Wrong identifiers
+    "options =",
+    // Builder API patterns
+    "BuildCommon.",
+    "BuildHTML.",
+    "buildExpression(",
+    "buildGroup(",
+    // Collection operations the translator emits wrong
+    "++= ",
+    "new Array",
+    ".concat(",
+    ".splice(",
+    ".join(",
+    ".map(",
+    ".filter(",
+    ".forEach(",
+    // Wrong property access on JS types
+    "span.",
+    "toNode(",
+    // Builder function errors
+    "throw new ParseError",
+    // Per-body guards: bodies that cannot compile without these patterns
+    "sqrtMain(",
+    "delimFromValue(",
+    "canCombine(",
+    ".depth",
+    "var delim = null"
   )
 
   val policy: ParityDerive.Policy =
