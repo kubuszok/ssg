@@ -98,9 +98,6 @@ object TerserBuilder {
     "S.inGenerator",
     "S.inAsync",
     "S.inFunction",
-    // Wrong dispatch: Mangler.frequency/leading/digits -- module-level access on private members
-    // (reset in NthIdentifier, the trait inside Mangler object)
-    "Mangler.frequency",
     // Wrong dispatch: Mangler.mergeSort (sort in Mangler)
     "Mangler.mergeSort(",
     // Wrong regex usage: BASICIDENT.findFirstIn (isBasicIdentifierString in Token)
@@ -762,7 +759,8 @@ object TerserBuilder {
     calleeIdx:     ReferenceSignatures.CalleeIndex,
     memberIdx:     ReferenceSignatures.MemberIndex,
     ctorSchema:    ReferenceSignatures.ConstructorSchema,
-    enumIdx:       ReferenceSignatures.EnumIndex
+    enumIdx:       ReferenceSignatures.EnumIndex,
+    owners:        ReferenceOwners
   ): ParityDerive.Bodies = {
     val result = mutable.Map.empty[String, mutable.ListBuffer[ParityDerive.TranslatedBody]]
 
@@ -788,7 +786,8 @@ object TerserBuilder {
           ctorSchema = ctorSchema,
           enumIndex = enumIdx,
           memberRenames = memberRenames,
-          oracle = oracle
+          oracle = oracle,
+          enclosingOwner = owners.ownerOf(refObjectName, key, policy.aliases)
         )
         val bodyText = translated.scalaBody.trim
         val reasons  = if (bodyText.isEmpty) "empty-body" :: translated.refusalReasons else translated.refusalReasons
@@ -825,6 +824,7 @@ object TerserBuilder {
     val refSources                                  = readReferenceSources(referenceDir)
     val (calleeIdx, memberIdx, ctorSchema, enumIdx) = ReferenceSignatures.buildIndices(refSources)
     val oracle                                      = ReferenceSignatures.TypeOracle.fromEntries(refSources.flatMap((n, s) => ReferenceSignatures.parseFile(n, s)))
+    val owners                                      = ReferenceOwners.of(refSources)
 
     NonJavaBodies.Library(
       name = "terser",
@@ -839,7 +839,7 @@ object TerserBuilder {
               refPath,
               rastPath,
               Nil,
-              rasts => buildTranslatedBodyMap(rasts, refObjectName, oracle, calleeIdx, memberIdx, ctorSchema, enumIdx)
+              rasts => buildTranslatedBodyMap(rasts, refObjectName, oracle, calleeIdx, memberIdx, ctorSchema, enumIdx, owners)
             )
           }
         )

@@ -108,9 +108,9 @@ commit and the exporter version. The KaTeX builder (`project/KaTeXBuilder.scala`
 `memberRenames` from the reference Scala tree feed return types, parameter types, callees, members,
 constructors and enums to the body translator; 1 uncompilable pattern guards a body the translator
 cannot yet compile (sqrtMain: val-reassignment, ISS-1396); `referenceOnly` classifies 201
-Scala-specific members. `bodies.tsv` records translated 4/466, reference by reason:
-translator-refusal=248, reference-only=201, skeleton-cannot-offer=6, occurrence-out-of-range=4,
-no-translated-body=2, uncompilable-pattern=1.
+Scala-specific members. `bodies.tsv` records translated 1/496, reference by reason:
+translator-refusal=251, reference-only=211, skeleton-cannot-offer=28, occurrence-out-of-range=4,
+uncompilable-pattern=1.
 
 **ssg-graphs-commons** exports RAST from five upstream submodules (roughjs, path-data-parser,
 points-on-curve, points-on-path, hachure-fill) with the engine's TS exporter and Node, cached
@@ -120,8 +120,8 @@ underscore-prefixed TS names, `memberRenames`, reference indices, and `reference
 19 Scala-specific members (helpers, comparators, get-accessors, platform-inapplicable). 14
 uncompilable patterns guard bodies the translator cannot yet compile (tuple-as-array-access,
 exponentiation operator, wrong self-reference, ArrayBuffer-vs-Vector/tuple). `bodies.tsv` records
-translated 17/130, reference by reason: reference-only=19, translator-refusal=54,
-uncompilable-pattern=30, skeleton-cannot-offer=10.
+translated 7/126, reference by reason: reference-only=19, translator-refusal=59,
+uncompilable-pattern=30, skeleton-cannot-offer=11.
 
 **ssg-js** exports RAST from `original-src/terser` with the engine's TS exporter (`allowJs`, no
 `checkJs`) and a committed `ast.d.ts` (under `ssg-js/port/`) declaring the AST class hierarchy so
@@ -131,11 +131,11 @@ files), `memberRenames`, reference indices, and `referenceOnly` classifying 620 
 members by reason (defnode-type-constant 113, defmethod-codegen 53, defmethod-opt-dispatch 43,
 defmethod-inference 33, cross-module-restructured 46, defmethod-needs-parens 16,
 defmethod-drop-side-effect 8, defmethod-eval 8, scope-analysis-pass 7, defmethod-reduce-vars 5,
-defmethod-negate 4, scala-restructured 245, plus 39 original entries). 35 uncompilable patterns
-guard 115 bodies the translator cannot yet compile (ISS-1398: wrong object dispatch 54,
-wrong constructor patterns 10, wrong state references 33, val-reassignment 8, truthiness 1,
-wrong callee resolution 9). `bodies.tsv` records translated 5/1057, reference by reason:
-reference-only=620, skeleton-cannot-offer=172, translator-refusal=145, uncompilable-pattern=115.
+defmethod-negate 4, scala-restructured 245, plus 39 original entries). Uncompilable patterns
+guard 85 bodies the translator cannot yet compile (ISS-1398); a body naming a private member of
+another object is refused by the engine itself, given the declaring object (`project/ReferenceOwners.scala`).
+`bodies.tsv` records translated 2/1066, reference by reason: reference-only=619,
+skeleton-cannot-offer=160, translator-refusal=196, uncompilable-pattern=85, no-translated-body=4.
 
 **ssg-mermaid, ssg-sass** derive from reference only with no RAST
 export yet; every body is `reference` with reason `no-translated-body`. Each will get its own

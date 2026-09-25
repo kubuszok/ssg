@@ -298,7 +298,8 @@ object KaTeXBuilder {
     calleeIdx:     ReferenceSignatures.CalleeIndex,
     memberIdx:     ReferenceSignatures.MemberIndex,
     ctorSchema:    ReferenceSignatures.ConstructorSchema,
-    enumIdx:       ReferenceSignatures.EnumIndex
+    enumIdx:       ReferenceSignatures.EnumIndex,
+    owners:        ReferenceOwners
   ): ParityDerive.Bodies = {
     val result = mutable.Map.empty[String, mutable.ListBuffer[ParityDerive.TranslatedBody]]
 
@@ -328,7 +329,8 @@ object KaTeXBuilder {
           ctorSchema = ctorSchema,
           enumIndex = enumIdx,
           memberRenames = memberRenames,
-          oracle = oracle
+          oracle = oracle,
+          enclosingOwner = owners.ownerOf(refObjectName, key, policy.aliases)
         )
         // An empty or whitespace-only body is a translator failure; record it as a refusal
         val bodyText    = translated.scalaBody.trim
@@ -499,6 +501,7 @@ object KaTeXBuilder {
     val refSources                                  = readReferenceSources(referenceDir)
     val (calleeIdx, memberIdx, ctorSchema, enumIdx) = ReferenceSignatures.buildIndices(refSources)
     val oracle                                      = ReferenceSignatures.TypeOracle.fromEntries(refSources.flatMap((n, s) => ReferenceSignatures.parseFile(n, s)))
+    val owners                                      = ReferenceOwners.of(refSources)
 
     NonJavaBodies.Library(
       name = "katex",
@@ -513,7 +516,7 @@ object KaTeXBuilder {
               refPath,
               rastPath,
               Nil,
-              rasts => buildTranslatedBodyMap(rasts, refObjectName, oracle, calleeIdx, memberIdx, ctorSchema, enumIdx)
+              rasts => buildTranslatedBodyMap(rasts, refObjectName, oracle, calleeIdx, memberIdx, ctorSchema, enumIdx, owners)
             )
           }
         )

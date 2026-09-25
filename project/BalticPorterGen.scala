@@ -299,6 +299,7 @@ object BalticPorterGen {
     val builder = {
       val md = java.security.MessageDigest.getInstance("SHA-256")
       md.update(Files.readString(ssgRoot.resolve("project/KaTeXBuilder.scala")).replace("\r", "").getBytes("UTF-8"))
+      md.update(Files.readString(ssgRoot.resolve("project/ReferenceOwners.scala")).replace("\r", "").getBytes("UTF-8"))
       md.digest().take(8).map(b => f"$b%02x").mkString
     }
     val reference = {
@@ -443,6 +444,7 @@ object BalticPorterGen {
     val builder = {
       val md = java.security.MessageDigest.getInstance("SHA-256")
       md.update(Files.readString(ssgRoot.resolve("project/RoughBuilder.scala")).replace("\r", "").getBytes("UTF-8"))
+      md.update(Files.readString(ssgRoot.resolve("project/ReferenceOwners.scala")).replace("\r", "").getBytes("UTF-8"))
       md.digest().take(8).map(b => f"$b%02x").mkString
     }
     val reference = {
@@ -591,6 +593,7 @@ object BalticPorterGen {
     val builder = {
       val md = java.security.MessageDigest.getInstance("SHA-256")
       md.update(Files.readString(ssgRoot.resolve("project/TerserBuilder.scala")).replace("\r", "").getBytes("UTF-8"))
+      md.update(Files.readString(ssgRoot.resolve("project/ReferenceOwners.scala")).replace("\r", "").getBytes("UTF-8"))
       md.digest().take(8).map(b => f"$b%02x").mkString
     }
     val astDts = {

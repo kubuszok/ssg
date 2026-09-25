@@ -50,13 +50,14 @@ runs:
         katexbuilder=$(git hash-object project/KaTeXBuilder.scala)
         roughbuilder=$(git hash-object project/RoughBuilder.scala)
         terserbuilder=$(git hash-object project/TerserBuilder.scala)
+        owners=$(git hash-object project/ReferenceOwners.scala)
         # build.sbt decides WHICH generators `generatePort` runs: a tree cached before a generator
         # was added would otherwise be restored, and the compile jobs (no submodule) cannot fill the gap
         build=$(git hash-object build.sbt)
-        test -n "$liqp" && test -n "$katex" && test -n "$roughjs" && test -n "$pathdataparser" && test -n "$pointsoncurve" && test -n "$pointsonpath" && test -n "$hachurefill" && test -n "$terser" && test -n "$liquid" && test -n "$md" && test -n "$parser" && test -n "$katexbuilder" && test -n "$roughbuilder" && test -n "$terserbuilder"
+        test -n "$liqp" && test -n "$katex" && test -n "$roughjs" && test -n "$pathdataparser" && test -n "$pointsoncurve" && test -n "$pointsonpath" && test -n "$hachurefill" && test -n "$terser" && test -n "$liquid" && test -n "$md" && test -n "$parser" && test -n "$katexbuilder" && test -n "$roughbuilder" && test -n "$terserbuilder" && test -n "$owners"
         # an Actions cache key is limited to 512 characters; the inputs are folded into one digest
         # (their names and order fixed here, so the same inputs always fold to the same key)
-        inputs="liqp-$liqp-katex-$katex-rough-$roughjs-pdp-$pathdataparser-poc-$pointsoncurve-pop-$pointsonpath-hf-$hachurefill-terser-$terser-ports-$liquid-$md-$jsport-$parser-$katexbuilder-$roughbuilder-$terserbuilder-build-$build"
+        inputs="liqp-$liqp-katex-$katex-rough-$roughjs-pdp-$pathdataparser-poc-$pointsoncurve-pop-$pointsonpath-hf-$hachurefill-terser-$terser-ports-$liquid-$md-$jsport-$parser-$katexbuilder-$roughbuilder-$terserbuilder-$owners-build-$build"
         echo "extra=inputs-$(printf '%s' "$inputs" | sha256sum | cut -c1-40)" >> "$GITHUB_OUTPUT"
 
     - uses: kubuszok/balticporter/.github/actions/generated-port@55be328a2265f34c8d41d30634569229539cf562

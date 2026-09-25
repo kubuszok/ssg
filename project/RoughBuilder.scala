@@ -252,7 +252,8 @@ object RoughBuilder {
     calleeIdx:     ReferenceSignatures.CalleeIndex,
     memberIdx:     ReferenceSignatures.MemberIndex,
     ctorSchema:    ReferenceSignatures.ConstructorSchema,
-    enumIdx:       ReferenceSignatures.EnumIndex
+    enumIdx:       ReferenceSignatures.EnumIndex,
+    owners:        ReferenceOwners
   ): ParityDerive.Bodies = {
     val result = mutable.Map.empty[String, mutable.ListBuffer[ParityDerive.TranslatedBody]]
 
@@ -277,7 +278,8 @@ object RoughBuilder {
         ctorSchema = ctorSchema,
         enumIndex = enumIdx,
         memberRenames = memberRenames,
-        oracle = oracle
+        oracle = oracle,
+        enclosingOwner = owners.ownerOf(refObjectName, key, policy.aliases)
       )
       val bodyText = translated.scalaBody.trim
       val reasons  = if (bodyText.isEmpty) "empty-body" :: translated.refusalReasons else translated.refusalReasons
@@ -312,6 +314,7 @@ object RoughBuilder {
     val refSources                                  = readReferenceSources(referenceDir)
     val (calleeIdx, memberIdx, ctorSchema, enumIdx) = ReferenceSignatures.buildIndices(refSources)
     val oracle                                      = ReferenceSignatures.TypeOracle.fromEntries(refSources.flatMap((n, s) => ReferenceSignatures.parseFile(n, s)))
+    val owners                                      = ReferenceOwners.of(refSources)
 
     NonJavaBodies.Library(
       name = "graphs-commons",
@@ -326,7 +329,7 @@ object RoughBuilder {
               refPath,
               rastPath,
               Nil,
-              rasts => buildTranslatedBodyMap(rasts, refObjectName, oracle, calleeIdx, memberIdx, ctorSchema, enumIdx)
+              rasts => buildTranslatedBodyMap(rasts, refObjectName, oracle, calleeIdx, memberIdx, ctorSchema, enumIdx, owners)
             )
           }
         )
