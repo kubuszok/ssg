@@ -98,6 +98,9 @@ object TerserBuilder {
     "S.inGenerator",
     "S.inAsync",
     "S.inFunction",
+    // Wrong dispatch: Mangler.frequency/leading/digits -- module-level access on private members
+    // (reset in NthIdentifier, the trait inside Mangler object)
+    "Mangler.frequency",
     // Wrong dispatch: Mangler.mergeSort (sort in Mangler)
     "Mangler.mergeSort(",
     // Wrong regex usage: BASICIDENT.findFirstIn (isBasicIdentifierString in Token)
