@@ -26,7 +26,7 @@ final class TemplateExtraSuite extends munit.FunSuite {
     val parser = new TemplateParser.Builder()
       .withTag(
         new tags.Tag("custom_tag") {
-          override def render(context: TemplateContext, ns: Array[nodes.LNode]): DataView = DataView.from("xxx")
+          override def render(context: TemplateContext, ns: nodes.LNode*): DataView = DataView.from("xxx")
         }
       )
       .build()
@@ -37,7 +37,7 @@ final class TemplateExtraSuite extends munit.FunSuite {
     val parser = new TemplateParser.Builder()
       .withBlock(
         new blocks.Block("custom_uppercase_block") {
-          override def render(context: TemplateContext, ns: Array[nodes.LNode]): DataView = {
+          override def render(context: TemplateContext, ns: nodes.LNode*): DataView = {
             val block = ns(0)
             val res   = block.render(context)
             DataView.from(super.asString(res, context).toUpperCase(Locale.US))

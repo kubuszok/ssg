@@ -14,7 +14,7 @@ final class TemplateExtraJvmNativeSuite extends munit.FunSuite {
     val parser = new TemplateParser.Builder()
       .withFilter(
         new filters.Filter("sum") {
-          override def apply(value: java.lang.Object, context: TemplateContext, params: Array[java.lang.Object]): java.lang.Object = {
+          override def apply(value: java.lang.Object, context: TemplateContext, params: java.lang.Object*): java.lang.Object = {
             val numbers = super.asArray(value, context)
             var sum     = 0.0
             numbers.foreach { obj =>

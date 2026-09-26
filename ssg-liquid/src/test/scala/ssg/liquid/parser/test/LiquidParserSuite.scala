@@ -39,7 +39,7 @@ final class LiquidParserSuite extends munit.FunSuite {
     new TemplateParser.Builder()
       .withBlock(
         new blocks.Block(blockName) {
-          override def render(context: TemplateContext, ns: Array[nodes.LNode]): DataView = {
+          override def render(context: TemplateContext, ns: nodes.LNode*): DataView = {
             val body = if (ns.length >= 2) ns(1).render(context) else ns(0).render(context)
             DataView.from(s"[$blockName:${super.asString(body, context)}]")
           }
@@ -47,7 +47,7 @@ final class LiquidParserSuite extends munit.FunSuite {
       )
       .withTag(
         new tags.Tag(tagName) {
-          override def render(context: TemplateContext, ns: Array[nodes.LNode]): DataView = {
+          override def render(context: TemplateContext, ns: nodes.LNode*): DataView = {
             // Render parameters if any
             val params = ns.map(n => super.asString(n.render(context), context)).mkString("")
             DataView.from(if (params.nonEmpty) s"<$tagName:$params>" else s"<$tagName>")
@@ -62,7 +62,7 @@ final class LiquidParserSuite extends munit.FunSuite {
       val blockName = bn
       builder = builder.withBlock(
         new blocks.Block(blockName) {
-          override def render(context: TemplateContext, ns: Array[nodes.LNode]): DataView = {
+          override def render(context: TemplateContext, ns: nodes.LNode*): DataView = {
             val body = if (ns.length >= 2) ns(1).render(context) else ns(0).render(context)
             DataView.from(s"[$blockName:${super.asString(body, context)}]")
           }
@@ -90,7 +90,7 @@ final class LiquidParserSuite extends munit.FunSuite {
     val parser = new TemplateParser.Builder()
       .withTag(
         new tags.Tag("mu") {
-          override def render(context: TemplateContext, ns: Array[nodes.LNode]): DataView = {
+          override def render(context: TemplateContext, ns: nodes.LNode*): DataView = {
             // Parameters are passed as child nodes
             val params = ns.map(n => super.asString(n.render(context), context)).mkString(",")
             DataView.from(s"<mu:$params>")
@@ -107,7 +107,7 @@ final class LiquidParserSuite extends munit.FunSuite {
     val parser = new TemplateParser.Builder()
       .withTag(
         new tags.Tag("mu") {
-          override def render(context: TemplateContext, ns: Array[nodes.LNode]): DataView =
+          override def render(context: TemplateContext, ns: nodes.LNode*): DataView =
             DataView.from("<mu:rendered>")
         }
       )
@@ -143,7 +143,7 @@ final class LiquidParserSuite extends munit.FunSuite {
     val parser = new TemplateParser.Builder()
       .withBlock(
         new blocks.Block("mu") {
-          override def render(context: TemplateContext, ns: Array[nodes.LNode]): DataView = {
+          override def render(context: TemplateContext, ns: nodes.LNode*): DataView = {
             val body = if (ns.length >= 2) ns(1).render(context) else ns(0).render(context)
             DataView.from(s"[mu:${super.asString(body, context)}]")
           }
@@ -151,7 +151,7 @@ final class LiquidParserSuite extends munit.FunSuite {
       )
       .withBlock(
         new blocks.Block("other") {
-          override def render(context: TemplateContext, ns: Array[nodes.LNode]): DataView = {
+          override def render(context: TemplateContext, ns: nodes.LNode*): DataView = {
             val body = if (ns.length >= 2) ns(1).render(context) else ns(0).render(context)
             DataView.from(s"[other:${super.asString(body, context)}]")
           }

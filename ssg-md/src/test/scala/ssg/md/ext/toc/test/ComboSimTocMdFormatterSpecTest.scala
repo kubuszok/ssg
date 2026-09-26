@@ -41,7 +41,7 @@ object ComboSimTocMdFormatterSpecTest {
 
   // Build TOC_OPTIONS equivalent: levels=2,3,4, title="Table of Contents", isTextOnly=false, isHtml=false
   private val TOC_OPTIONS: DataHolder = {
-    val levels = TocOptions.getLevels(Array(2, 3, 4))
+    val levels = TocOptions.getLevels(Array(2, 3, 4)*)
     val opts   = TocOptions.DEFAULT.withLevels(levels).withTitle("Table of Contents").withIsTextOnly(false).withIsHtml(false)
     val ds     = new MutableDataSet()
     opts.setIn(ds)
@@ -50,7 +50,7 @@ object ComboSimTocMdFormatterSpecTest {
 
   // Empty title variant
   private val EMPTY_TOC_OPTIONS: DataHolder = {
-    val levels = TocOptions.getLevels(Array(2, 3, 4))
+    val levels = TocOptions.getLevels(Array(2, 3, 4)*)
     val opts   = TocOptions.DEFAULT.withLevels(levels).withTitle("").withIsTextOnly(false).withIsHtml(false)
     val ds     = new MutableDataSet()
     opts.setIn(ds)

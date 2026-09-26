@@ -41,7 +41,7 @@ final class LiquidLexerSuite extends munit.FunSuite {
     new TemplateParser.Builder()
       .withBlock(
         new blocks.Block(blockName) {
-          override def render(context: TemplateContext, ns: Array[nodes.LNode]): DataView = {
+          override def render(context: TemplateContext, ns: nodes.LNode*): DataView = {
             val body = if (ns.length >= 2) ns(1).render(context) else ns(0).render(context)
             DataView.from(s"[$blockName:${super.asString(body, context)}]")
           }
@@ -53,7 +53,7 @@ final class LiquidLexerSuite extends munit.FunSuite {
     new TemplateParser.Builder()
       .withBlock(
         new blocks.Block(blockName) {
-          override def render(context: TemplateContext, ns: Array[nodes.LNode]): DataView = {
+          override def render(context: TemplateContext, ns: nodes.LNode*): DataView = {
             val body = if (ns.length >= 2) ns(1).render(context) else ns(0).render(context)
             DataView.from(s"[$blockName:${super.asString(body, context)}]")
           }
@@ -61,7 +61,7 @@ final class LiquidLexerSuite extends munit.FunSuite {
       )
       .withTag(
         new tags.Tag(tagName) {
-          override def render(context: TemplateContext, ns: Array[nodes.LNode]): DataView =
+          override def render(context: TemplateContext, ns: nodes.LNode*): DataView =
             DataView.from(s"<$tagName>")
         }
       )
@@ -216,7 +216,7 @@ final class LiquidLexerSuite extends munit.FunSuite {
     val parser = new TemplateParser.Builder()
       .withBlock(
         new blocks.Block("one") {
-          override def render(context: TemplateContext, ns: Array[nodes.LNode]): DataView = {
+          override def render(context: TemplateContext, ns: nodes.LNode*): DataView = {
             val body = if (ns.length >= 2) ns(1).render(context) else ns(0).render(context)
             DataView.from(s"[one:${super.asString(body, context)}]")
           }
@@ -224,7 +224,7 @@ final class LiquidLexerSuite extends munit.FunSuite {
       )
       .withBlock(
         new blocks.Block("bad") {
-          override def render(context: TemplateContext, ns: Array[nodes.LNode]): DataView = {
+          override def render(context: TemplateContext, ns: nodes.LNode*): DataView = {
             val body = if (ns.length >= 2) ns(1).render(context) else ns(0).render(context)
             DataView.from(s"[bad:${super.asString(body, context)}]")
           }
@@ -999,7 +999,7 @@ final class LiquidLexerSuite extends munit.FunSuite {
       .withFlavor(Flavor.LIQUID)
       .withTag(
         new tags.Tag("include_relative") {
-          override def render(context: TemplateContext, ns: Array[nodes.LNode]): DataView =
+          override def render(context: TemplateContext, ns: nodes.LNode*): DataView =
             DataView.from("<include_relative>")
         }
       )

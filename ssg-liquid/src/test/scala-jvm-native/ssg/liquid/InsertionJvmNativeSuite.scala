@@ -14,7 +14,7 @@ final class InsertionJvmNativeSuite extends munit.FunSuite {
     val parser = new TemplateParser.Builder()
       .withTag(
         new tags.Tag("twice") {
-          override def render(context: TemplateContext, ns: Array[nodes.LNode]): DataView = {
+          override def render(context: TemplateContext, ns: nodes.LNode*): DataView = {
             val number = super.asNumber(ns(0).render(context)).doubleValue()
             DataView.from(number * 2)
           }
@@ -29,7 +29,7 @@ final class InsertionJvmNativeSuite extends munit.FunSuite {
     val parser = new TemplateParser.Builder()
       .withTag(
         new tags.Tag("multiply") {
-          override def render(context: TemplateContext, ns: Array[nodes.LNode]): DataView = {
+          override def render(context: TemplateContext, ns: nodes.LNode*): DataView = {
             val n1 = super.asNumber(ns(0).render(context)).doubleValue()
             val n2 = super.asNumber(ns(1).render(context)).doubleValue()
             DataView.from(n1 * n2)

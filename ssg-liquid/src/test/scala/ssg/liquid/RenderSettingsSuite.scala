@@ -154,7 +154,7 @@ final class RenderSettingsSuite extends munit.FunSuite {
     val parser = new TemplateParser.Builder()
       .withFilter(
         new filters.Filter("secret") {
-          override def apply(value: java.lang.Object, context: TemplateContext, params: Array[java.lang.Object]): java.lang.Object =
+          override def apply(value: java.lang.Object, context: TemplateContext, params: java.lang.Object*): java.lang.Object =
             DataView.from(super.asString(value, context) + " " + context.getEnvironmentMap().getOrElse(secretKey, null))
         }
       )

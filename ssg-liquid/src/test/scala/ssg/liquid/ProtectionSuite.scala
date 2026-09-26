@@ -63,7 +63,7 @@ final class ProtectionSuite extends munit.FunSuite {
 
   test("custom filter - registered via Builder") {
     val customFilter = new Filter("shout") {
-      override def apply(value: java.lang.Object, context: TemplateContext, params: Array[java.lang.Object]): java.lang.Object =
+      override def apply(value: java.lang.Object, context: TemplateContext, params: java.lang.Object*): java.lang.Object =
         DataView.from(super.asString(value, context).toUpperCase() + "!!!")
     }
     val parser   = new TemplateParser.Builder().withFilter(customFilter).build()
@@ -73,7 +73,7 @@ final class ProtectionSuite extends munit.FunSuite {
 
   test("custom tag - registered via Builder") {
     val customTag = new Tag("greeting") {
-      override def render(context: TemplateContext, nodes: Array[LNode]): DataView =
+      override def render(context: TemplateContext, nodes: LNode*): DataView =
         DataView.from("Hello, World!")
     }
     val parser   = new TemplateParser.Builder().withTag(customTag).build()

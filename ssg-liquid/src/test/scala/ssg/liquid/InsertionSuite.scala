@@ -35,7 +35,7 @@ final class InsertionSuite extends munit.FunSuite {
     val parser = new TemplateParser.Builder()
       .withBlock(
         new blocks.Block("block") {
-          override def render(context: TemplateContext, ns: Array[nodes.LNode]): DataView = {
+          override def render(context: TemplateContext, ns: nodes.LNode*): DataView = {
             val data = if (ns.length >= 2) ns(1).render(context) else ns(0).render(context)
             DataView.from("blk[" + super.asString(data, context) + "]")
           }
@@ -43,7 +43,7 @@ final class InsertionSuite extends munit.FunSuite {
       )
       .withTag(
         new tags.Tag("simple") {
-          override def render(context: TemplateContext, ns: Array[nodes.LNode]): DataView =
+          override def render(context: TemplateContext, ns: nodes.LNode*): DataView =
             DataView.from("(sim)")
         }
       )
@@ -57,7 +57,7 @@ final class InsertionSuite extends munit.FunSuite {
     val parser = new TemplateParser.Builder()
       .withBlock(
         new blocks.Block("block") {
-          override def render(context: TemplateContext, ns: Array[nodes.LNode]): DataView = {
+          override def render(context: TemplateContext, ns: nodes.LNode*): DataView = {
             val data = if (ns.length >= 2) ns(1).render(context) else ns(0).render(context)
             DataView.from("blk[" + super.asString(data, context) + "]")
           }
@@ -65,7 +65,7 @@ final class InsertionSuite extends munit.FunSuite {
       )
       .withTag(
         new tags.Tag("simple") {
-          override def render(context: TemplateContext, ns: Array[nodes.LNode]): DataView =
+          override def render(context: TemplateContext, ns: nodes.LNode*): DataView =
             DataView.from("(sim)")
         }
       )
@@ -82,7 +82,7 @@ final class InsertionSuite extends munit.FunSuite {
     val parser = new TemplateParser.Builder()
       .withBlock(
         new blocks.Block("twice") {
-          override def render(context: TemplateContext, ns: Array[nodes.LNode]): DataView = {
+          override def render(context: TemplateContext, ns: nodes.LNode*): DataView = {
             val blockNode  = ns(ns.length - 1)
             val blockValue = super.asString(blockNode.render(context), context)
             DataView.from(blockValue + " " + blockValue)
@@ -147,7 +147,7 @@ final class InsertionSuite extends munit.FunSuite {
     val parser = new TemplateParser.Builder()
       .withTag(
         new tags.Tag("custom_tag") {
-          override def render(context: TemplateContext, ns: Array[nodes.LNode]): DataView =
+          override def render(context: TemplateContext, ns: nodes.LNode*): DataView =
             DataView.from("xxx")
         }
       )

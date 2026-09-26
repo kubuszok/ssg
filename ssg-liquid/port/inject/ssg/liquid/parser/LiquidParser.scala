@@ -407,7 +407,7 @@ final class LiquidParser(
       nodes.add(parseFilter())
 
     consume(TokenType.TAG_END)
-    new InsertionNode(insertions.get("assign"), nodes.asScala.toArray)
+    new InsertionNode(insertions.get("assign"), nodes.asScala.toArray*)
   }
 
   // --- Specific tag parsers ---
@@ -446,7 +446,7 @@ final class LiquidParser(
     advance()
     consume(TokenType.TAG_END)
 
-    new InsertionNode(insertions.get("if"), nodes.asScala.toArray)
+    new InsertionNode(insertions.get("if"), nodes.asScala.toArray*)
   }
 
   /** unless_tag: {% unless expr %} block ({% else %} block)? {% endunless %} */
@@ -472,7 +472,7 @@ final class LiquidParser(
     advance()
     consume(TokenType.TAG_END)
 
-    new InsertionNode(insertions.get("unless"), nodes.asScala.toArray)
+    new InsertionNode(insertions.get("unless"), nodes.asScala.toArray*)
   }
 
   /** case_tag: {% case expr %} when_tag+ else_tag? {% endcase %} */
@@ -513,7 +513,7 @@ final class LiquidParser(
     advance()
     consume(TokenType.TAG_END)
 
-    new InsertionNode(insertions.get("case"), nodes.asScala.toArray)
+    new InsertionNode(insertions.get("case"), nodes.asScala.toArray*)
   }
 
   /** for_tag: {% for id in lookup/range ... %} block {% else %} block {% endfor %} */
@@ -598,7 +598,7 @@ final class LiquidParser(
     advance()
     consume(TokenType.TAG_END)
 
-    new InsertionNode(insertions.get("for"), nodes.asScala.toArray)
+    new InsertionNode(insertions.get("for"), nodes.asScala.toArray*)
   }
 
   /** Parses for_attribute entries: offset:expr, limit:expr, etc. */
@@ -654,7 +654,7 @@ final class LiquidParser(
     advance()
     consume(TokenType.TAG_END)
 
-    new InsertionNode(insertions.get("tablerow"), nodes.asScala.toArray)
+    new InsertionNode(insertions.get("tablerow"), nodes.asScala.toArray*)
   }
 
   /** capture_tag: {% capture id %} block {% endcapture %} */
@@ -675,7 +675,7 @@ final class LiquidParser(
     advance()
     consume(TokenType.TAG_END)
 
-    new InsertionNode(insertions.get("capture"), Array[LNode](new AtomNode(id), block))
+    new InsertionNode(insertions.get("capture"), Array[LNode](new AtomNode(id), block)*)
   }
 
   /** comment_tag: {% comment %} ... {% endcomment %} */
@@ -689,12 +689,12 @@ final class LiquidParser(
         consume(TokenType.TAG_START)
         advance() // consume ENDCOMMENT
         consume(TokenType.TAG_END)
-        break(new InsertionNode(insertions.get("comment"), Array.empty[LNode]))
+        break(new InsertionNode(insertions.get("comment"), Array.empty[LNode]*))
       }
       advance()
     }
 
-    new InsertionNode(insertions.get("comment"), Array.empty[LNode])
+    new InsertionNode(insertions.get("comment"), Array.empty[LNode]*)
   }
 
   /** raw_tag: The lexer already handles raw body as TEXT between {% raw %} and {% endraw %} */
@@ -713,14 +713,14 @@ final class LiquidParser(
           consume(TokenType.TAG_START)
           advance() // consume RAW (endraw)
           consume(TokenType.TAG_END)
-          break(new InsertionNode(insertions.get("raw"), Array[LNode](new AtomNode(sb.toString()))))
+          break(new InsertionNode(insertions.get("raw"), Array[LNode](new AtomNode(sb.toString()))*))
         }
       }
       sb.append(t.value)
       advance()
     }
 
-    new InsertionNode(insertions.get("raw"), Array[LNode](new AtomNode(sb.toString())))
+    new InsertionNode(insertions.get("raw"), Array[LNode](new AtomNode(sb.toString()))*)
   }
 
   /** cycle_tag: {% cycle group: expr, expr, ... %} */
@@ -746,7 +746,7 @@ final class LiquidParser(
     }
 
     consume(TokenType.TAG_END)
-    new InsertionNode(insertions.get("cycle"), nodes.asScala.toArray)
+    new InsertionNode(insertions.get("cycle"), nodes.asScala.toArray*)
   }
 
   /** include_tag: {% include 'file' %} or {% include file var=val %} */
@@ -800,7 +800,7 @@ final class LiquidParser(
     }
 
     consume(TokenType.TAG_END)
-    new InsertionNode(insertions.get("include"), nodes.asScala.toArray)
+    new InsertionNode(insertions.get("include"), nodes.asScala.toArray*)
   }
 
   /** Assembles an unquoted Jekyll include file name from the token run.
@@ -925,22 +925,22 @@ final class LiquidParser(
     consume(TokenType.TAG_END)
     val incRelative = insertions.get("include_relative")
     if (incRelative != null) {
-      new InsertionNode(incRelative, nodes.asScala.toArray)
+      new InsertionNode(incRelative, nodes.asScala.toArray*)
     } else {
-      new InsertionNode(insertions.get("include"), nodes.asScala.toArray)
+      new InsertionNode(insertions.get("include"), nodes.asScala.toArray*)
     }
   }
 
   private def parseBreakTag(): LNode = {
     advance() // consume BREAK_TAG
     consume(TokenType.TAG_END)
-    new InsertionNode(insertions.get("break"), Array.empty[LNode])
+    new InsertionNode(insertions.get("break"), Array.empty[LNode]*)
   }
 
   private def parseContinueTag(): LNode = {
     advance() // consume CONTINUE_TAG
     consume(TokenType.TAG_END)
-    new InsertionNode(insertions.get("continue"), Array.empty[LNode])
+    new InsertionNode(insertions.get("continue"), Array.empty[LNode]*)
   }
 
   /** custom block: {% blockid ... %} block {% endblockid %} */
@@ -1001,7 +1001,7 @@ final class LiquidParser(
     }
 
     if (insertion != null) {
-      new InsertionNode(insertion, params.asScala.toArray)
+      new InsertionNode(insertion, params.asScala.toArray*)
     } else {
       block // fallback: just render the block content
     }
@@ -1026,7 +1026,7 @@ final class LiquidParser(
     consume(TokenType.TAG_END)
 
     if (insertion != null) {
-      new InsertionNode(insertion, params.asScala.toArray)
+      new InsertionNode(insertion, params.asScala.toArray*)
     } else {
       new AtomNode("") // unknown tag, produce empty
     }
@@ -1040,7 +1040,7 @@ final class LiquidParser(
     consume(TokenType.TAG_END)
 
     if (insertion != null) {
-      new InsertionNode(insertion, Array[LNode](new AtomNode(varName)))
+      new InsertionNode(insertion, Array[LNode](new AtomNode(varName))*)
     } else {
       new AtomNode("")
     }
@@ -1078,7 +1078,7 @@ final class LiquidParser(
       consume(TokenType.TAG_END)
 
       if (insertion != null) {
-        new InsertionNode(insertion, params.asScala.toArray)
+        new InsertionNode(insertion, params.asScala.toArray*)
       } else {
         // Unregistered start tag → Invalid Tag (LiquidParser.g4:106-107). The
         // parser listener throws unconditionally in all error modes
@@ -1445,7 +1445,7 @@ object LiquidParser {
     */
   private[parser] val Unresolved: filters.Filter = new filters.Filter("") {
 
-    override def apply(value: Object, context: TemplateContext, params: Array[Object]): Object =
+    override def apply(value: Object, context: TemplateContext, params: Object*): Object =
       throw new IllegalArgumentException("no filter available")
   }
 }

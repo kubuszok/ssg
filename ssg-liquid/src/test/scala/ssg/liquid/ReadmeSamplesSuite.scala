@@ -68,7 +68,7 @@ final class ReadmeSamplesSuite extends munit.FunSuite {
     val parser = new TemplateParser.Builder()
       .withFilter(
         new filters.Filter("b") {
-          override def apply(value: java.lang.Object, context: TemplateContext, params: Array[java.lang.Object]): java.lang.Object = {
+          override def apply(value: java.lang.Object, context: TemplateContext, params: java.lang.Object*): java.lang.Object = {
             val text = super.asString(value, context)
             DataView.from(text.replaceAll("\\*(\\w(.*?\\w)?)\\*", "<strong>$1</strong>"))
           }
@@ -86,7 +86,7 @@ final class ReadmeSamplesSuite extends munit.FunSuite {
     val parser = new TemplateParser.Builder()
       .withFilter(
         new filters.Filter("repeat") {
-          override def apply(value: java.lang.Object, context: TemplateContext, params: Array[java.lang.Object]): java.lang.Object = {
+          override def apply(value: java.lang.Object, context: TemplateContext, params: java.lang.Object*): java.lang.Object = {
             val text    = super.asString(value, context)
             var times   = if (params.length == 0) 1 else super.asNumber(params(0)).intValue()
             val builder = new StringBuilder()
@@ -111,7 +111,7 @@ final class ReadmeSamplesSuite extends munit.FunSuite {
     val parser = new TemplateParser.Builder()
       .withBlock(
         new blocks.Block("loop") {
-          override def render(context: TemplateContext, ns: Array[nodes.LNode]): DataView = {
+          override def render(context: TemplateContext, ns: nodes.LNode*): DataView = {
             var n       = super.asNumber(ns(0).render(context)).intValue()
             val block   = ns(1)
             val builder = new StringBuilder()

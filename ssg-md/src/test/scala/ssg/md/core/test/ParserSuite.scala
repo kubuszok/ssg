@@ -660,7 +660,7 @@ final class ParserSuite extends munit.FunSuite {
   private class BlockFactory(options: DataHolder) extends AbstractBlockParserFactory(options) {
     override def tryStart(state: ParserState, matchedBlockParser: MatchedBlockParser): BlockStart =
       if (state.getLine().equals("---")) {
-        BlockStart.of(Array(new DashBlockParser(state.getLine())))
+        BlockStart.of(Array(new DashBlockParser(state.getLine()))*)
       } else {
         BlockStart.none()
       }

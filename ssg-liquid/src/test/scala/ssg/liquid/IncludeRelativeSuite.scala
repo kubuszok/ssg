@@ -34,7 +34,7 @@ final class IncludeRelativeSuite extends munit.FunSuite {
       .withNameResolver(new TestBridges.InMemoryNameResolver(map))
       .withTag(
         new tags.Tag("include_relative") {
-          override def render(context: TemplateContext, ns: Array[nodes.LNode]): DataView =
+          override def render(context: TemplateContext, ns: nodes.LNode*): DataView =
             DataView.from("World")
         }
       )
@@ -53,7 +53,7 @@ final class IncludeRelativeSuite extends munit.FunSuite {
       .withNameResolver(new TestBridges.InMemoryNameResolver(map))
       .withBlock(
         new blocks.Block("another") {
-          override def render(context: TemplateContext, ns: Array[nodes.LNode]): DataView = {
+          override def render(context: TemplateContext, ns: nodes.LNode*): DataView = {
             val blockNode = ns(ns.length - 1)
             DataView.from("[" + super.asString(blockNode.render(context), context) + "]")
           }
@@ -61,7 +61,7 @@ final class IncludeRelativeSuite extends munit.FunSuite {
       )
       .withBlock(
         new blocks.Block("include_relative") {
-          override def render(context: TemplateContext, ns: Array[nodes.LNode]): DataView =
+          override def render(context: TemplateContext, ns: nodes.LNode*): DataView =
             DataView.from("World")
         }
       )

@@ -34,7 +34,7 @@ final class NodeExtraSuite extends munit.FunSuite {
   test("block node: custom tag with block") {
     val parser = new TemplateParser.Builder()
       .withBlock(new blocks.Block("testtag") {
-        override def render(context: TemplateContext, ns: Array[nodes.LNode]): DataView = DataView.nil
+        override def render(context: TemplateContext, ns: nodes.LNode*): DataView = DataView.nil
       })
       .build()
     parser.parse("{% testtag %} {% endtesttag %}").render()
