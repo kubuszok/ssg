@@ -724,7 +724,9 @@ object BalticPorterGen {
           log.info(s"[Baltic Porter] ssg-js: ${run.summary.line}")
           RecordedDivergences.requireMatched("ssg-js", run)
           if (run.unmatchedReferenceOnlyAt.nonEmpty)
-            sys.error(s"[Baltic Porter] ssg-js: ${TerserBuilder.referenceOnlyTable} rows that name no reference member: ${run.unmatchedReferenceOnlyAt.mkString(", ")}")
+            sys.error(
+              s"[Baltic Porter] ssg-js: ${TerserBuilder.referenceOnlyTable} rows that name no reference member: ${run.unmatchedReferenceOnlyAt.mkString(", ")}"
+            )
           Files.createDirectories(marker.getParent)
           Files.writeString(marker, expected)
           run.written.map(_.toFile)

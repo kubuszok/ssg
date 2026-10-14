@@ -34,7 +34,9 @@ object RecordedDivergences {
   /** Stops the generation when a record of `module` named no reference member: the reference moved and the decision must be re-recorded. */
   def requireMatched(module: String, run: NonJavaBodies.Run): Unit =
     if (run.unmatchedRecorded.nonEmpty)
-      sys.error(s"[Baltic Porter] $module: recorded divergences that name no reference member: ${run.unmatchedRecorded.map(_.describe).mkString(", ")}")
+      sys.error(
+        s"[Baltic Porter] $module: recorded divergences that name no reference member: ${run.unmatchedRecorded.map(_.describe).mkString(", ")}"
+      )
 
   /** The bytes a generated tree depends on: the table and this reader. */
   def fingerprintInputs(ssgRoot: Path): List[Array[Byte]] =
