@@ -282,7 +282,8 @@ object KaTeXBuilder {
           enumIndex = enumIdx,
           memberRenames = memberRenames,
           oracle = oracle,
-          enclosingOwner = owners.ownerOf(refObjectName, key, policy.aliases)
+          enclosingOwner = owners.ownerOf(refObjectName, key, policy.aliases),
+          tsTypes = rastFile.types
         )
         // An empty or whitespace-only body is a translator failure; record it as a refusal
         val bodyText    = translated.scalaBody.trim
@@ -292,7 +293,7 @@ object KaTeXBuilder {
           case Some(defect) => defect :: baseReasons
           case None         => baseReasons
         }
-        result.getOrElseUpdate(key, mutable.ListBuffer.empty) += ParityDerive.TranslatedBody(translated.scalaBody, reasons)
+        result.getOrElseUpdate(key, mutable.ListBuffer.empty) += ParityDerive.TranslatedBody(translated.scalaBody, reasons, translated.refusalSites.map(_.render(rastFile.path)))
       }
     }
 

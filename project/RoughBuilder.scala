@@ -185,11 +185,12 @@ object RoughBuilder {
         enumIndex = enumIdx,
         memberRenames = memberRenames,
         oracle = oracle,
-        enclosingOwner = owners.ownerOf(refObjectName, key, policy.aliases)
+        enclosingOwner = owners.ownerOf(refObjectName, key, policy.aliases),
+        tsTypes = rastFile.types
       )
       val bodyText = translated.scalaBody.trim
       val reasons  = if (bodyText.isEmpty) "empty-body" :: translated.refusalReasons else translated.refusalReasons
-      result.getOrElseUpdate(key, mutable.ListBuffer.empty) += ParityDerive.TranslatedBody(translated.scalaBody, reasons)
+      result.getOrElseUpdate(key, mutable.ListBuffer.empty) += ParityDerive.TranslatedBody(translated.scalaBody, reasons, translated.refusalSites.map(_.render(rastFile.path)))
     }
 
     ParityDerive.Bodies(result.map { case (k, v) => k -> v.toList }.toMap)
