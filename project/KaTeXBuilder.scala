@@ -8,20 +8,10 @@ import scala.jdk.CollectionConverters.*
 
 /** KaTeX body builder for parity-derive: the per-library policy that was in the engine's KaTeXEmitter, adapted to the generic `NonJavaBodies.build` entry point.
   *
-  * The mechanism (ParityDerive, bodies.tsv, refusal recording) lives in the engine. This file carries only what is specific to KaTeX: the module table, the uncompilable patterns, and the body
-  * translator invocation.
+  * The mechanism (ParityDerive, bodies.tsv, refusal recording) lives in the engine. This file carries only what is specific to KaTeX: the module table, the member exclusions, and the body translator
+  * invocation.
   */
 object KaTeXBuilder {
-
-  /** Patterns in a translated KaTeX RAST body that cannot compile in ssg-katex.
-    *
-    * These catch constructs the body translator emits that break compilation: DOM APIs (no browser in ssg), Scala reserved words used as JS identifiers, untranslated JS constructs, and patterns that
-    * produce syntax the Scala compiler cannot parse.
-    */
-  private val uncompilablePatterns: List[String] = List(
-    // sqrtMain body: val-reassignment (extraVinculum) in SvgGeometry.scala
-    "sqrtMain("
-  )
 
   /** Per-member exclusions: translated bodies that do not compile due to translator defects. Each entry maps a camelCase member name to the defect reason. The body is kept from the reference with
     * reason `translator-refusal:<defect>` in bodies.tsv.
@@ -86,7 +76,6 @@ object KaTeXBuilder {
 
   val policy: ParityDerive.Policy =
     ParityDerive.Policy(
-      uncompilablePatterns = uncompilablePatterns,
       keepReferenceOnRefusal = true,
       aliases = Map(
         // camelCase("_getExpansion") produces "GetExpansion" but the reference member is _getExpansion

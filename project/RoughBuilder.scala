@@ -10,7 +10,7 @@ import scala.jdk.CollectionConverters.*
   * generic `NonJavaBodies.build` entry point.
   *
   * The mechanism (ParityDerive, bodies.tsv, refusal recording) lives in the engine. This file carries only what is specific to the rough.js family: the module table, the referenceOnly entries, the
-  * aliases, and the body translator invocation.
+  * class each method belongs to, and the body translator invocation.
   */
 object RoughBuilder {
 
@@ -23,70 +23,9 @@ object RoughBuilder {
     "hachure-fill"
   )
 
-  /** Patterns in a translated RAST body that cannot compile in ssg-graphs-commons.
-    *
-    * Each catches a construct the body translator emits that breaks compilation, documented with the defect class and affected members. A pattern is the LAST resort, one per defect class; defects are
-    * recorded in the tracker.
-    */
-  private val uncompilablePatterns: List[String] = List(
-    // JS ** exponentiation operator emitted as literal token name (randomSeed, next in RoughMath)
-    "AsteriskAsteriskToken",
-    // TS tuple type [number, number] emitted as array-index access on Point/Line case classes:
-    // p(0), p(1), line(0) etc. (lineLength in Geometry, distance/distanceSq/distanceToSegmentSq/
-    // lerp/flatness/simplify/getPointsOnBezierCurveWithSplitting in PointsOnCurve, clone in
-    // CurveToBezier, rotatePoints in HachureFill, rotate in Normalize)
-    "(0) -",
-    // Point.toArray (clone in CurveToBezier)
-    ".toArray",
-    // Wrong case for _fillPolygons: translator produces this.FillPolygons (HachureFiller)
-    "this.FillPolygons",
-    // Val reassignment: ret.shape = "circle" (circle in RoughGenerator)
-    ".shape =",
-    // Destructuring in filter callback: ((d, i) => (...)) (_mergedShape in RoughGenerator)
-    "((d, i)",
-    // Int truthiness: if (this.seed) where seed is Int (next in RoughMath)
-    "if (this.seed)",
-    // Extra ctor arg from dropped DOM param: new RoughSVG(svg, config) (svg in Rough)
-    "new RoughSVG(svg",
-    // TS tuple mutation: p(0) = ... / p(1) = ... on Point case class (rotatePoints in HachureFill)
-    "p(0) =",
-    // Wrong self-reference: translator prefixes own-object methods with the object name
-    // (getPointsOnBezierCurveWithSplitting, simplify in PointsOnCurve)
-    "PointsOnCurve.",
-    // ArrayBuffer where Vector or tuple expected (getPointsOnBezierCurveWithSplitting in
-    // PointsOnCurve, rotate in Normalize)
-    "ArrayBuffer[Point](",
-    "ArrayBuffer(X",
-    // JS truthiness on Option/Vector: if (newPoints), points && points.length
-    // (getPointsOnBezierCurveWithSplitting, rotatePoints)
-    "if (newPoints)",
-    "points && points"
-  )
-
+  /** No uncompilable-pattern guard: every body the translator cannot render faithfully it refuses itself, with its reason in bodies.tsv. */
   val policy: ParityDerive.Policy =
-    ParityDerive.Policy(
-      uncompilablePatterns = uncompilablePatterns,
-      keepReferenceOnRefusal = true,
-      aliases = Map(
-        // Underscore-prefixed TS names whose camelCase form differs from the reference member name.
-        // camelCase("_fillPolygons") -> "FillPolygons" but reference keeps "_fillPolygons"
-        "_fillPolygons" -> List("FillPolygons"),
-        // renderer.ts private helpers
-        "_offset" -> List("Offset"),
-        "_offsetOpt" -> List("OffsetOpt"),
-        "_doubleLine" -> List("DoubleLine"),
-        "_line" -> List("Line"),
-        "_curveWithOffset" -> List("CurveWithOffset"),
-        "_curve" -> List("Curve"),
-        "_computeEllipsePoints" -> List("ComputeEllipsePoints"),
-        "_arc" -> List("Arc"),
-        "_bezierTo" -> List("BezierTo"),
-        // generator.ts
-        "_o" -> List("O"),
-        "_d" -> List("D"),
-        "_mergedShape" -> List("MergedShape")
-      )
-    )
+    ParityDerive.Policy(keepReferenceOnRefusal = true)
 
   /** JS property names that the Scala reference renamed. The body translator's `snakeToCamel` would mangle underscore-prefixed names; `type` is a Scala reserved word.
     */
@@ -116,11 +55,13 @@ object RoughBuilder {
     "pointsOnPath" -> "PointsOnPath.pointsOnPath"
   )
 
-  private def camelCase(s: String): String =
-    if (s.contains("_")) {
-      val parts = s.split("_")
-      parts.head + parts.tail.map(p => if (p.nonEmpty) p(0).toUpper + p.substring(1) else "").mkString
-    } else s
+  /** `snake_case` to `camelCase`, keeping leading underscores: the reference names `_offset` as upstream does. */
+  private def camelCase(s: String): String = {
+    val lead  = s.takeWhile(_ == '_')
+    val parts = s.drop(lead.length).split("_")
+    if (parts.length <= 1) s
+    else lead + parts.head + parts.tail.map(p => if (p.nonEmpty) p(0).toUpper + p.substring(1) else "").mkString
+  }
 
   // -------------------------------------------------------------------------
   // Module table: every reference file and the RAST file that feeds it.
@@ -209,18 +150,21 @@ object RoughBuilder {
     "jsNum" -> "scala-specific-helper"
   )
 
-  /** Extract every function, function-valued variable and method with a body from a RAST file. */
-  private def functionBodies(file: RastFile): List[(String, List[String], RastNode)] = {
-    val results = mutable.ListBuffer.empty[(String, List[String], RastNode)]
+  /** Extract every function, function-valued variable and method with a body from a RAST file, with the class declaring a method (`_free_` for a module-level function): the translator reads `this` as
+    * that class.
+    */
+  private def functionBodies(file: RastFile): List[(String, String, List[String], RastNode)] = {
+    val results = mutable.ListBuffer.empty[(String, String, List[String], RastNode)]
 
     def paramsOf(fn: RastNode): List[String] =
       fn.children.filter(_.kind == "Parameter").flatMap(_.children.find(_.kind == "Identifier").flatMap(_.text))
 
-    def walk(node: RastNode): Unit = {
+    def walk(node: RastNode, cls: String): Unit = {
       node.kind match {
         case "FunctionDeclaration" | "MethodDeclaration" =>
-          val name = node.children.find(_.kind == "Identifier").flatMap(_.text).getOrElse("")
-          if (name.nonEmpty) node.children.find(_.kind == "Block").foreach(body => results += ((name, paramsOf(node), body)))
+          val name  = node.children.find(_.kind == "Identifier").flatMap(_.text).getOrElse("")
+          val owner = if (node.kind == "MethodDeclaration") cls else "_free_"
+          if (name.nonEmpty) node.children.find(_.kind == "Block").foreach(body => results += ((owner, name, paramsOf(node), body)))
 
         case "VariableStatement" =>
           for {
@@ -229,18 +173,20 @@ object RoughBuilder {
             fn <- vd.children.find(c => c.kind == "ArrowFunction" || c.kind == "FunctionExpression")
           } {
             val name = vd.children.headOption.flatMap(_.text).getOrElse("")
+            // A braceless arrow's body is its LAST child; a return-type annotation may precede it.
             val body = fn.children.find(_.kind == "Block").orElse {
-              fn.children.find(c => c.kind != "Parameter").map(e => RastNode("Block", 0, (0, 0), children = List(RastNode("ReturnStatement", 0, (0, 0), children = List(e)))))
+              fn.children.lastOption.filter(_.kind != "Parameter").map(e => RastNode("Block", 0, (0, 0), children = List(RastNode("ReturnStatement", 0, (0, 0), children = List(e)))))
             }
-            body.foreach(b => results += ((name, paramsOf(fn), b)))
+            body.foreach(b => results += (("_free_", name, paramsOf(fn), b)))
           }
 
         case _ => ()
       }
-      node.children.foreach(walk)
+      val inner = if (node.kind == "ClassDeclaration") node.children.find(_.kind == "Identifier").flatMap(_.text).getOrElse(cls) else cls
+      node.children.foreach(walk(_, inner))
     }
 
-    file.nodes.foreach(walk)
+    file.nodes.foreach(walk(_, "_free_"))
     results.toList
   }
 
@@ -259,13 +205,13 @@ object RoughBuilder {
 
     for {
       rastFile <- rastFiles
-      (name, params, body) <- functionBodies(rastFile)
+      (owner, name, params, body) <- functionBodies(rastFile)
     } {
       val key        = camelCase(name)
       val sig        = oracle.get(refObjectName, key)
       val retType    = sig.map(_.returnType)
       val paramTpes  = sig.map(s => s.params.map(p => p.name -> p.tpe).toMap).getOrElse(Map.empty)
-      val entry      = DefmethodEntry("_free_", name, params, body)
+      val entry      = DefmethodEntry(owner, name, params, body)
       val translated = DefmethodBodyTranslator.translateBody(
         entry,
         Nil,
