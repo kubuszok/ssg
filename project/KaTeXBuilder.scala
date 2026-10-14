@@ -1,4 +1,4 @@
-import balticporter.frontend.ts.{ NonJavaBodies, ParityDerive, Rast, RastFile, RastNode, RastValue, ReferenceSignatures }
+import balticporter.frontend.ts.{ NonJavaBodies, ParityDerive, Rast, RastFile, RastFunctions, RastNode, RastValue, ReferenceSignatures }
 import balticporter.frontend.ts.dedicated.{ DefmethodBodyTranslator, DefmethodEntry }
 
 import java.nio.charset.StandardCharsets
@@ -147,6 +147,9 @@ object KaTeXBuilder {
 
   /** Members the reference declares that have no TS counterpart: the engine keeps the reference body and records the reason in bodies.tsv. Keyed by member name (matched globally across all files). */
   private val referenceOnly: Map[String, String] = Map(
+    // BuildTree.scala: the reference validates `settings.output` first (ISS-1087, a recorded
+    // divergence from upstream, which accepts any value)
+    "buildHTMLTree" -> "recorded-divergence",
     // Registration wrappers (48 function files + 3 environment files + 2 registries)
     "register" -> "module-level-side-effect",
     "registerAll" -> "module-level-side-effect",
@@ -241,41 +244,6 @@ object KaTeXBuilder {
     "get" -> "data-accessor-delegation"
   )
 
-  /** Extract every function, function-valued variable and method with a body from a RAST file. */
-  private def functionBodies(file: RastFile): List[(String, List[String], RastNode)] = {
-    val results = mutable.ListBuffer.empty[(String, List[String], RastNode)]
-
-    def paramsOf(fn: RastNode): List[String] =
-      fn.children.filter(_.kind == "Parameter").flatMap(_.children.find(_.kind == "Identifier").flatMap(_.text))
-
-    def walk(node: RastNode): Unit = {
-      node.kind match {
-        case "FunctionDeclaration" | "MethodDeclaration" =>
-          val name = node.children.find(_.kind == "Identifier").flatMap(_.text).getOrElse("")
-          if (name.nonEmpty) node.children.find(_.kind == "Block").foreach(body => results += ((name, paramsOf(node), body)))
-
-        case "VariableStatement" =>
-          for {
-            vdl <- node.children.find(_.kind == "VariableDeclarationList")
-            vd <- vdl.children.filter(_.kind == "VariableDeclaration")
-            fn <- vd.children.find(c => c.kind == "ArrowFunction" || c.kind == "FunctionExpression")
-          } {
-            val name = vd.children.headOption.flatMap(_.text).getOrElse("")
-            val body = fn.children.find(_.kind == "Block").orElse {
-              fn.children.find(c => c.kind != "Parameter").map(e => RastNode("Block", 0, (0, 0), children = List(RastNode("ReturnStatement", 0, (0, 0), children = List(e)))))
-            }
-            body.foreach(b => results += ((name, paramsOf(fn), b)))
-          }
-
-        case _ => ()
-      }
-      node.children.foreach(walk)
-    }
-
-    file.nodes.foreach(walk)
-    results.toList
-  }
-
   /** Translate the RAST bodies from one or more files into parity-derive bodies.
     *
     * Every translated body goes through the uncompilable pattern check via the policy; bodies that contain any declared pattern are kept from the reference with a recorded reason in bodies.tsv.
@@ -294,7 +262,7 @@ object KaTeXBuilder {
 
     for {
       rastFile <- rastFiles
-      (name, params, body) <- functionBodies(rastFile)
+      RastFunctions.Function(owner, name, params, body) <- RastFunctions.of(rastFile)
     } {
       // Skip functions whose camelCase name collides with common methods across many reference
       // files. These cause `unclassified` labels in bodies.tsv when a name from one file's RAST
@@ -305,7 +273,7 @@ object KaTeXBuilder {
         val sig        = oracle.get(refObjectName, key)
         val retType    = sig.map(_.returnType)
         val paramTpes  = sig.map(s => s.params.map(p => p.name -> p.tpe).toMap).getOrElse(Map.empty)
-        val entry      = DefmethodEntry("_free_", name, params, body)
+        val entry      = DefmethodEntry(owner, name, params, body)
         val translated = DefmethodBodyTranslator.translateBody(
           entry,
           Nil,
