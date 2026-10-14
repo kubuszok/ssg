@@ -141,17 +141,16 @@ translator-refusal=67, reference-only=19, skeleton-cannot-offer=11.
 `checkJs`) and a committed `ast.d.ts` (under `ssg-js/port/`) declaring the AST class hierarchy so
 the checker can resolve field accesses. The builder (`project/TerserBuilder.scala`) supplies a
 `NonJavaBodies.Library` value with the module table (28 exported files mapped to 51 reference
-files), `memberRenames`, reference indices, and `referenceOnly` classifying 620 Scala-specific
-members by reason (defnode-type-constant 113, defmethod-codegen 53, defmethod-opt-dispatch 43,
-defmethod-inference 33, cross-module-restructured 46, defmethod-needs-parens 16,
-defmethod-drop-side-effect 8, defmethod-eval 8, scope-analysis-pass 7, defmethod-reduce-vars 5,
-defmethod-negate 4, scala-restructured 245, plus 39 original entries). Uncompilable patterns
+files), `memberRenames`, reference indices, and a FILE-SCOPED reference-only table,
+`ssg-js/port/reference-only.tsv` (reference file, member, reason: DEFMETHOD/OPT callbacks the
+reference restructured, Scala-specific helpers, the ssg glue), so a name kept in one file never
+keeps its namesake in another; a row naming no member stops the generation. Uncompilable patterns
 guard 80 bodies the translator cannot yet compile (ISS-1398); a body naming a private member of
 another object is refused by the engine itself, given the declaring object (`project/ReferenceOwners.scala`).
 terser's own JS conventions (`AST_X` classes, the `TYPE` tag, `make_node`, helpers moved into
 `AstSize`, `CompressorFlags`) are the builder's `JsConventions` value and `apiLookup` entries.
-`bodies.tsv` records translated 15/1066, reference by reason: reference-only=619,
-skeleton-cannot-offer=160, translator-refusal=188, uncompilable-pattern=80, no-translated-body=4.
+`bodies.tsv` records translated 15/1066, reference by reason: reference-only=618,
+skeleton-cannot-offer=160, translator-refusal=189, uncompilable-pattern=80, no-translated-body=4.
 
 **ssg-mermaid, ssg-sass** derive from reference only with no RAST
 export yet; every body is `reference` with reason `no-translated-body`. Each will get its own
