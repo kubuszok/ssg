@@ -597,6 +597,7 @@ object BalticPorterGen {
     val builder = {
       val md = java.security.MessageDigest.getInstance("SHA-256")
       md.update(Files.readString(ssgRoot.resolve("project/TerserBuilder.scala")).replace("\r", "").getBytes("UTF-8"))
+      md.update(Files.readString(ssgRoot.resolve(TerserBuilder.referenceOnlyTable)).replace("\r", "").getBytes("UTF-8"))
       md.update(Files.readString(ssgRoot.resolve("project/ReferenceOwners.scala")).replace("\r", "").getBytes("UTF-8"))
       RecordedDivergences.fingerprintInputs(ssgRoot).foreach(b => md.update(b))
       md.digest().take(8).map(b => f"$b%02x").mkString
@@ -712,7 +713,7 @@ object BalticPorterGen {
       TerserBuilder.exportRast(terserSrc, astDtsFile, rastDir, exporterDir, log)
 
       // 4. Derive
-      val lib = TerserBuilder.library(referenceDir).copy(recordedDivergences = RecordedDivergences.forModule(ssgRoot, "ssg-js"))
+      val lib = TerserBuilder.library(ssgRoot, referenceDir).copy(recordedDivergences = RecordedDivergences.forModule(ssgRoot, "ssg-js"))
       balticporter.frontend.ts.NonJavaBodies.build(lib, referenceDir, rastDir) match {
         case refused: balticporter.frontend.ts.NonJavaBodies.Refused =>
           log.warn(s"[Baltic Porter] ssg-js: ${refused.message}")
@@ -722,6 +723,8 @@ object BalticPorterGen {
           val run = built.derive(outDir, reportDir)
           log.info(s"[Baltic Porter] ssg-js: ${run.summary.line}")
           RecordedDivergences.requireMatched("ssg-js", run)
+          if (run.unmatchedReferenceOnlyAt.nonEmpty)
+            sys.error(s"[Baltic Porter] ssg-js: ${TerserBuilder.referenceOnlyTable} rows that name no reference member: ${run.unmatchedReferenceOnlyAt.mkString(", ")}")
           Files.createDirectories(marker.getParent)
           Files.writeString(marker, expected)
           run.written.map(_.toFile)
