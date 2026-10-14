@@ -775,11 +775,12 @@ object TerserBuilder {
           memberRenames = memberRenames,
           oracle = oracle,
           enclosingOwner = owners.ownerOf(refObjectName, key, policy.aliases),
+          tsTypes = rastFile.types,
           conventions = conventions
         )
         val bodyText = translated.scalaBody.trim
         val reasons  = if (bodyText.isEmpty) "empty-body" :: translated.refusalReasons else translated.refusalReasons
-        result.getOrElseUpdate(key, mutable.ListBuffer.empty) += ParityDerive.TranslatedBody(translated.scalaBody, reasons)
+        result.getOrElseUpdate(key, mutable.ListBuffer.empty) += ParityDerive.TranslatedBody(translated.scalaBody, reasons, translated.refusalSites.map(_.render(rastFile.path)))
       } catch {
         case e: Exception =>
           // A translator crash is a refusal, not a build failure
