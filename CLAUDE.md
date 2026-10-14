@@ -106,22 +106,23 @@ in the frontend-ts jar) and Node, cached under `target/balticporter-rast/katex` 
 commit and the exporter version. The KaTeX builder (`project/KaTeXBuilder.scala`) supplies a
 `NonJavaBodies.Library` value with the full policy: reference indices, type oracle and
 `memberRenames` from the reference Scala tree feed return types, parameter types, callees, members,
-constructors and enums to the body translator; 1 uncompilable pattern guards a body the translator
-cannot yet compile (sqrtMain: val-reassignment, ISS-1396); `referenceOnly` classifies 201
-Scala-specific members. `bodies.tsv` records translated 1/496, reference by reason:
-translator-refusal=251, reference-only=211, skeleton-cannot-offer=28, occurrence-out-of-range=4,
-uncompilable-pattern=1.
+constructors and enums to the body translator; no uncompilable pattern is needed (the translator
+refuses every body it cannot render faithfully); `referenceOnly` classifies 201 Scala-specific
+members. `bodies.tsv` records translated 3/496, reference by reason: translator-refusal=250,
+reference-only=211, skeleton-cannot-offer=28, occurrence-out-of-range=4.
+
+Every non-Java report directory also holds `bodies-translations.txt`: the translated text of each
+member, emitted or declined, headed by its `bodies.tsv` row — read it to see what a refusal refused.
 
 **ssg-graphs-commons** exports RAST from five upstream submodules (roughjs, path-data-parser,
 points-on-curve, points-on-path, hachure-fill) with the engine's TS exporter and Node, cached
 under `target/balticporter-rast/<name>` per submodule commit and exporter version. The builder
-(`project/RoughBuilder.scala`) supplies a `NonJavaBodies.Library` value with aliases for
-underscore-prefixed TS names, `memberRenames`, reference indices, and `referenceOnly` entries for
-19 Scala-specific members (helpers, comparators, get-accessors, platform-inapplicable). 14
-uncompilable patterns guard bodies the translator cannot yet compile (tuple-as-array-access,
-exponentiation operator, wrong self-reference, ArrayBuffer-vs-Vector/tuple). `bodies.tsv` records
-translated 7/126, reference by reason: reference-only=19, translator-refusal=59,
-uncompilable-pattern=30, skeleton-cannot-offer=11.
+(`project/RoughBuilder.scala`) supplies a `NonJavaBodies.Library` value with `memberRenames`,
+reference indices, the class declaring each method (the translator reads `this` as that class), and
+`referenceOnly` entries for 19 Scala-specific members (helpers, comparators, get-accessors,
+platform-inapplicable); names keep their leading underscore, so no aliases are needed, and no
+uncompilable pattern is needed. `bodies.tsv` records translated 25/126, reference by reason:
+translator-refusal=71, reference-only=19, skeleton-cannot-offer=11.
 
 **ssg-js** exports RAST from `original-src/terser` with the engine's TS exporter (`allowJs`, no
 `checkJs`) and a committed `ast.d.ts` (under `ssg-js/port/`) declaring the AST class hierarchy so
@@ -134,8 +135,8 @@ defmethod-drop-side-effect 8, defmethod-eval 8, scope-analysis-pass 7, defmethod
 defmethod-negate 4, scala-restructured 245, plus 39 original entries). Uncompilable patterns
 guard 85 bodies the translator cannot yet compile (ISS-1398); a body naming a private member of
 another object is refused by the engine itself, given the declaring object (`project/ReferenceOwners.scala`).
-`bodies.tsv` records translated 2/1066, reference by reason: reference-only=619,
-skeleton-cannot-offer=160, translator-refusal=196, uncompilable-pattern=85, no-translated-body=4.
+`bodies.tsv` records translated 13/1066, reference by reason: reference-only=619,
+skeleton-cannot-offer=160, translator-refusal=188, uncompilable-pattern=82, no-translated-body=4.
 
 **ssg-mermaid, ssg-sass** derive from reference only with no RAST
 export yet; every body is `reference` with reason `no-translated-body`. Each will get its own
