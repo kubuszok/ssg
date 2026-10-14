@@ -1,0 +1,7 @@
+# Reference members of the non-Java ports that differ from upstream on purpose. Each keeps its reference body whatever the translator offers.
+# issue: the tracker row recording the decision (category divergence or pit-of-success). file: relative to the module's reference/scala. params: parameter types of one overload, * for all, - for none.
+# module	file	member	params	issue	what the reference keeps
+ssg-katex	ssg/katex/build/BuildTree.scala	buildTree	*	ISS-1087	rejects an output setting outside htmlAndMathml/html/mathml; upstream accepts any value
+ssg-katex	ssg/katex/build/BuildTree.scala	buildHTMLTree	*	ISS-1087	rejects an output setting outside htmlAndMathml/html/mathml; upstream accepts any value
+ssg-katex	ssg/katex/build/BuildTree.scala	validateOutput	*	ISS-1087	the check itself
+ssg-katex	ssg/katex/KaTeX.scala	renderToString	String, KaTeXOptions	ISS-1086	the KaTeXOptions entry point delegating to the Settings overload; upstream has one overload

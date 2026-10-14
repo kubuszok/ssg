@@ -107,10 +107,18 @@ commit and the exporter version. The KaTeX builder (`project/KaTeXBuilder.scala`
 `NonJavaBodies.Library` value with the full policy: reference indices, type oracle and
 `memberRenames` from the reference Scala tree feed return types, parameter types, callees, members,
 constructors and enums to the body translator; no uncompilable pattern is needed (the translator
-refuses every body it cannot render faithfully); `referenceOnly` classifies 202 members whose
-reference body must stay (Scala-specific members, and `buildHTMLTree`, whose output validation is a
-recorded divergence from upstream). `bodies.tsv` records translated 30/496, reference by reason:
-translator-refusal=222, reference-only=212, skeleton-cannot-offer=28, occurrence-out-of-range=4.
+refuses every body it cannot render faithfully); `referenceOnly` classifies 200 members whose
+reference body must stay (Scala-specific members). `bodies.tsv` records translated 30/496, reference
+by reason: translator-refusal=221, reference-only=210, skeleton-cannot-offer=28,
+recorded-divergence=4, occurrence-out-of-range=3.
+
+A reference member that differs from upstream ON PURPOSE is listed once, in
+`.rescale/data/recorded-divergences.tsv` (module, reference file, member, overload's parameter
+types, the tracker issue recording the decision), and keeps its reference body in every non-Java
+port whatever the translator offers (`project/RecordedDivergences.scala`; `bodies.tsv` reason
+`recorded-divergence:<issue>`). A row whose issue is not a `divergence`/`pit-of-success` tracker row,
+or that names no reference member any more, stops the generation. Record a deliberate divergence
+there in the commit that makes it — a faithful translation would otherwise undo it silently.
 
 All three builders read a file's functions through the engine's `RastFunctions.of`, which names the
 class declaring each method so the translator reads `this` as that class.
