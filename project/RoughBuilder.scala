@@ -1,4 +1,4 @@
-import balticporter.frontend.ts.{ NonJavaBodies, ParityDerive, Rast, RastFile, RastNode, RastValue, ReferenceSignatures }
+import balticporter.frontend.ts.{ NonJavaBodies, ParityDerive, Rast, RastFile, RastFunctions, RastNode, RastValue, ReferenceSignatures }
 import balticporter.frontend.ts.dedicated.{ DefmethodBodyTranslator, DefmethodEntry }
 
 import java.nio.charset.StandardCharsets
@@ -150,46 +150,6 @@ object RoughBuilder {
     "jsNum" -> "scala-specific-helper"
   )
 
-  /** Extract every function, function-valued variable and method with a body from a RAST file, with the class declaring a method (`_free_` for a module-level function): the translator reads `this` as
-    * that class.
-    */
-  private def functionBodies(file: RastFile): List[(String, String, List[String], RastNode)] = {
-    val results = mutable.ListBuffer.empty[(String, String, List[String], RastNode)]
-
-    def paramsOf(fn: RastNode): List[String] =
-      fn.children.filter(_.kind == "Parameter").flatMap(_.children.find(_.kind == "Identifier").flatMap(_.text))
-
-    def walk(node: RastNode, cls: String): Unit = {
-      node.kind match {
-        case "FunctionDeclaration" | "MethodDeclaration" =>
-          val name  = node.children.find(_.kind == "Identifier").flatMap(_.text).getOrElse("")
-          val owner = if (node.kind == "MethodDeclaration") cls else "_free_"
-          if (name.nonEmpty) node.children.find(_.kind == "Block").foreach(body => results += ((owner, name, paramsOf(node), body)))
-
-        case "VariableStatement" =>
-          for {
-            vdl <- node.children.find(_.kind == "VariableDeclarationList")
-            vd <- vdl.children.filter(_.kind == "VariableDeclaration")
-            fn <- vd.children.find(c => c.kind == "ArrowFunction" || c.kind == "FunctionExpression")
-          } {
-            val name = vd.children.headOption.flatMap(_.text).getOrElse("")
-            // A braceless arrow's body is its LAST child; a return-type annotation may precede it.
-            val body = fn.children.find(_.kind == "Block").orElse {
-              fn.children.lastOption.filter(_.kind != "Parameter").map(e => RastNode("Block", 0, (0, 0), children = List(RastNode("ReturnStatement", 0, (0, 0), children = List(e)))))
-            }
-            body.foreach(b => results += (("_free_", name, paramsOf(fn), b)))
-          }
-
-        case _ => ()
-      }
-      val inner = if (node.kind == "ClassDeclaration") node.children.find(_.kind == "Identifier").flatMap(_.text).getOrElse(cls) else cls
-      node.children.foreach(walk(_, inner))
-    }
-
-    file.nodes.foreach(walk(_, "_free_"))
-    results.toList
-  }
-
   /** Translate the RAST bodies from one or more files into parity-derive bodies. */
   private def buildTranslatedBodyMap(
     rastFiles:     List[RastFile],
@@ -205,7 +165,7 @@ object RoughBuilder {
 
     for {
       rastFile <- rastFiles
-      (owner, name, params, body) <- functionBodies(rastFile)
+      RastFunctions.Function(owner, name, params, body) <- RastFunctions.of(rastFile)
     } {
       val key        = camelCase(name)
       val sig        = oracle.get(refObjectName, key)

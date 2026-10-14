@@ -107,9 +107,13 @@ commit and the exporter version. The KaTeX builder (`project/KaTeXBuilder.scala`
 `NonJavaBodies.Library` value with the full policy: reference indices, type oracle and
 `memberRenames` from the reference Scala tree feed return types, parameter types, callees, members,
 constructors and enums to the body translator; no uncompilable pattern is needed (the translator
-refuses every body it cannot render faithfully); `referenceOnly` classifies 201 Scala-specific
-members. `bodies.tsv` records translated 3/496, reference by reason: translator-refusal=250,
-reference-only=211, skeleton-cannot-offer=28, occurrence-out-of-range=4.
+refuses every body it cannot render faithfully); `referenceOnly` classifies 202 members whose
+reference body must stay (Scala-specific members, and `buildHTMLTree`, whose output validation is a
+recorded divergence from upstream). `bodies.tsv` records translated 30/496, reference by reason:
+translator-refusal=222, reference-only=212, skeleton-cannot-offer=28, occurrence-out-of-range=4.
+
+All three builders read a file's functions through the engine's `RastFunctions.of`, which names the
+class declaring each method so the translator reads `this` as that class.
 
 Every non-Java report directory also holds `bodies-translations.txt`: the translated text of each
 member, emitted or declined, headed by its `bodies.tsv` row — read it to see what a refusal refused.
@@ -121,8 +125,8 @@ under `target/balticporter-rast/<name>` per submodule commit and exporter versio
 reference indices, the class declaring each method (the translator reads `this` as that class), and
 `referenceOnly` entries for 19 Scala-specific members (helpers, comparators, get-accessors,
 platform-inapplicable); names keep their leading underscore, so no aliases are needed, and no
-uncompilable pattern is needed. `bodies.tsv` records translated 25/126, reference by reason:
-translator-refusal=71, reference-only=19, skeleton-cannot-offer=11.
+uncompilable pattern is needed. `bodies.tsv` records translated 28/126, reference by reason:
+translator-refusal=68, reference-only=19, skeleton-cannot-offer=11.
 
 **ssg-js** exports RAST from `original-src/terser` with the engine's TS exporter (`allowJs`, no
 `checkJs`) and a committed `ast.d.ts` (under `ssg-js/port/`) declaring the AST class hierarchy so
@@ -133,10 +137,12 @@ members by reason (defnode-type-constant 113, defmethod-codegen 53, defmethod-op
 defmethod-inference 33, cross-module-restructured 46, defmethod-needs-parens 16,
 defmethod-drop-side-effect 8, defmethod-eval 8, scope-analysis-pass 7, defmethod-reduce-vars 5,
 defmethod-negate 4, scala-restructured 245, plus 39 original entries). Uncompilable patterns
-guard 85 bodies the translator cannot yet compile (ISS-1398); a body naming a private member of
+guard 80 bodies the translator cannot yet compile (ISS-1398); a body naming a private member of
 another object is refused by the engine itself, given the declaring object (`project/ReferenceOwners.scala`).
-`bodies.tsv` records translated 13/1066, reference by reason: reference-only=619,
-skeleton-cannot-offer=160, translator-refusal=188, uncompilable-pattern=82, no-translated-body=4.
+terser's own JS conventions (`AST_X` classes, the `TYPE` tag, `make_node`, helpers moved into
+`AstSize`, `CompressorFlags`) are the builder's `JsConventions` value and `apiLookup` entries.
+`bodies.tsv` records translated 14/1066, reference by reason: reference-only=619,
+skeleton-cannot-offer=160, translator-refusal=189, uncompilable-pattern=80, no-translated-body=4.
 
 **ssg-mermaid, ssg-sass** derive from reference only with no RAST
 export yet; every body is `reference` with reason `no-translated-body`. Each will get its own

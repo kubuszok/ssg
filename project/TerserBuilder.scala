@@ -1,4 +1,4 @@
-import balticporter.frontend.ts.{ NonJavaBodies, ParityDerive, Rast, RastFile, RastNode, RastValue, ReferenceSignatures }
+import balticporter.frontend.ts.{ NonJavaBodies, ParityDerive, Rast, RastFile, RastFunctions, RastNode, RastValue, ReferenceSignatures }
 import balticporter.frontend.ts.dedicated.{ DefmethodBodyTranslator, DefmethodEntry, JsConventions }
 
 import java.nio.charset.StandardCharsets
@@ -738,41 +738,6 @@ object TerserBuilder {
     ).toMap
   }
 
-  /** Extract every function, function-valued variable and method with a body from a RAST file. */
-  private def functionBodies(file: RastFile): List[(String, List[String], RastNode)] = {
-    val results = mutable.ListBuffer.empty[(String, List[String], RastNode)]
-
-    def paramsOf(fn: RastNode): List[String] =
-      fn.children.filter(_.kind == "Parameter").flatMap(_.children.find(_.kind == "Identifier").flatMap(_.text))
-
-    def walk(node: RastNode): Unit = {
-      node.kind match {
-        case "FunctionDeclaration" | "MethodDeclaration" =>
-          val name = node.children.find(_.kind == "Identifier").flatMap(_.text).getOrElse("")
-          if (name.nonEmpty) node.children.find(_.kind == "Block").foreach(body => results += ((name, paramsOf(node), body)))
-
-        case "VariableStatement" =>
-          for {
-            vdl <- node.children.find(_.kind == "VariableDeclarationList")
-            vd <- vdl.children.filter(_.kind == "VariableDeclaration")
-            fn <- vd.children.find(c => c.kind == "ArrowFunction" || c.kind == "FunctionExpression")
-          } {
-            val name = vd.children.headOption.flatMap(_.text).getOrElse("")
-            val body = fn.children.find(_.kind == "Block").orElse {
-              fn.children.find(c => c.kind != "Parameter").map(e => RastNode("Block", 0, (0, 0), children = List(RastNode("ReturnStatement", 0, (0, 0), children = List(e)))))
-            }
-            body.foreach(b => results += ((name, paramsOf(fn), b)))
-          }
-
-        case _ => ()
-      }
-      node.children.foreach(walk)
-    }
-
-    file.nodes.foreach(walk)
-    results.toList
-  }
-
   /** Translate the RAST bodies from one or more files into parity-derive bodies. */
   private def buildTranslatedBodyMap(
     rastFiles:     List[RastFile],
@@ -788,13 +753,13 @@ object TerserBuilder {
 
     for {
       rastFile <- rastFiles
-      (name, params, body) <- functionBodies(rastFile)
+      RastFunctions.Function(owner, name, params, body) <- RastFunctions.of(rastFile)
     } {
       val key       = camelCase(name)
       val sig       = oracle.get(refObjectName, key)
       val retType   = sig.map(_.returnType)
       val paramTpes = sig.map(s => s.params.map(p => p.name -> p.tpe).toMap).getOrElse(Map.empty)
-      val entry     = DefmethodEntry("_free_", name, params, body)
+      val entry     = DefmethodEntry(owner, name, params, body)
       try {
         val translated = DefmethodBodyTranslator.translateBody(
           entry,
