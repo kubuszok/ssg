@@ -1,5 +1,5 @@
 import balticporter.frontend.ts.{ NonJavaBodies, ParityDerive, Rast, RastFile, RastNode, RastValue, ReferenceSignatures }
-import balticporter.frontend.ts.dedicated.{ DefmethodBodyTranslator, DefmethodEntry }
+import balticporter.frontend.ts.dedicated.{ DefmethodBodyTranslator, DefmethodEntry, JsConventions }
 
 import java.nio.charset.StandardCharsets
 import java.nio.file.{ Files, Path }
@@ -169,7 +169,29 @@ object TerserBuilder {
     // equivalent-to.js
     "equivalent_to" -> "AstEquivalent.equivalentTo",
     // transform.js
-    "MAP" -> "MAP"
+    "MAP" -> "MAP",
+    // utils: the constant-returning helpers terser assigns as methods
+    "return_false" -> "false",
+    "return_true" -> "true",
+    "return_this" -> "this",
+    "pass_through" -> "true",
+    // tree walker abort sentinel
+    "walkAbort" -> "TreeWalker.WalkAbort",
+    // compress/compressor-flags.js
+    "has_flag" -> "CompressorFlags.hasFlag",
+    "set_flag" -> "CompressorFlags.setFlag",
+    "clear_flag" -> "CompressorFlags.clearFlag"
+  )
+
+  /** How terser spells its AST in JS: `AST_X` is the class `AstX` (`AstNode` at the root), `node.TYPE` is `nodeType`, `make_node(AST_X, orig, {…})` builds a node, and `node.size()` lives in
+    * `AstSize`.
+    */
+  private val conventions: JsConventions = JsConventions(
+    classPrefix = Some("AST_" -> "Ast"),
+    rootClass = Some("AstNode"),
+    typeTag = Some("TYPE" -> "nodeType"),
+    nodeFactories = Set("make_node"),
+    methodRewrites = Map("size" -> "AstSize.size($receiver)")
   )
 
   private def camelCase(s: String): String =
@@ -787,7 +809,8 @@ object TerserBuilder {
           enumIndex = enumIdx,
           memberRenames = memberRenames,
           oracle = oracle,
-          enclosingOwner = owners.ownerOf(refObjectName, key, policy.aliases)
+          enclosingOwner = owners.ownerOf(refObjectName, key, policy.aliases),
+          conventions = conventions
         )
         val bodyText = translated.scalaBody.trim
         val reasons  = if (bodyText.isEmpty) "empty-body" :: translated.refusalReasons else translated.refusalReasons
