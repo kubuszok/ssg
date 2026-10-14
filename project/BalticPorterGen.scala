@@ -300,6 +300,7 @@ object BalticPorterGen {
       val md = java.security.MessageDigest.getInstance("SHA-256")
       md.update(Files.readString(ssgRoot.resolve("project/KaTeXBuilder.scala")).replace("\r", "").getBytes("UTF-8"))
       md.update(Files.readString(ssgRoot.resolve("project/ReferenceOwners.scala")).replace("\r", "").getBytes("UTF-8"))
+      RecordedDivergences.fingerprintInputs(ssgRoot).foreach(b => md.update(b))
       md.digest().take(8).map(b => f"$b%02x").mkString
     }
     val reference = {
@@ -412,7 +413,7 @@ object BalticPorterGen {
       log.info(s"[Baltic Porter] Exported KaTeX RAST to $rastDir")
 
       // 4. Derive
-      val lib = KaTeXBuilder.library(referenceDir)
+      val lib = KaTeXBuilder.library(referenceDir).copy(recordedDivergences = RecordedDivergences.forModule(ssgRoot, "ssg-katex"))
       balticporter.frontend.ts.NonJavaBodies.build(lib, referenceDir, rastDir) match {
         case refused: balticporter.frontend.ts.NonJavaBodies.Refused =>
           log.warn(s"[Baltic Porter] ssg-katex: ${refused.message}")
@@ -421,6 +422,7 @@ object BalticPorterGen {
         case built: balticporter.frontend.ts.NonJavaBodies.Built =>
           val run = built.derive(outDir, reportDir)
           log.info(s"[Baltic Porter] ssg-katex: ${run.summary.line}")
+          RecordedDivergences.requireMatched("ssg-katex", run)
           Files.createDirectories(marker.getParent)
           Files.writeString(marker, expected)
           run.written.map(_.toFile)
@@ -445,6 +447,7 @@ object BalticPorterGen {
       val md = java.security.MessageDigest.getInstance("SHA-256")
       md.update(Files.readString(ssgRoot.resolve("project/RoughBuilder.scala")).replace("\r", "").getBytes("UTF-8"))
       md.update(Files.readString(ssgRoot.resolve("project/ReferenceOwners.scala")).replace("\r", "").getBytes("UTF-8"))
+      RecordedDivergences.fingerprintInputs(ssgRoot).foreach(b => md.update(b))
       md.digest().take(8).map(b => f"$b%02x").mkString
     }
     val reference = {
@@ -564,7 +567,7 @@ object BalticPorterGen {
       }
 
       // 4. Derive
-      val lib = RoughBuilder.library(referenceDir)
+      val lib = RoughBuilder.library(referenceDir).copy(recordedDivergences = RecordedDivergences.forModule(ssgRoot, "ssg-graphs-commons"))
       balticporter.frontend.ts.NonJavaBodies.build(lib, referenceDir, rastDir) match {
         case refused: balticporter.frontend.ts.NonJavaBodies.Refused =>
           log.warn(s"[Baltic Porter] ssg-graphs-commons: ${refused.message}")
@@ -573,6 +576,7 @@ object BalticPorterGen {
         case built: balticporter.frontend.ts.NonJavaBodies.Built =>
           val run = built.derive(outDir, reportDir)
           log.info(s"[Baltic Porter] ssg-graphs-commons: ${run.summary.line}")
+          RecordedDivergences.requireMatched("ssg-graphs-commons", run)
           Files.createDirectories(marker.getParent)
           Files.writeString(marker, expected)
           run.written.map(_.toFile)
@@ -594,6 +598,7 @@ object BalticPorterGen {
       val md = java.security.MessageDigest.getInstance("SHA-256")
       md.update(Files.readString(ssgRoot.resolve("project/TerserBuilder.scala")).replace("\r", "").getBytes("UTF-8"))
       md.update(Files.readString(ssgRoot.resolve("project/ReferenceOwners.scala")).replace("\r", "").getBytes("UTF-8"))
+      RecordedDivergences.fingerprintInputs(ssgRoot).foreach(b => md.update(b))
       md.digest().take(8).map(b => f"$b%02x").mkString
     }
     val astDts = {
@@ -707,7 +712,7 @@ object BalticPorterGen {
       TerserBuilder.exportRast(terserSrc, astDtsFile, rastDir, exporterDir, log)
 
       // 4. Derive
-      val lib = TerserBuilder.library(referenceDir)
+      val lib = TerserBuilder.library(referenceDir).copy(recordedDivergences = RecordedDivergences.forModule(ssgRoot, "ssg-js"))
       balticporter.frontend.ts.NonJavaBodies.build(lib, referenceDir, rastDir) match {
         case refused: balticporter.frontend.ts.NonJavaBodies.Refused =>
           log.warn(s"[Baltic Porter] ssg-js: ${refused.message}")
@@ -716,6 +721,7 @@ object BalticPorterGen {
         case built: balticporter.frontend.ts.NonJavaBodies.Built =>
           val run = built.derive(outDir, reportDir)
           log.info(s"[Baltic Porter] ssg-js: ${run.summary.line}")
+          RecordedDivergences.requireMatched("ssg-js", run)
           Files.createDirectories(marker.getParent)
           Files.writeString(marker, expected)
           run.written.map(_.toFile)

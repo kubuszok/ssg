@@ -147,9 +147,6 @@ object KaTeXBuilder {
 
   /** Members the reference declares that have no TS counterpart: the engine keeps the reference body and records the reason in bodies.tsv. Keyed by member name (matched globally across all files). */
   private val referenceOnly: Map[String, String] = Map(
-    // BuildTree.scala: the reference validates `settings.output` first (ISS-1087, a recorded
-    // divergence from upstream, which accepts any value)
-    "buildHTMLTree" -> "recorded-divergence",
     // Registration wrappers (48 function files + 3 environment files + 2 registries)
     "register" -> "module-level-side-effect",
     "registerAll" -> "module-level-side-effect",
@@ -182,8 +179,6 @@ object KaTeXBuilder {
     "childType" -> "case-class-field",
     // BuildHTML.scala
     "traverseNonSpaceNodesInner" -> "scala-specific-split",
-    // BuildTree.scala
-    "validateOutput" -> "scala-specific-helper",
     // Macros.scala
     "defineMacroFn" -> "scala-wrapping-helper",
     // FontMetrics.scala: data accessor delegation (35 metrics + apply + get)
