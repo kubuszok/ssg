@@ -76,6 +76,7 @@ ssg/js/compress/Compressor.scala	get	cross-module-restructured
 ssg/js/compress/Compressor.scala	hasDirective	cross-module-restructured
 ssg/js/compress/Compressor.scala	inBooleanContext	scala-specific-helper
 ssg/js/compress/Compressor.scala	inTryDeadCode	scala-restructured
+ssg/js/compress/Compressor.scala	isLhs	scala-restructured
 ssg/js/compress/Compressor.scala	isReservedWord	defmethod-inference
 ssg/js/compress/Compressor.scala	isValidIdentifier	defmethod-inference
 ssg/js/compress/Compressor.scala	liftSequencesAssign	scala-restructured
