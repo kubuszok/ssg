@@ -108,9 +108,11 @@ commit and the exporter version. The KaTeX builder (`project/KaTeXBuilder.scala`
 `memberRenames` from the reference Scala tree feed return types, parameter types, callees, members,
 constructors and enums to the body translator; no uncompilable pattern is needed (the translator
 refuses every body it cannot render faithfully); `referenceOnly` classifies 200 members whose
-reference body must stay (Scala-specific members). `bodies.tsv` records translated 37/496, reference
-by reason: translator-refusal=214, reference-only=210, skeleton-cannot-offer=28,
-recorded-divergence=4, occurrence-out-of-range=3.
+reference body must stay (Scala-specific members). Its `JsConventions` name the parse-node tag
+(`type`, spelled `nodeType` in the reference): a tag test compares the string and narrows to the one
+node class declaring that tag, and a tagged object literal builds that class. `bodies.tsv` records
+translated 46/496, reference by reason: translator-refusal=205, reference-only=210,
+skeleton-cannot-offer=28, recorded-divergence=4, occurrence-out-of-range=3.
 
 A reference member that differs from upstream ON PURPOSE is listed once, in
 `.rescale/data/recorded-divergences.tsv` (module, reference file, member, overload's parameter
@@ -121,7 +123,10 @@ or that names no reference member any more, stops the generation. Record a delib
 there in the commit that makes it — a faithful translation would otherwise undo it silently.
 
 All three builders read a file's functions through the engine's `RastFunctions.of`, which names the
-class declaring each method so the translator reads `this` as that class.
+class declaring each method so the translator reads `this` as that class, and the names each
+function's enclosing functions bind. `ReferenceOwners.classOf` names the reference class a body is
+emitted into (`enclosingClass`): a name the enclosing JS function binds resolves to that class's
+member, as where the reference made terser's `parse`/`OutputStream` closures into classes.
 
 Every non-Java report directory also holds `bodies-translations.txt`: the translated text of each
 member, emitted or declined, headed by its `bodies.tsv` row and one `-- refused <reason> <file>:<line>:<column>`
@@ -134,8 +139,10 @@ under `target/balticporter-rast/<name>` per submodule commit and exporter versio
 reference indices, the class declaring each method (the translator reads `this` as that class), and
 `referenceOnly` entries for 19 Scala-specific members (helpers, comparators, get-accessors,
 platform-inapplicable); names keep their leading underscore, so no aliases are needed, and no
-uncompilable pattern is needed. `bodies.tsv` records translated 29/126, reference by reason:
-translator-refusal=67, reference-only=19, skeleton-cannot-offer=11.
+uncompilable pattern is needed. Its `JsConventions.tupleRecords` say rough.js's `[x, y]` points and
+`[p1, p2]` lines are the reference's `Point`/`Line` case classes, field by position. `bodies.tsv`
+records translated 36/126, reference by reason: translator-refusal=60, reference-only=19,
+skeleton-cannot-offer=11.
 
 **ssg-js** exports RAST from `original-src/terser` with the engine's TS exporter (`allowJs`, no
 `checkJs`) and a committed `ast.d.ts` (under `ssg-js/port/`) declaring the AST class hierarchy so
@@ -149,8 +156,8 @@ guard 80 bodies the translator cannot yet compile (ISS-1398); a body naming a pr
 another object is refused by the engine itself, given the declaring object (`project/ReferenceOwners.scala`).
 terser's own JS conventions (`AST_X` classes, the `TYPE` tag, `make_node`, helpers moved into
 `AstSize`, `CompressorFlags`) are the builder's `JsConventions` value and `apiLookup` entries.
-`bodies.tsv` records translated 15/1066, reference by reason: reference-only=618,
-skeleton-cannot-offer=160, translator-refusal=189, uncompilable-pattern=80, no-translated-body=4.
+`bodies.tsv` records translated 34/1066, reference by reason: reference-only=619,
+skeleton-cannot-offer=160, translator-refusal=169, uncompilable-pattern=80, no-translated-body=4.
 
 **ssg-mermaid, ssg-sass** derive from reference only with no RAST
 export yet; every body is `reference` with reason `no-translated-body`. Each will get its own
