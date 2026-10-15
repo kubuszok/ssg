@@ -1,5 +1,5 @@
 import balticporter.frontend.ts.{ NonJavaBodies, ParityDerive, Rast, RastFile, RastFunctions, RastNode, RastValue, ReferenceSignatures }
-import balticporter.frontend.ts.dedicated.{ DefmethodBodyTranslator, DefmethodEntry }
+import balticporter.frontend.ts.dedicated.{ DefmethodBodyTranslator, DefmethodEntry, JsConventions }
 
 import java.nio.charset.StandardCharsets
 import java.nio.file.{ Files, Path }
@@ -239,6 +239,9 @@ object KaTeXBuilder {
     "get" -> "data-accessor-delegation"
   )
 
+  /** KaTeX tags each parse node with its `type` field, which the reference spells `nodeType` and declares as a constant per node class. */
+  private val conventions: JsConventions = JsConventions(typeTag = Some("type" -> "nodeType"))
+
   /** Translate the RAST bodies from one or more files into parity-derive bodies.
     *
     * Every translated body goes through the uncompilable pattern check via the policy; bodies that contain any declared pattern are kept from the reference with a recorded reason in bodies.tsv.
@@ -257,7 +260,7 @@ object KaTeXBuilder {
 
     for {
       rastFile <- rastFiles
-      RastFunctions.Function(owner, name, params, body) <- RastFunctions.of(rastFile)
+      RastFunctions.Function(owner, name, params, body, outer) <- RastFunctions.of(rastFile)
     } {
       // Skip functions whose camelCase name collides with common methods across many reference
       // files. These cause `unclassified` labels in bodies.tsv when a name from one file's RAST
@@ -268,7 +271,7 @@ object KaTeXBuilder {
         val sig        = oracle.get(refObjectName, key)
         val retType    = sig.map(_.returnType)
         val paramTpes  = sig.map(s => s.params.map(p => p.name -> p.tpe).toMap).getOrElse(Map.empty)
-        val entry      = DefmethodEntry(owner, name, params, body)
+        val entry      = DefmethodEntry(owner, name, params, body, outer)
         val translated = DefmethodBodyTranslator.translateBody(
           entry,
           Nil,
@@ -283,7 +286,9 @@ object KaTeXBuilder {
           memberRenames = memberRenames,
           oracle = oracle,
           enclosingOwner = owners.ownerOf(refObjectName, key, policy.aliases),
-          tsTypes = rastFile.types
+          tsTypes = rastFile.types,
+          enclosingClass = owners.classOf(refObjectName, key, policy.aliases),
+          conventions = conventions
         )
         // An empty or whitespace-only body is a translator failure; record it as a refusal
         val bodyText    = translated.scalaBody.trim

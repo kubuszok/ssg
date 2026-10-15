@@ -17,6 +17,18 @@ final case class ReferenceOwners(byName: Map[(String, String), List[ReferenceDec
       case _                                     => None
     }
   }
+
+  /** The class (its simple name) the reference member(s) a body keyed `key` is placed at sit in, when they all sit in one class rather than an object; the translator reads a name the enclosing JS
+    * function binds as that class's member.
+    */
+  def classOf(file: String, key: String, aliases: Map[String, List[String]]): Option[String] = {
+    val names  = key :: aliases.collect { case (ref, keys) if keys.contains(key) => ref }.toList
+    val owners = names.flatMap(n => byName.getOrElse((file, n), Nil)).map(d => (d.owner, d.ownerIsObject)).distinct
+    owners match {
+      case List((owner, false)) if owner.nonEmpty => Some(owner.split('.').last)
+      case _                                      => None
+    }
+  }
 }
 
 object ReferenceOwners {

@@ -313,13 +313,13 @@ object TerserBuilder {
 
     for {
       rastFile <- rastFiles
-      RastFunctions.Function(owner, name, params, body) <- RastFunctions.of(rastFile)
+      RastFunctions.Function(owner, name, params, body, outer) <- RastFunctions.of(rastFile)
     } {
       val key       = camelCase(name)
       val sig       = oracle.get(refObjectName, key)
       val retType   = sig.map(_.returnType)
       val paramTpes = sig.map(s => s.params.map(p => p.name -> p.tpe).toMap).getOrElse(Map.empty)
-      val entry     = DefmethodEntry(owner, name, params, body)
+      val entry     = DefmethodEntry(owner, name, params, body, outer)
       try {
         val translated = DefmethodBodyTranslator.translateBody(
           entry,
@@ -336,7 +336,8 @@ object TerserBuilder {
           oracle = oracle,
           enclosingOwner = owners.ownerOf(refObjectName, key, policy.aliases),
           tsTypes = rastFile.types,
-          conventions = conventions
+          conventions = conventions,
+          enclosingClass = owners.classOf(refObjectName, key, policy.aliases)
         )
         val bodyText = translated.scalaBody.trim
         val reasons  = if (bodyText.isEmpty) "empty-body" :: translated.refusalReasons else translated.refusalReasons
