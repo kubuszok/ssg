@@ -1,4 +1,4 @@
-import balticporter.frontend.ts.{ NonJavaBodies, ParityDerive, Rast, RastFile, RastFunctions, RastNode, RastValue, ReferenceSignatures }
+import balticporter.frontend.ts.{ NonJavaBodies, ParityDerive, Rast, RastFile, RastFunctions, RastNode, RastValue, ReferenceDeclarations, ReferenceSignatures }
 import balticporter.frontend.ts.dedicated.{ DefmethodBodyTranslator, DefmethodEntry, JsConventions }
 
 import java.nio.charset.StandardCharsets
@@ -307,7 +307,8 @@ object TerserBuilder {
     memberIdx:     ReferenceSignatures.MemberIndex,
     ctorSchema:    ReferenceSignatures.ConstructorSchema,
     enumIdx:       ReferenceSignatures.EnumIndex,
-    owners:        ReferenceOwners
+    owners:        ReferenceOwners,
+    fileNames:     ReferenceDeclarations.FileNames
   ): ParityDerive.Bodies = {
     val result = mutable.Map.empty[String, mutable.ListBuffer[ParityDerive.TranslatedBody]]
 
@@ -337,7 +338,8 @@ object TerserBuilder {
           enclosingOwner = owners.ownerOf(refObjectName, key, policy.aliases),
           tsTypes = rastFile.types,
           conventions = conventions,
-          enclosingClass = owners.classOf(refObjectName, key, policy.aliases)
+          enclosingClass = owners.classOf(refObjectName, key, policy.aliases),
+          fileNames = fileNames
         )
         val bodyText = translated.scalaBody.trim
         val reasons  = if (bodyText.isEmpty) "empty-body" :: translated.refusalReasons else translated.refusalReasons
@@ -389,7 +391,18 @@ object TerserBuilder {
               refPath,
               rastPath,
               Nil,
-              rasts => buildTranslatedBodyMap(rasts, refObjectName, oracle, calleeIdx, memberIdx, ctorSchema, enumIdx, owners)
+              rasts =>
+                buildTranslatedBodyMap(
+                  rasts,
+                  refObjectName,
+                  oracle,
+                  calleeIdx,
+                  memberIdx,
+                  ctorSchema,
+                  enumIdx,
+                  owners,
+                  ReferenceNames.of(referenceDir, refPath)
+                )
             )
           }
         )

@@ -1,5 +1,9 @@
 import balticporter.frontend.ts.ReferenceDeclarations
 
+import java.nio.charset.StandardCharsets
+import java.nio.file.{ Files, Path }
+import scala.jdk.CollectionConverters.*
+
 /** The object a translated body is emitted into, which the body translator needs to decide whether a private member it names is reachable from there.
   *
   * `byName` holds, per `(file stem, member)`, every term declaration of that name in the reference files with that stem.
@@ -48,4 +52,21 @@ object ReferenceOwners {
         .groupBy(_._1)
         .map { case (key, entries) => key -> entries.map(_._2) }
     )
+}
+
+/** What each reference file names itself — the type names it writes and its package-level values — which a translated body emitted into that file may name too. */
+object ReferenceNames {
+
+  /** The names of the reference file at `refPath` (relative to the reference dir's anchor); empty when no such file exists. */
+  def of(referenceDir: Path, refPath: String): ReferenceDeclarations.FileNames = {
+    val stream = Files.walk(referenceDir)
+    val file   =
+      try
+        stream.iterator().asScala.find { p =>
+          val relative = referenceDir.relativize(p).toString.replace('\\', '/')
+          Files.isRegularFile(p) && (relative == refPath || relative.endsWith("/" + refPath))
+        }
+      finally stream.close()
+    file.fold(ReferenceDeclarations.FileNames.empty)(p => ReferenceDeclarations.namesIn(refPath, new String(Files.readAllBytes(p), StandardCharsets.UTF_8)))
+  }
 }
