@@ -111,7 +111,7 @@ refuses every body it cannot render faithfully); `referenceOnly` classifies 200 
 reference body must stay (Scala-specific members). Its `JsConventions` name the parse-node tag
 (`type`, spelled `nodeType` in the reference): a tag test compares the string and narrows to the one
 node class declaring that tag, and a tagged object literal builds that class. `bodies.tsv` records
-translated 46/496, reference by reason: translator-refusal=205, reference-only=210,
+translated 45/496, reference by reason: translator-refusal=206, reference-only=210,
 skeleton-cannot-offer=28, recorded-divergence=4, occurrence-out-of-range=3.
 
 A reference member that differs from upstream ON PURPOSE is listed once, in
