@@ -1,4 +1,4 @@
-import balticporter.frontend.ts.{ NonJavaBodies, ParityDerive, Rast, RastFile, RastFunctions, RastNode, RastValue, ReferenceSignatures }
+import balticporter.frontend.ts.{ NonJavaBodies, ParityDerive, Rast, RastFile, RastFunctions, RastNode, RastValue, ReferenceDeclarations, ReferenceSignatures }
 import balticporter.frontend.ts.dedicated.{ DefmethodBodyTranslator, DefmethodEntry, JsConventions }
 
 import java.nio.charset.StandardCharsets
@@ -99,6 +99,8 @@ object KaTeXBuilder {
 
   /** KaTeX API name lookup for the body translator: JS identifier to Scala equivalent. */
   private val apiLookup: Map[String, String] = Map(
+    // symbols.ts's default export, `symbols[mode][name]`: Symbols.scala's `apply(mode)` answers that mode's table
+    "symbols" -> "Symbols",
     "assertNodeType" -> "ParseNode.assertNodeType",
     "assertSymbolNodeType" -> "ParseNode.assertSymbolNodeType",
     "checkNodeType" -> "ParseNode.checkNodeType",
@@ -254,7 +256,8 @@ object KaTeXBuilder {
     memberIdx:     ReferenceSignatures.MemberIndex,
     ctorSchema:    ReferenceSignatures.ConstructorSchema,
     enumIdx:       ReferenceSignatures.EnumIndex,
-    owners:        ReferenceOwners
+    owners:        ReferenceOwners,
+    fileNames:     ReferenceDeclarations.FileNames
   ): ParityDerive.Bodies = {
     val result = mutable.Map.empty[String, mutable.ListBuffer[ParityDerive.TranslatedBody]]
 
@@ -288,7 +291,8 @@ object KaTeXBuilder {
           enclosingOwner = owners.ownerOf(refObjectName, key, policy.aliases),
           tsTypes = rastFile.types,
           enclosingClass = owners.classOf(refObjectName, key, policy.aliases),
-          conventions = conventions
+          conventions = conventions,
+          fileNames = fileNames
         )
         // An empty or whitespace-only body is a translator failure; record it as a refusal
         val bodyText    = translated.scalaBody.trim
@@ -474,7 +478,18 @@ object KaTeXBuilder {
               refPath,
               rastPath,
               Nil,
-              rasts => buildTranslatedBodyMap(rasts, refObjectName, oracle, calleeIdx, memberIdx, ctorSchema, enumIdx, owners)
+              rasts =>
+                buildTranslatedBodyMap(
+                  rasts,
+                  refObjectName,
+                  oracle,
+                  calleeIdx,
+                  memberIdx,
+                  ctorSchema,
+                  enumIdx,
+                  owners,
+                  ReferenceNames.of(referenceDir, refPath)
+                )
             )
           }
         )
