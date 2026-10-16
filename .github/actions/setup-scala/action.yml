@@ -26,7 +26,7 @@ runs:
         java-version: ${{ inputs.java-version }}
         architecture: ${{ inputs.architecture }}
 
-    # Deliberately NO dependency cache here (coursier/cache-action, setup-java's `cache: sbt`): each
+    # Deliberately NO general dependency cache here (coursier/cache-action, setup-java's `cache: sbt`): each
     # job saves its own 1-2 GB entry, which fills the repository's 10 GB Actions-cache quota within
     # one run and evicts the generated-port entry every other job depends on. Resolving from
     # Maven Central on a runner costs far less than those entries do.
@@ -34,6 +34,19 @@ runs:
       with:
         jvm: ${{ inputs.architecture == '' && inputs.jvm || '' }}
         apps: sbt
+
+    # The ONE dependency cache: the hand-pinned snapshots (the Baltic Porter engine, lls) and
+    # nothing else, about 15 MB per OS, so it stays far inside the quota above. They are the
+    # downloads that failed: Central's snapshot repository cut the 8 MB engine jar off partway
+    # (`Premature EOF`), coursier does not retry that, and every job downloaded it afresh.
+    # One entry per OS (the jars are the same on every architecture) and per pin.
+    - uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cache/coursier/v1/https/central.sonatype.com/repository/maven-snapshots
+          ~/Library/Caches/Coursier/v1/https/central.sonatype.com/repository/maven-snapshots
+          ~/AppData/Local/Coursier/Cache/v1/https/central.sonatype.com/repository/maven-snapshots
+        key: coursier-snapshots-${{ runner.os }}-${{ hashFiles('project/plugins.sbt', 'project/Versions.scala') }}
 
     # For an sbt 2 build the `sbt` launcher defaults to a THIN CLIENT that starts a background
     # server. On a runner that is wrong three times over: the server keeps the environment of the

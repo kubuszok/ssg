@@ -4,7 +4,8 @@ description: >
   test binary that dies uncleanly can let the task exit 0 while hiding failures, and an alias that
   only compiles exits 0 having tested nothing. The run passes only when (a) sbt exits 0, (b) the
   output proves tests ran to their end — a line matching `require` — and (c) no munit failure
-  marker appears in the output.
+  marker appears in the output. A run that failed on a dependency download before any test ran is
+  retried (.github/scripts/sbt-download-retry.sh) and is never reported as a crash.
 
 inputs:
   command:
@@ -27,9 +28,13 @@ runs:
         # ('Cannot run program "C:/Program Files"'); sbt.bat — what `sbt` means in PowerShell — can.
         if [ "$RUNNER_OS" = "Windows" ]; then GUARDED_COMMAND="${GUARDED_COMMAND/#sbt /sbt.bat }"; fi
         set +e
-        bash -c "$GUARDED_COMMAND" 2>&1 | tee "$log"
-        code=${PIPESTATUS[0]}
+        bash "$GITHUB_WORKSPACE/.github/scripts/sbt-download-retry.sh" "$log" "$GUARDED_COMMAND"
+        code=$?
         set -e
+        if [ -e "$log.download-failed" ]; then
+          # the retry script reported the download failure; no test ran, so nothing crashed
+          exit 1
+        fi
         fail=0
         if [ "$code" -ne 0 ]; then
           echo "::error::the command exited with code $code"
