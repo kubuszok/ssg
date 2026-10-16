@@ -25,7 +25,7 @@ object Versions {
   val kindlingsYaml    = "0.3.3"
   val lls              = "0.3.0-58-g4b7e9d4-SNAPSHOT"
   val scalaJavaLocales = "1.5.4"
-  val scalaJavaTime    = "2.6.0"
+  val scalaJavaTime    = "2.8.0"
 
   // Multiarch
   val multiarch           = "0.4.0"
