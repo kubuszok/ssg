@@ -48,7 +48,8 @@ jobs:
       # setup-scala makes every sbt call its own foreground JVM, so the credentials below reach
       # the build even though the generation step ran sbt first.
       - name: Publish all projects
-        run: sbt ci-release
+        # retried only on a dependency download failure before anything was published
+        run: bash .github/scripts/sbt-download-retry.sh "$RUNNER_TEMP/release.log" "sbt ci-release"
         env:
           SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
           SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}

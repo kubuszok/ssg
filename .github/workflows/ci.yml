@@ -39,8 +39,10 @@ env:
   # and the build leaves the remote cache OFF. Entries are shared between jobs of the same
   # os × arch only, so the linux-x64 rows (compile + the JS shards + one JVM and one Native row)
   # are the main win; the other rows compile for themselves.
-  # Deliberately NO actions/cache for ~/.cache/sbt/v2 or for dependencies: the remote cache
-  # supersedes the first and the second evicts the generated port (see setup-scala).
+  # Deliberately NO actions/cache for ~/.cache/sbt/v2 or for dependencies beyond the hand-pinned
+  # snapshots: the remote cache supersedes the first and the second evicts the generated port (see
+  # setup-scala). Every sbt run retries a failed dependency download
+  # (.github/scripts/sbt-download-retry.sh, directly or through sbt-guarded).
   BUILDBUDDY_API_KEY: ${{ secrets.BUILDBUDDY_API_KEY }}
 
 jobs:
@@ -58,7 +60,7 @@ jobs:
       - uses: ./.github/actions/setup-scala
 
       - name: Check formatting
-        run: sbt "scalafmtCheckAll; scalafmtSbtCheck"
+        run: bash .github/scripts/sbt-download-retry.sh "$RUNNER_TEMP/format.log" 'sbt "scalafmtCheckAll; scalafmtSbtCheck"'
 
       - name: Lint the workflows
         run: |
@@ -92,7 +94,7 @@ jobs:
           set -euo pipefail
           git clone --depth=1 https://github.com/kubuszok/re-scale.git "$RUNNER_TEMP/re-scale"
           cd "$RUNNER_TEMP/re-scale"
-          sbt install
+          bash "$GITHUB_WORKSPACE/.github/scripts/sbt-download-retry.sh" "$RUNNER_TEMP/re-scale-install.log" "sbt install"
           echo "$RUNNER_TEMP/re-scale/bin" >> "$GITHUB_PATH"
 
       - name: Print re-scale version
@@ -169,7 +171,7 @@ jobs:
           key: ${{ needs.generate.outputs.key }}
 
       - name: Test/compile all modules
-        run: sbt 'testCompile-${{ matrix.row }}-3'
+        run: bash .github/scripts/sbt-download-retry.sh "$RUNNER_TEMP/compile.log" 'sbt testCompile-${{ matrix.row }}-3'
 
   # ─── JVM tests (6 desktop platforms) ───────────────────────────────
 
@@ -220,8 +222,10 @@ jobs:
         with:
           command: sbt ci-jvm-3
 
+      # Only after the tests passed: with no report fail_ci_if_error fails the job a second time,
+      # and a failed job should show one error, the test run's.
       - name: Upload coverage to Codecov
-        if: always()
+        if: success()
         uses: codecov/codecov-action@v7
         with:
           # sbt 2.0's target/out layout: `sbt ci-jvm-3` runs `coverageAggregate`, which writes the
@@ -278,7 +282,7 @@ jobs:
       - name: Extract WASM and query files for tree-sitter
         if: matrix.shard == 'engines'
         run: |
-          sbt 'ssg-highlightJS/update'
+          bash .github/scripts/sbt-download-retry.sh "$RUNNER_TEMP/update.log" "sbt ssg-highlightJS/update"
           WASM_JAR=$(find ~/.cache/coursier ~/.ivy2 \
             -name "wasm-provider-tree-sitter-*.jar" \
             -not -name "*-sources.jar" -not -name "*-javadoc.jar" 2>/dev/null | head -1)

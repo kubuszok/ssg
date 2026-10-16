@@ -10,7 +10,8 @@ description: >
   and injected sources under `ssg-liquid/port` and `ssg-md/port`, and the liqp parser step) are in
   the key too: a change to any of them must regenerate, and no other job can (it has no submodule).
   liqp's parser is ANTLR output the upstream does not track, so `command` generates it with liqp's
-  own maven wrapper before the generator runs.
+  own maven wrapper before the generator runs. The generator's sbt run is retried when it failed on
+  a dependency download (.github/scripts/sbt-download-retry.sh).
   The `uses:` line below is the ONE place the shared action's version is pinned.
 
 inputs:
@@ -71,5 +72,5 @@ runs:
           git submodule update --init --depth=1 original-src/liqp original-src/katex original-src/roughjs original-src/path-data-parser original-src/points-on-curve original-src/points-on-path original-src/hachure-fill original-src/terser
           && (cd original-src/liqp && chmod +x mvnw && ./mvnw -q generate-sources -pl .)
           && (cd original-src/katex && npm install --no-save 2>/dev/null || true)
-          && sbt generatePort
+          && bash "$GITHUB_WORKSPACE/.github/scripts/sbt-download-retry.sh" "$RUNNER_TEMP/generate-port.log" "sbt generatePort"
         key-extra: ${{ steps.upstreams.outputs.extra }}
