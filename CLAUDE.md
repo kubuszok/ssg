@@ -112,8 +112,9 @@ reference body must stay (Scala-specific members). Its `JsConventions` name the 
 (`type`, spelled `nodeType` in the reference): a tag test compares the string and narrows to the one
 node class declaring that tag, and a tagged object literal builds that class. `apiLookup` names
 `symbols.ts`'s export `Symbols`, whose `apply(mode)` the translator reads `symbols[mode]` through.
-`bodies.tsv` records translated 58/496, reference by reason: translator-refusal=193,
-reference-only=210, skeleton-cannot-offer=28, recorded-divergence=4, occurrence-out-of-range=3.
+`bodies.tsv` records translated 63/496, reference by reason: translator-refusal=184,
+reference-only=210, skeleton-cannot-offer=28, recorded-divergence=4, no-translated-body=4,
+occurrence-out-of-range=3.
 
 A reference member that differs from upstream ON PURPOSE is listed once, in
 `.rescale/data/recorded-divergences.tsv` (module, reference file, member, overload's parameter
@@ -128,6 +129,8 @@ class declaring each method so the translator reads `this` as that class, and th
 function's enclosing functions bind. `ReferenceOwners.classOf` names the reference class a body is
 emitted into (`enclosingClass`): a name the enclosing JS function binds resolves to that class's
 member, as where the reference made terser's `parse`/`OutputStream` closures into classes.
+Each builder also passes the reference method's parameter names in order (`paramNames`): a
+parameter the reference renamed (`val` -> `value`) is read under the reference's name by position.
 `ReferenceNames.of` gives each body the names its target reference file writes itself (the engine's
 `ReferenceDeclarations.namesIn`): the body may write that file's type names as type arguments and
 ascriptions (a JS array local typed `Point[]` becomes a buffer of `Point`) and read its
@@ -146,7 +149,7 @@ reference indices, the class declaring each method (the translator reads `this` 
 platform-inapplicable); names keep their leading underscore, so no aliases are needed, and no
 uncompilable pattern is needed. Its `JsConventions.tupleRecords` say rough.js's `[x, y]` points and
 `[p1, p2]` lines are the reference's `Point`/`Line` case classes, field by position. `bodies.tsv`
-records translated 47/126, reference by reason: translator-refusal=49, reference-only=19,
+records translated 55/126, reference by reason: translator-refusal=41, reference-only=19,
 skeleton-cannot-offer=11.
 
 **ssg-js** exports RAST from `original-src/terser` with the engine's TS exporter (`allowJs`, no
@@ -157,12 +160,12 @@ files), `memberRenames`, reference indices, and a FILE-SCOPED reference-only tab
 `ssg-js/port/reference-only.tsv` (reference file, member, reason: DEFMETHOD/OPT callbacks the
 reference restructured, Scala-specific helpers, the ssg glue), so a name kept in one file never
 keeps its namesake in another; a row naming no member stops the generation. Uncompilable patterns
-guard 78 bodies the translator cannot yet compile (ISS-1398); a body naming a private member of
+guard 74 bodies the translator cannot yet compile (ISS-1398); a body naming a private member of
 another object is refused by the engine itself, given the declaring object (`project/ReferenceOwners.scala`).
 terser's own JS conventions (`AST_X` classes, the `TYPE` tag, `make_node`, helpers moved into
 `AstSize`, `CompressorFlags`) are the builder's `JsConventions` value and `apiLookup` entries.
-`bodies.tsv` records translated 36/1066, reference by reason: reference-only=619,
-skeleton-cannot-offer=160, translator-refusal=169, uncompilable-pattern=78, no-translated-body=4.
+`bodies.tsv` records translated 38/1066, reference by reason: reference-only=619,
+skeleton-cannot-offer=160, translator-refusal=171, uncompilable-pattern=74, no-translated-body=4.
 
 **ssg-mermaid, ssg-sass** derive from reference only with no RAST
 export yet; every body is `reference` with reason `no-translated-body`. Each will get its own
