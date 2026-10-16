@@ -292,7 +292,9 @@ object KaTeXBuilder {
           tsTypes = rastFile.types,
           enclosingClass = owners.classOf(refObjectName, key, policy.aliases),
           conventions = conventions,
-          fileNames = fileNames
+          fileNames = fileNames,
+          // the reference's parameter names in order: one it renamed is read under its own name
+          paramNames = sig.map(_.params.map(_.name)).getOrElse(Nil)
         )
         // An empty or whitespace-only body is a translator failure; record it as a refusal
         val bodyText    = translated.scalaBody.trim
