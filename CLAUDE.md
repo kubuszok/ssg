@@ -106,13 +106,13 @@ in the frontend-ts jar) and Node, cached under `target/balticporter-rast/katex` 
 commit and the exporter version. The KaTeX builder (`project/KaTeXBuilder.scala`) supplies a
 `NonJavaBodies.Library` value with the full policy: reference indices, type oracle and
 `memberRenames` from the reference Scala tree feed return types, parameter types, callees, members,
-constructors and enums to the body translator; no uncompilable pattern is needed (the translator
-refuses every body it cannot render faithfully); `referenceOnly` classifies 200 members whose
+constructors and enums to the body translator; no uncompilable pattern or per-member exclusion is
+needed (the translator refuses every body it cannot render faithfully); `referenceOnly` classifies 200 members whose
 reference body must stay (Scala-specific members). Its `JsConventions` name the parse-node tag
 (`type`, spelled `nodeType` in the reference): a tag test compares the string and narrows to the one
 node class declaring that tag, and a tagged object literal builds that class. `apiLookup` names
 `symbols.ts`'s export `Symbols`, whose `apply(mode)` the translator reads `symbols[mode]` through.
-`bodies.tsv` records translated 63/496, reference by reason: translator-refusal=184,
+`bodies.tsv` records translated 86/496, reference by reason: translator-refusal=161,
 reference-only=210, skeleton-cannot-offer=28, recorded-divergence=4, no-translated-body=4,
 occurrence-out-of-range=3.
 
@@ -149,7 +149,7 @@ reference indices, the class declaring each method (the translator reads `this` 
 platform-inapplicable); names keep their leading underscore, so no aliases are needed, and no
 uncompilable pattern is needed. Its `JsConventions.tupleRecords` say rough.js's `[x, y]` points and
 `[p1, p2]` lines are the reference's `Point`/`Line` case classes, field by position. `bodies.tsv`
-records translated 55/126, reference by reason: translator-refusal=41, reference-only=19,
+records translated 57/126, reference by reason: translator-refusal=39, reference-only=19,
 skeleton-cannot-offer=11.
 
 **ssg-js** exports RAST from `original-src/terser` with the engine's TS exporter (`allowJs`, no
@@ -160,12 +160,12 @@ files), `memberRenames`, reference indices, and a FILE-SCOPED reference-only tab
 `ssg-js/port/reference-only.tsv` (reference file, member, reason: DEFMETHOD/OPT callbacks the
 reference restructured, Scala-specific helpers, the ssg glue), so a name kept in one file never
 keeps its namesake in another; a row naming no member stops the generation. Uncompilable patterns
-guard 74 bodies the translator cannot yet compile (ISS-1398); a body naming a private member of
+guard 75 bodies the translator cannot yet compile (ISS-1398); a body naming a private member of
 another object is refused by the engine itself, given the declaring object (`project/ReferenceOwners.scala`).
 terser's own JS conventions (`AST_X` classes, the `TYPE` tag, `make_node`, helpers moved into
 `AstSize`, `CompressorFlags`) are the builder's `JsConventions` value and `apiLookup` entries.
 `bodies.tsv` records translated 38/1066, reference by reason: reference-only=619,
-skeleton-cannot-offer=160, translator-refusal=171, uncompilable-pattern=74, no-translated-body=4.
+skeleton-cannot-offer=160, translator-refusal=170, uncompilable-pattern=75, no-translated-body=4.
 
 **ssg-mermaid, ssg-sass** derive from reference only with no RAST
 export yet; every body is `reference` with reason `no-translated-body`. Each will get its own
