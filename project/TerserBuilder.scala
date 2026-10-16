@@ -339,7 +339,9 @@ object TerserBuilder {
           tsTypes = rastFile.types,
           conventions = conventions,
           enclosingClass = owners.classOf(refObjectName, key, policy.aliases),
-          fileNames = fileNames
+          fileNames = fileNames,
+          // the reference's parameter names in order: one it renamed is read under its own name
+          paramNames = sig.map(_.params.map(_.name)).getOrElse(Nil)
         )
         val bodyText = translated.scalaBody.trim
         val reasons  = if (bodyText.isEmpty) "empty-body" :: translated.refusalReasons else translated.refusalReasons
