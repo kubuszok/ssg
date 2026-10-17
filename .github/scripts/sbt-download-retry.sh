@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Run an sbt command line, retrying it (up to 3 times, with backoff) when it failed on a dependency
-# download before any test ran or anything was published. Coursier does not retry a download cut
-# off partway (`Premature EOF`), and Maven Central sometimes answers 404/502 for artifacts it has
-# long held; a rerun fixes both. A failure with no download error, or after a test ran, is final.
+# download and no test failed. Coursier does not retry a download cut off partway (`Premature EOF`),
+# and Maven Central sometimes answers 404/502 for artifacts it has long held; a rerun fixes both.
+# A multi-module run resolves a later module after earlier modules' tests passed, so tests having
+# RUN is no bar. A failure with no download error, or with a failed test, is final.
 #
 # usage: sbt-download-retry.sh <log file> <command line>
 # The log file holds the LAST attempt's output. When every attempt failed on a download,
@@ -12,8 +13,8 @@ set -uo pipefail
 log="$1"
 cmd="$2"
 download='Premature EOF|Error fetching artifacts|Error downloading|ResolveException|could not retrieve sbt'
-# output proving the command got past dependency resolution and did work that must not be redone
-progress='Passed: Total|Failed: Total|==> X |published '
+# output proving a test failed: a real failure, never retried
+failed='==> X |Failed: Total|Failed tests:'
 delays=(20 60 120)
 
 # the coursier caches of the three runner OSes; a `.*.error` file records a failed download, and
@@ -32,7 +33,7 @@ attempt=0
 while :; do
   bash -c "$cmd" 2>&1 | tee "$log"
   code=${PIPESTATUS[0]}
-  if [ "$code" -eq 0 ] || ! grep -qE "$download" "$log" || grep -qE "$progress" "$log"; then
+  if [ "$code" -eq 0 ] || ! grep -qE "$download" "$log" || grep -qE "$failed" "$log"; then
     exit "$code"
   fi
   if [ "$attempt" -ge "${#delays[@]}" ]; then
