@@ -202,7 +202,11 @@ object KaTeXBuilder {
 
     for {
       rastFile <- rastFiles
-      RastFunctions.Function(owner, name, params, body, outer) <- RastFunctions.of(rastFile)
+      // a function the file itself declares shadows every import of that name (buildMathML.ts's own `buildExpression`)
+      functions = RastFunctions.of(rastFile)
+      own       = functions.collect { case f if f.owner == RastFunctions.NoClass && f.outer.isEmpty => f.name }.toSet
+      lookup    = apiLookup.filterNot { case (k, v) => own(k) && v.contains('.') && !v.startsWith(refObjectName + ".") }
+      RastFunctions.Function(owner, name, params, body, outer) <- functions
     } {
       // Skip functions whose camelCase name collides with common methods across many reference
       // files. These cause `unclassified` labels in bodies.tsv when a name from one file's RAST
@@ -218,7 +222,7 @@ object KaTeXBuilder {
           entry,
           Nil,
           "    ",
-          apiLookup = apiLookup,
+          apiLookup = lookup,
           returnType = retType,
           paramTypes = paramTpes,
           calleeIndex = calleeIdx,
