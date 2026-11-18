@@ -511,11 +511,9 @@ lazy val ssg = (projectMatrix in file("ssg"))
 //
 // sbt-welcome has no sbt-2.0 build and is no longer bundled by sbt-kubuszok, so the `logo` /
 // `usefulTasks` wiring (which also registered the ci-*/test-* aliases on the sbt-1.x axis) is gone.
-// We register the CI aliases ourselves via addCommandAlias, reusing Aliases.ci(...) to assemble each
-// pipeline's task list. On sbt 2.0 the bare `test` task is incrementally cached and runs 0 suites on a
-// fresh checkout (silent false-green), so we rewrite every `<id>/test` task to `<id>/testFull`.
-def ciTestFull(platform: String, scalaBinary: String): String =
-  al.ci(platform, scalaBinary).replaceAll("""/test(?=( ; )|$)""", "/testFull")
+// We register the CI aliases ourselves via addCommandAlias (not al.commandAliases(...)), because they
+// differ from the generated ones: no `clean`, Native tests only the Native-compatible modules, and
+// Scala.js is sharded. Aliases.ci(...) already uses `<id>/testFull` on sbt 2 and adds `<id>/doc`.
 
 // The ci aliases open with `clean`, which deletes target/balticporter — the generated markdown
 // sources — and forces a regeneration (on CI it throws away the tree the `generatePort` job
@@ -552,8 +550,8 @@ lazy val root = (project in file("."))
     name := "ssg-root"
   )
   .settings(
-    addCommandAlias("ci-jvm-3", dropClean(ciTestFull("JVM", "3"))),
-    addCommandAlias("ci-js-3", dropClean(ciTestFull("JS", "3"))),
+    addCommandAlias("ci-jvm-3", dropClean(al.ci("JVM", "3"))),
+    addCommandAlias("ci-js-3", dropClean(al.ci("JS", "3"))),
     // Generated ssg-md/ssg-liquid code uses JVM-only APIs (jackson, Class.getEnumConstants);
     // compile all Native modules but testFull only the ones whose generated code is Native-compatible.
     addCommandAlias("ci-native-3", {
