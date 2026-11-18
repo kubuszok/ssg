@@ -13,7 +13,7 @@ inputs:
     required: true
   require:
     description: extended regex that must match at least one output line (empty = not checked)
-    default: "Passed: Total [1-9]"
+    default: "[Pp]assed: [Tt]otal [1-9]"
 
 runs:
   using: composite

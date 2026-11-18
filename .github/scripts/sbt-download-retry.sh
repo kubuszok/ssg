@@ -14,7 +14,7 @@ log="$1"
 cmd="$2"
 download='Premature EOF|Error fetching artifacts|Error downloading|ResolveException|could not retrieve sbt'
 # output proving a test failed: a real failure, never retried
-failed='==> X |Failed: Total|Failed tests:'
+failed='==> X |[Ff]ailed: [Tt]otal|Failed tests:'
 delays=(20 60 120)
 
 # the coursier caches of the three runner OSes; a `.*.error` file records a failed download, and
