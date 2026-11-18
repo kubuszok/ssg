@@ -33,9 +33,7 @@ lazy val al = new Aliases(
     `ssg-mermaid`,
     `ssg-minify`,
     `ssg-sass`,
-    `ssg-site`
-  ),
-  compileOnly = Seq(
+    `ssg-site`,
     ssg
   )
 )
@@ -66,10 +64,6 @@ val commonSettings = Seq(
       "org.scalameta"     %% "munit-scalacheck"  % versions.munitScalacheck % Test
     ),
     resolvers += Resolver.mavenLocal,
-    // Sonatype Central Portal snapshots — hearth/kindlings sbt-2.0 dev snapshots
-    // (the incoming hearth 0.4.0 / kindlings 0.3.0 breaking-change line) live here,
-    // published by their CI; not yet released to Central.
-    resolvers += "Central Portal Snapshots" at "https://central.sonatype.com/repository/maven-snapshots/",
     testFrameworks += new TestFramework("munit.Framework")
   )),
   MatrixAction.ForPlatforms(VirtualAxis.jvm).Configure(_.settings(
@@ -329,7 +323,6 @@ lazy val `ssg-liquid` = (projectMatrix in file("ssg-liquid"))
       "com.kubuszok"                    %% "balticporter-runtime"      % "74c286af179a28df4b60612b4496846cc2b54078-SNAPSHOT",
       "com.kubuszok"                    %% "multiarch-serviceloader"   % "0.4.0-18-g73af6a6-SNAPSHOT",
     ),
-    resolvers += "Central Portal Snapshots" at "https://central.sonatype.com/repository/maven-snapshots",
     Compile / resourceGenerators += Def.task {
       BalticPorterGen.liquidResources((ThisBuild / baseDirectory).value, streams.value.log)
     }.taskValue,
