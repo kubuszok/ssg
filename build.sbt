@@ -333,6 +333,8 @@ lazy val `ssg-liquid` = (projectMatrix in file("ssg-liquid"))
     Compile / resourceGenerators += Def.task {
       BalticPorterGen.liquidResources((ThisBuild / baseDirectory).value, streams.value.log)
     }.taskValue,
+    // sbt 2.1 rejects resource generators writing outside managedResourceDirectories
+    Compile / managedResourceDirectories += (ThisBuild / baseDirectory).value / "target" / "balticporter" / "ssg-liquid" / "src_managed" / "main" / "resources",
     scalacOptions += "-Wconf:src=.*/sourceManaged/.*:s,src=.*/target/balticporter/.*:s"
   )
   .settings(publishSettings)
