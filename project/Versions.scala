@@ -24,7 +24,7 @@ object Versions {
   val hearth           = "0.4.3"
   val kindlingsYaml    = "0.3.4"
   val lls              = "0.3.0-58-g4b7e9d4-SNAPSHOT"
-  val scalaJavaLocales = "1.5.4"
+  val scalaJavaLocales = "1.6.0"
   val scalaJavaTime    = "2.8.0"
 
   // Multiarch
