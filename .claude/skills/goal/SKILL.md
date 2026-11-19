@@ -39,7 +39,7 @@ Execute ONE iteration of the §7 protocol:
    and an override would both un-pin 4.6 and collide with the Opus 4.8 auditor
    → void C13. Anti-Fable note: Fable 5 is blocked worldwide; the implementer
    moved Opus 4.8 → Opus 4.6 so it stays a different model from the auditor.
-   - porting/`incomplete-port` issues → `re-scale:port-implementer`
+   - porting/`incomplete-port` issues → `re-scale-porting:port-implementer`
      (frontmatter pinned to claude-opus-4-6)
    - everything else → `issue-implementer` agent (project agent at
      `.claude/agents/issue-implementer.md`, frontmatter pinned to
@@ -85,7 +85,7 @@ Execute ONE iteration of the §7 protocol:
    implementer runs Opus 4.6, so the Opus 4.8 auditor is a distinct model —
    C13 holds. (Fable 5 was the auditor model until Anthropic blocked Fable
    worldwide; do NOT route the auditor through the implementer's 4.6.):
-   - porting issues → `re-scale:port-auditor`
+   - porting issues → `re-scale-porting:port-auditor`
    - everything else → general-purpose agent told to follow
      `.claude/skills/verify-issue/SKILL.md` for issue <ID>
    The auditor MUST perform proof-of-red (plan §6) and return an explicit

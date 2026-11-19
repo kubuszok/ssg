@@ -25,8 +25,9 @@ for context and evidence lines.
    original's logic — no ad-hoc patches, no workarounds (no-monkey-patching
    rule). For `api-noop` issues, cite how the original library consumes that
    option.
-3. **Fix.** Follow `/guide-conversion`, `/guide-nullable`, `/guide-control-flow`
-   conventions. Preserve all original comments. Braces, no `return`, no `null`,
+3. **Fix.** Follow `/guide-conversion` (SSG rules) and
+   `/re-scale-porting:re-scale-porting-guide-nullable`,
+   `/re-scale-porting:re-scale-porting-guide-control-flow` conventions. Preserve all original comments. Braces, no `return`, no `null`,
    `Nullable[A]`, final case classes.
 4. **Prove.** Your reproduction test now passes. For `api-noop`: one
    differential test PER parameter (output differs when toggled). For

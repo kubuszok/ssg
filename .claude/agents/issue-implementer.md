@@ -9,7 +9,7 @@ model: claude-opus-4-6
 You are the **implementer** in the R0610 remediation implement→audit→fix loop,
 for issues that are NOT pure porting work (bugs, incomplete logic, fold/print
 divergences). For porting / `incomplete-port` issues the orchestrator uses
-`re-scale:port-implementer` instead.
+`re-scale-porting:port-implementer` instead.
 
 ## Your job
 

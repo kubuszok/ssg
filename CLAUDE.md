@@ -183,20 +183,21 @@ export when its upstream submodule is wired into the build.
 - Before any push: commit, then `sbt --client verifyLocal` (JVM, Scala.js and Scala Native tests; it
   records the verified commit in `target/local-verification`). A hook refuses the push otherwise.
 - The procedures — tracing a generated defect to the rule that produced it, bumping the engine pin,
-  driving sbt 2, what CI does with the generated tree — are skills of the `balticporter` Claude Code
-  plugin this repository enables (`.claude/settings.json`): `generated-code`, `root-cause-port`,
-  `consumer-ci`, `sbt2-client`, `cross-platform-port`.
+  driving sbt 2, what CI does with the generated tree — are skills of the `baltic-porter` Claude Code
+  plugin (kubuszok/agent-skills) this repository enables (`.claude/settings.json`):
+  `baltic-porter-generated-code`, `baltic-porter-root-cause-port`, `baltic-porter-consumer-ci`,
+  `baltic-porter-sbt2-client`, `baltic-porter-cross-platform-port`.
 
 ## CLI Toolkit: `re-scale`
 
 **Use `re-scale` commands for all development tasks.** The PreToolUse hook
-delegates to `re-scale hook`, which validates every Bash command — if
-denied, use the suggested alternative.
+(the `baltic-porter` plugin's guard) refuses a few commands — if denied,
+use the suggested alternative.
 
 Source repo: <https://github.com/kubuszok/re-scale>. Installed
-automatically by the re-scale plugin's SessionStart hook — it clones
-the pinned version to `~/.local/share/re-scale/<VERSION>/`, builds
-the Scala Native binary, and adds `bin/` to PATH for the session.
+automatically by the `re-scale-porting` plugin's SessionStart hook — it
+installs the pinned version with Coursier into
+`~/.local/share/re-scale/<VERSION>/bin` and adds it to PATH for the session.
 
 | Command | Purpose |
 |---------|---------|
@@ -229,16 +230,18 @@ Use `re-scale db` for all migration/issues/audit queries — never read TSVs by 
 
 ## Bash Restrictions
 
-**The PreToolUse hook validates ALL Bash commands.** Only `re-scale`,
-`sbt --client`, `git`, `cargo`, `npm`, `npx`, and `scala-cli` are allowed
-directly. All other commands are denied or redirected to dedicated tools:
+These are conventions; the `re-scale-hooks` plugin that would enforce them
+is not enabled here, because its default rules deny `git rebase`, `rm` and
+pipes the rebase-only workflow needs. Only `re-scale`, `sbt --client`,
+`git`, `cargo`, `npm`, `npx`, and `scala-cli` are used directly. All other
+commands are avoided or replaced by dedicated tools:
 
 - **Denied**: `python`/`python3`, `kill`/`pkill`, `rm -rf`, `sbt` (without `--client`)
 - **Redirected to tools**: `grep`→Grep, `find`/`ls`→Glob, `cat`/`head`/`tail`→Read, `sed`/`awk`→Edit
 - **Use `re-scale`** for builds, tests, git, process management, enforcement, and database queries
 - **Use dedicated tools** (`Grep`, `Glob`, `Read`, `Edit`) for code search and file operations
 
-Per-project rule overrides live at `.rescale/claude-hooks.yaml`.
+Per-project rule overrides for that hook live at `.rescale/claude-hooks.yaml`.
 
 ## Skill Dispatch Rules
 
@@ -246,19 +249,19 @@ Load the relevant skill when working on specific areas:
 
 | Context | Skill to load |
 |---------|---------------|
-| Converting a Java/Dart/Ruby file to Scala | `/guide-conversion` |
-| Code style, license headers, formatting | `/guide-code-style` |
-| Replacing return/break/continue | `/guide-control-flow` |
-| Nullable patterns, null safety | `/guide-nullable` |
+| Converting a Java/Dart/Ruby file to Scala | `/re-scale-porting:re-scale-porting-guide-conversion`, then `/guide-conversion` (SSG rules) |
+| Code style, license headers, formatting | `/re-scale-porting:re-scale-porting-guide-code-style` + `docs/contributing/code-style.md` |
+| Replacing return/break/continue | `/re-scale-porting:re-scale-porting-guide-control-flow` |
+| Nullable patterns, null safety | `/re-scale-porting:re-scale-porting-guide-nullable` + `docs/contributing/nullable-guide.md` |
 | Source→SSG class/package renames | `/guide-type-mappings` |
-| Post-conversion verification | `/guide-verification` |
+| Post-conversion verification | `/re-scale-porting:re-scale-porting-guide-verification` + `docs/contributing/verification-checklist.md` |
 | sbt build config, projectMatrix | `/arch-build` |
 | Cross-platform settings | `/arch-cross-platform` |
 | Regex cross-platform (re2/JS) | `/guide-regex` |
-| Auditing a file | `/audit-file <path>` |
-| Auditing a package | `/audit-package <pkg>` |
-| Migration progress | `/check-progress` |
-| Finding code issues | `/find-issues` |
+| Auditing a file | `/re-scale-porting:re-scale-porting-audit-file <path>` |
+| Auditing a package | `/re-scale-porting:re-scale-porting-audit-package <pkg>` |
+| Migration progress | `/re-scale-porting:re-scale-porting-check-progress` |
+| Finding code issues | `/re-scale-porting:re-scale-porting-find-issues` |
 
 ## Conversion Guides
 
@@ -307,7 +310,7 @@ rendering (ISS-1204). `ssg-graphviz` implements DOT language parsing and renderi
 Per-file audit trail comparing every SSG Scala file against its original source.
 Each audited file gets a `Migration notes:` block in its header comment.
 
-- **Commands**: `/audit-file <path>`, `/audit-package <pkg>`, `/audit-status`
+- **Commands**: `/re-scale-porting:re-scale-porting-audit-file <path>`, `/re-scale-porting:re-scale-porting-audit-package <pkg>`, `/re-scale-porting:re-scale-porting-audit-status`
 - **Database**: `re-scale db audit stats`, `re-scale db audit list --package <pkg>`
 - **Statuses**: `pass`, `minor_issues`, `major_issues`
 - **In-file notes**: `Renames`, `Convention`, `Idiom`, `Audited` date
@@ -316,8 +319,8 @@ Each audited file gets a `Migration notes:` block in its header comment.
 
 All porting work MUST use the **implement → audit → fix → re-audit** loop.
 Never consider porting work "done" after a single implementation pass.
-Use the `re-scale:port-implementer` and `re-scale:port-auditor` agents
-(available as skills) to execute this workflow.
+Use the `re-scale-porting:port-implementer` and `re-scale-porting:port-auditor`
+agents (from the `re-scale-porting` plugin) to execute this workflow.
 
 ### The loop
 
