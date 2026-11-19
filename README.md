@@ -30,7 +30,7 @@ All completed modules pass tests on **JVM, Scala.js, and Scala Native**.
 
 ## Building
 
-Requires: JDK 21+, sbt 1.12+, Scala 3.8.4
+Requires: JDK 21+, sbt 1.12+, Scala 3.9.0
 
 ```bash
 # Compile all modules on default (JVM) platform

@@ -202,13 +202,13 @@ object RoughRenderer {
   /** Port of `ellipseWithParams(x, y, o, ellipseParams)`. */
   def ellipseWithParams(x: Double, y: Double, o: ResolvedOptions, ellipseParams: EllipseParams): EllipseResult = {
     val overlap:    Double                         = ellipseParams.increment * _offset(0.1, _offset(0.4, 1, o), o)
-    val (ap1, cp1): (Vector[Point], Vector[Point]) =
-      _computeEllipsePoints(ellipseParams.increment, x, y, ellipseParams.rx, ellipseParams.ry, 1, overlap, o)
+    val (ap1, cp1) =
+      (_computeEllipsePoints(ellipseParams.increment, x, y, ellipseParams.rx, ellipseParams.ry, 1, overlap, o): (Vector[Point], Vector[Point]))
     val o1: ArrayBuffer[Op] = ArrayBuffer.empty
     o1 ++= _curve(ap1, Nullable.empty, o)
     if ((!o.disableMultiStroke) && (o.roughness != 0)) {
-      val (ap2, _): (Vector[Point], Vector[Point]) =
-        _computeEllipsePoints(ellipseParams.increment, x, y, ellipseParams.rx, ellipseParams.ry, 1.5, 0, o)
+      val (ap2, _) =
+        (_computeEllipsePoints(ellipseParams.increment, x, y, ellipseParams.rx, ellipseParams.ry, 1.5, 0, o): (Vector[Point], Vector[Point]))
       val o2: Vector[Op] = _curve(ap2, Nullable.empty, o)
       o1 ++= o2
     }

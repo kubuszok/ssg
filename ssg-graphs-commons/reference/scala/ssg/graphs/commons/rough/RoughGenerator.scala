@@ -500,13 +500,13 @@ object RoughGenerator {
       val raw:                 String           = num.toString
       val lower:               String           = raw.replace('E', 'e')
       val eIdx:                Int              = lower.indexOf('e')
-      val (mantissa, expPart): (String, String) =
-        if (eIdx >= 0) (lower.substring(0, eIdx), lower.substring(eIdx + 1))
-        else (lower, "")
+      val (mantissa, expPart) =
+        (if (eIdx >= 0) (lower.substring(0, eIdx), lower.substring(eIdx + 1))
+         else (lower, "")): (String, String)
       val dotIdx:                Int           = mantissa.indexOf('.')
-      val (rawDigits, pointPos): (String, Int) =
-        if (dotIdx >= 0) (mantissa.substring(0, dotIdx) + mantissa.substring(dotIdx + 1), dotIdx)
-        else (mantissa, mantissa.length)
+      val (rawDigits, pointPos) =
+        (if (dotIdx >= 0) (mantissa.substring(0, dotIdx) + mantissa.substring(dotIdx + 1), dotIdx)
+         else (mantissa, mantissa.length)): (String, Int)
       val parsedExp: Int =
         if (expPart.isEmpty) 0
         else if (expPart.charAt(0) == '+') expPart.substring(1).toInt

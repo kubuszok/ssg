@@ -4,7 +4,7 @@
 
 | Tool | Version | Purpose |
 |------|---------|---------|
-| Scala | 3.8.4 | Language version |
+| Scala | 3.9.0 | Language version |
 | sbt | 2.0.0 | Build tool |
 | sbt-kubuszok | 0.2.3 | Meta-plugin (bundles sbt-scalafmt, sbt-scoverage, sbt-scalajs, sbt-scala-native, sbt-commandmatrix, and more) |
 | sbt-projectmatrix | (merged into sbt 2.0) | Cross-platform compilation (no longer a separate plugin) |
