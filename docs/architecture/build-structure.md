@@ -50,7 +50,7 @@ Total: 42 sbt subprojects (14 modules x 3 platforms).
 
 Defined in `build.sbt` (`commonSettings`) and `project/Versions.scala`:
 
-- `scalaVersion`: 3.8.4 (from `Versions.scala3` in `project/Versions.scala`)
+- `scalaVersion`: 3.9.0 (from `Versions.scala3` in `project/Versions.scala`)
 - `commonSettings`: Compiler flags, test framework, dependencies (in `build.sbt`)
 - Platform-specific settings are applied per-module via `MatrixAction.ForPlatforms` in `build.sbt`
 

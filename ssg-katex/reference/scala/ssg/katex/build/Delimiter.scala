@@ -486,7 +486,7 @@ object Delimiter {
     // included in the TeX-like `height` used for calculation of
     // vertical alignment. So texHeight = span.height < span.style.height.
 
-    val (span, spanHeight, texHeight, advanceWidth): (SvgSpan, Double, Double, Double) = delim match {
+    val parts: (SvgSpan, Double, Double, Double) = delim match {
       case _: DelimSmall =>
         // Get an SVG that is derived from glyph U+221A in font KaTeX-Main.
         // 1000 unit normal glyph height.
@@ -524,6 +524,7 @@ object Delimiter {
         val aw = 1.056
         (s, sh, th, aw)
     }
+    val (span, spanHeight, texHeight, advanceWidth) = parts
 
     span.height = texHeight
     span.style = span.style.copy(height = Nullable(Units.makeEm(spanHeight)))

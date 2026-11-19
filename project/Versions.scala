@@ -12,7 +12,7 @@ import sbt._
 
 object Versions {
   // Versions we are publishing for.
-  val scala3 = "3.8.4"
+  val scala3 = "3.9.0"
 
   // Which versions should be cross-compiled for publishing.
   val scalas:    List[String]                   = List(scala3)
