@@ -92,7 +92,7 @@ val commonSettings = Seq(
     scalanative.sbtplugin.ScalaNativePlugin.autoImport.nativeConfig ~= {
       _.withEmbedResources(true).withMultithreading(false) // Single-threaded: avoids thread stack limits, uses main stack
     },
-    // scalacheck 1.19 pulls test-interface 0.5.8 while scala-native 0.5.12 selects 0.5.8's successor
+    // scalacheck 1.19 pulls test-interface 0.5.8 while scala-native 0.5.13 selects 0.5.8's successor
     // 0.5.12 (strict): the two are compatible at the test-interface level, so downgrade the eviction
     // conflict from an error to a warning on the native axis.
     evictionErrorLevel := Level.Warn
